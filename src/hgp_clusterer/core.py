@@ -156,7 +156,7 @@ def HypergraphPercol(
         print("Arêtes triées.")
     liste_composantes = kruskal(U,V,W,N)
     if verbeux :
-        print(f"Kruskal appliqué. Nombre de composantes connexes : {len(liste_composantes)}")
+        print(f"Kruskal appliqué. Nombre de composantes connexes : {len(liste_composantes)}. Taille de la première : {liste_composantes[0].size}")
 
     labels_faces = -np.ones(N, dtype=np.int64)
     idx_cluster = 0
