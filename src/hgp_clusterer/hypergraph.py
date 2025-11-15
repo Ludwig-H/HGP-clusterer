@@ -1,8 +1,19 @@
-import numpy as np
+from __future__ import annotations
+
+import itertools
+import math
 import os
+from pathlib import Path
+from typing import Sequence
+
+import numpy as np
+from joblib import Parallel, delayed, cpu_count
+from sklearn.metrics import pairwise_distances
 
 from .delaunay import orderk_delaunay3
 from .geometry import kth_radius, minimum_enclosing_ball
+
+N_CPU_dispo = max(1, cpu_count() - 1)
 
 def _build_graph_KSimplexes(
     M: np.ndarray,
@@ -50,23 +61,29 @@ def _build_graph_KSimplexes(
     Simplexes: list[tuple[list[int], float]] = []
     root_path = Path(cgal_root) if cgal_root is not None else None
     if complex_chosen.lower() == "orderk_delaunay":
-        simplexes = orderk_delaunay3(M, min_samples - 1, precision=precision, verbose=verbose, root=root_path)
-        if verbose:
-            print(f"Simplexes sans filtration : {len(simplexes)}")
-        if simplexes:
-            def _sqr_radius(simplex: Sequence[int]) -> float:
-                pts = M[np.asarray(simplex, dtype=np.int64)]
-                _, radius_sq = minimum_enclosing_ball(pts)
-                return radius_sq
-            radii_sq = Parallel(n_jobs=N_CPU_dispo, prefer="processes")(
-                delayed(_sqr_radius)(s) for s in simplexes
-            )
+        try:
+            simplexes = orderk_delaunay3(M, min_samples - 1, precision=precision, verbose=verbose, root=root_path)
+        except FileNotFoundError as exc:
             if verbose:
-                print("N_CPU_dispo utilisés : ", N_CPU_dispo)
-            if expZ != 2:
-                radii_sq = np.asarray(radii_sq, dtype=np.float64) ** (expZ / 2)
-            Simplexes = [(list(s), float(radii_sq[i])) for i, s in enumerate(simplexes)]
-    else:
+                print(f"CGAL non disponible ({exc}). Repli sur la filtration Rips.")
+            complex_chosen = "rips"
+        else:
+            if verbose:
+                print(f"Simplexes sans filtration : {len(simplexes)}")
+            if simplexes:
+                def _sqr_radius(simplex: Sequence[int]) -> float:
+                    pts = M[np.asarray(simplex, dtype=np.int64)]
+                    _, radius_sq = minimum_enclosing_ball(pts)
+                    return radius_sq
+                radii_sq = Parallel(n_jobs=N_CPU_dispo, prefer="processes")(
+                    delayed(_sqr_radius)(s) for s in simplexes
+                )
+                if verbose:
+                    print("N_CPU_dispo utilisés : ", N_CPU_dispo)
+                if expZ != 2:
+                    radii_sq = np.asarray(radii_sq, dtype=np.float64) ** (expZ / 2)
+                Simplexes = [(list(s), float(radii_sq[i])) for i, s in enumerate(simplexes)]
+    if complex_chosen.lower() != "orderk_delaunay":
         import gudhi
 
         if is_sparse_metric:
@@ -129,11 +146,10 @@ def _build_graph_KSimplexes(
             nS += 1
             vert = tuple(sorted(vertices))
             base = len(faces_raw)
-            faces_S 
             for drop in range(K + 1):
                 face = [simplex[vert[i]] for i in range(K + 1) if i != drop]
                 faces_raw.append(face)
-                faces_Simplexes.append((base+drop, face, float(weight))) 
+                faces_Simplexes.append((base + drop, face, float(weight)))
             for idx in range(K):
                 e_u.append(base + idx)
                 e_v.append(base + idx + 1)

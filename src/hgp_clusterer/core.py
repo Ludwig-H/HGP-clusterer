@@ -1,7 +1,9 @@
+from .clustering import GetClusters, condense_tree
 from .hypergraph import _build_graph_KSimplexes
 from .union_find import UnionFind
 from ._cython import kruskal
 
+import math
 import numpy as np
 import os
 
@@ -29,6 +31,8 @@ def HypergraphPercol(
     verbeux: bool = False,
     cgal_root: str | os.PathLike[str] | None = "/content/HypergraphPercol/CGALDelaunay",
 ) -> np.ndarray | tuple[np.ndarray, list[list[tuple[int, float, float]]]]:
+    if method is None:
+        method = "leaf"
     is_sparse_metric = metric == "sparse"
     if is_sparse_metric:
         M = np.asarray(M, dtype=np.float64)
@@ -101,7 +105,7 @@ def HypergraphPercol(
         idx_face = inv[old_idx]
         for p in points_face :
             Points[p].append((idx_face,r_face))
-    Points_w = [{} if weight_face == "uniform" or weight_face == "lambda" else [(-1,0)] for _ in range(n)]
+    Points_w = [{} if weight_face == "uniform" or weight_face == "lambda" else [(-1, 0)] for _ in range(n)]
     for p,liste_faces in enumerate(Points) :
         for (idx_face,w_face) in liste_faces :
             if weight_face == "uniform" or weight_face == "lambda" :
@@ -116,7 +120,7 @@ def HypergraphPercol(
             else :
                 1/0
         if weight_face == "uniform" or weight_face == "lambda" :
-            liste_faces_w = list(Points[p].items())
+            liste_faces_w = list(Points_w[p].items())
             Points_w[p] = liste_faces_w
         somme = 0
         for _,s in Points_w[p] :

@@ -4,8 +4,8 @@ import numpy as np
 
 try:
     import cyminiball as _CYMINIBALL  # type: ignore
-except Exception as exc:  # pragma: no cover - hard failure, dependency required
-    raise ImportError("cyminiball is required for minimum_enclosing_ball") from exc
+except Exception:  # pragma: no cover - optional dependency
+    _CYMINIBALL = None
 
 try:  # pragma: no cover - prefer compiled implementations
     from ._cython import (  # type: ignore
@@ -90,17 +90,69 @@ def union_if_adjacent_int(a: np.ndarray, b: np.ndarray, out_u: np.ndarray) -> bo
     return u == k + 1
 
 
+def _minimum_enclosing_ball_fallback(points_sub: np.ndarray) -> tuple[np.ndarray, float]:
+    pts = [np.asarray(p, dtype=np.float64) for p in points_sub]
+    dim = points_sub.shape[1] if points_sub.size else 0
+
+    def _ball_from(boundary: list[np.ndarray]) -> tuple[np.ndarray, float]:
+        if not boundary:
+            return np.zeros(dim, dtype=np.float64), -1.0
+        arr = np.vstack(boundary)
+        if arr.shape[0] == 1:
+            return arr[0], 0.0
+        if arr.shape[0] == 2:
+            diff = arr[0] - arr[1]
+            center = 0.5 * (arr[0] + arr[1])
+            return center, float(np.dot(diff, diff)) * 0.25
+        base = arr[0]
+        A = 2.0 * (arr[1:] - base)
+        b = np.einsum("ij,ij->i", arr[1:], arr[1:]) - float(np.dot(base, base))
+        center = base if not A.size else base + np.linalg.lstsq(A, b, rcond=None)[0]
+        radius_sq = float(np.max(np.sum((arr - center) ** 2, axis=1)))
+        return center, radius_sq
+
+    rng = np.random.default_rng(0)
+    order = list(rng.permutation(len(pts)))
+    shuffled = [pts[i] for i in order]
+
+    def _welzl(points: list[np.ndarray], boundary: list[np.ndarray]) -> tuple[np.ndarray, float]:
+        if not points or len(boundary) == dim + 1:
+            return _ball_from(boundary)
+        p = points.pop()
+        center, radius_sq = _welzl(points, boundary)
+        if radius_sq >= 0 and np.dot(p - center, p - center) <= radius_sq + 1e-9:
+            points.append(p)
+            return center, radius_sq
+        boundary.append(p)
+        center, radius_sq = _welzl(points, boundary)
+        boundary.pop()
+        points.append(p)
+        return center, radius_sq
+
+    center, radius_sq = _welzl(shuffled, [])
+    if radius_sq < 0:
+        radius_sq = 0.0
+    return center, radius_sq
+
+
 def minimum_enclosing_ball(points_sub: np.ndarray) -> tuple[np.ndarray, float]:
-    if points_sub.shape[0] <= 1:
+    dim = points_sub.shape[1] if points_sub.ndim == 2 else 0
+    if points_sub.shape[0] == 0:
+        return np.zeros(dim, dtype=np.float64), 0.0
+    if points_sub.shape[0] == 1:
         return points_sub[0], 0.0
     if points_sub.shape[0] == 2:
         diff = points_sub[0] - points_sub[1]
         return 0.5 * (points_sub[0] + points_sub[1]), float(np.dot(diff, diff)) * 0.25
 
-    ball = _CYMINIBALL.Miniball(points_sub)
-    center = np.asarray(ball.center(), dtype=np.float64)
-    radius_sq = float(ball.squared_radius())
-    return center, radius_sq
+    if _CYMINIBALL is not None:
+        ball = _CYMINIBALL.Miniball(points_sub)
+        center = np.asarray(ball.center(), dtype=np.float64)
+        radius_sq = float(ball.squared_radius())
+        return center, radius_sq
+
+    print("Warning: cyminiball unavailable, using numpy fallback for minimum_enclosing_ball.")
+    return _minimum_enclosing_ball_fallback(points_sub)
 
 
 def kth_radius(M: np.ndarray, k: int, metric: str, precomputed: bool) -> np.ndarray:
