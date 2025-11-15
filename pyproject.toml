@@ -1,0 +1,37 @@
+[build-system]
+requires = [
+  "setuptools>=68",
+  "wheel",
+  "Cython>=3.0",
+  "numpy>=1.24",
+]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "hgp_clusterer"
+version = "0.1.0"
+description = "HypergraphPercol clustering algorithm"
+authors = [{ name = "HypergraphPercol" }]
+readme = "README.md"
+license = { text = "MIT" }
+requires-python = ">=3.9"
+dependencies = [
+  "numpy>=1.24",
+  "scikit-learn",
+  "joblib",
+  "hdbscan",
+  "gudhi",
+  "cyminiball>=2.1.1",
+]
+
+[project.optional-dependencies]
+umap = ["umap-learn"]
+
+[project.urls]
+Homepage = "https://github.com/Ludwig-H/HGP-clusterer"
+
+[tool.setuptools]
+package-dir = {"" = "src"}
+
+[tool.setuptools.packages.find]
+where = ["src"]
