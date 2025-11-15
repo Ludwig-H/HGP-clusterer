@@ -1,3 +1,5 @@
+from .union_find import UnionFind
+
 import numpy as np
 
 from sklearn.decomposition import PCA
