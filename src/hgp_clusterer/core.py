@@ -15,6 +15,7 @@ def HypergraphPercol(
     min_samples: int | None = None,
     metric: str = "euclidean",
     method = None,
+    weight_face: str = "lambda", # "lambda" ∝ 1/r ; "uniform" ∝ 1 ; "unique" 1 on the face with min r
     label_all_points: bool = False,
     return_multi_clusters: bool = False,
     complex_chosen: str = "auto",
@@ -63,7 +64,7 @@ def HypergraphPercol(
             X = reducer.fit_transform(M)
             if verbeux:
                 print(f"Dimension réduite par UMAP : {d} → {r}")
-    faces_raw, e_u, e_v, e_w, nS = _build_graph_KSimplexes(
+    faces_raw, e_u, e_v, e_w, KSimplexes = _build_graph_KSimplexes(
         X,
         K,
         min_samples,
@@ -75,21 +76,29 @@ def HypergraphPercol(
         cgal_root=cgal_root,
     )
     if verbeux:
-        print(f"{K}-simplices={nS}")
+        print(f"{K}-simplices={len(KSimplexes)}")
     # if not faces_raw:
     #     if not is_sparse_metric and K > d:
     #         print("Warning: K too high compared to the dimension of the data. No clustering possible with such a K.")
     #     if return_multi_clusters:
     #         return np.full(n, -1, dtype=np.int64), [(-1, 1.0, 1.0)] * n
     #     return np.full(n, 0, dtype=np.int64)
-    # faces_raw_arr = np.asarray(faces_raw, dtype=np.int64, order="C")
-    # e_u_arr = np.asarray(e_u, dtype=np.int64)
-    # e_v_arr = np.asarray(e_v, dtype=np.int64)
-    # e_w_arr = np.asarray(e_w, dtype=np.float64)
-    faces_unique, inv = np.unique(faces_raw, axis=0, return_inverse=True)
+    faces_raw_arr = np.asarray(faces_raw, dtype=np.int64, order="C")
+    e_u = np.asarray(e_u, dtype=np.int64)
+    e_v = np.asarray(e_v, dtype=np.int64)
+    e_w = np.asarray(e_w, dtype=np.float64)
+    faces_unique, inv = np.unique(faces_raw_arr, axis=0, return_inverse=True)
     N = faces_unique.shape[0]
-    if verbeux:
+    if verbeux :
         print(f"Faces uniques: {N} (compression {faces_raw.shape[0]}→{faces_unique.shape[0]})")
+    # face_to_index = {}
+    Points = [{} for _ in range(n)]
+    for i in range(N) :
+        face = tuple(faces_unique[i,:])
+        for p in face :
+        # face_to_index[face] = i
+    if verbeux :
+        print("face_to_index écrit")
     u = inv[e_u]
     v = inv[e_v]
     W = e_w
