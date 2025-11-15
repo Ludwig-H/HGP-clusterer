@@ -29,7 +29,7 @@ def HypergraphPercol(
     dim_reducer: bool | str = False,
     threshold_variance_dim_reduction: float = 0.999,
     verbeux: bool = False,
-    cgal_root: str | os.PathLike[str] | None = "/content/HypergraphPercol/CGALDelaunay",
+    cgal_root: str | os.PathLike[str] | None = "/content/HGP-clusterer/CGALDelaunay",
 ) -> np.ndarray | tuple[np.ndarray, list[list[tuple[int, float, float]]]]:
     if method is None:
         method = "eom"
