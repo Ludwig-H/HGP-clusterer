@@ -1,4 +1,5 @@
 from .union_find import UnionFind
+from ._cython import kruskal
 
 import numpy as np
 
@@ -86,8 +87,9 @@ def HypergraphPercol(
     # e_v_arr = np.asarray(e_v, dtype=np.int64)
     # e_w_arr = np.asarray(e_w, dtype=np.float64)
     faces_unique, inv = np.unique(faces_raw, axis=0, return_inverse=True)
+    N = faces_unique.shape[0]
     if verbeux:
-        print(f"Faces uniques: {faces_unique.shape[0]} (compression {faces_raw.shape[0]}→{faces_unique.shape[0]})")
+        print(f"Faces uniques: {N} (compression {faces_raw.shape[0]}→{faces_unique.shape[0]})")
     u = inv[e_u]
     v = inv[e_v]
     W = e_w
@@ -104,6 +106,26 @@ def HypergraphPercol(
     # vv = vv[gidx]
     if verbeux:
         print(f"Arêtes uniques (U<V): {U.size}")
+    order = np.argsort(W) # parallel_sort si besoin
+    U = U[order]
+    V = V[order]
+    W = W[order]
+    if verbeux :
+        print("Arêtes triées.")
+    liste_composantes = kruskal(U,V,W,N)
+    if verbeux :
+        print(f"Kruskal appliqué. Nombre de composantes connexes : {len(liste_composantes)}")
+    ### Ici répartir les poids des points sur les faces = (K-1)-simplexes
+
+    for idx_cc in liste_composantes :
+        U_mst = U[idx_cc]
+        V_mst = V[idx_cc]
+        W_mst = W[idx_cc]
+        faces_unique.shape[0]
+    
+    
+    
+    
     UF_faces = UnionFind(faces_unique.shape[0])
     mst_faces_sorted = _kruskal_mst_from_edges(faces_unique.shape[0], uu, vv, ww, UF_faces)
     if verbeux:
