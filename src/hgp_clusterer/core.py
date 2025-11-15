@@ -16,6 +16,7 @@ def HypergraphPercol(
     min_samples: int | None = None,
     metric: str = "euclidean",
     method = None,
+    splitting = None,
     weight_face: str = "lambda", # "lambda" ∝ 1/r ; "uniform" ∝ 1 ; "unique" 1 on the face with min r
     label_all_points: bool = False,
     return_multi_clusters: bool = False,
@@ -92,12 +93,13 @@ def HypergraphPercol(
     N = faces_unique.shape[0]
     if verbeux :
         print(f"Faces uniques: {N} (compression {faces_raw.shape[0]}→{faces_unique.shape[0]})")
-    # face_to_index = {}
+    
+    ### Ici répartir les poids des points sur les faces = (K-1)-simplexes
     Points = [[] for _ in range(n)]
-    for (old_idx, points_face, w_face) in faces_Simplexes :
+    for (old_idx, points_face, r_face) in faces_Simplexes :
         idx_face = inv[old_idx]
         for p in points_face :
-            Points[p].append((idx_face,w_face))
+            Points[p].append((idx_face,r_face))
     Points_w = [{} if weight_face == "uniform" or weight_face == "lambda" else [(-1,0)] for _ in range(n)]
     for p,liste_faces in enumerate(Points) :
         for (idx_face,w_face) in liste_faces :
@@ -126,21 +128,12 @@ def HypergraphPercol(
         for idx,s in liste_faces :
             W_nodes[idx] += s
     if verbeux :
-        print("face_to_index écrit")
+        print("W_nodes calculé.")
     u = inv[e_u]
     v = inv[e_v]
     W = e_w
     U = np.minimum(u, v)
     V = np.maximum(u, v)
-    # order = np.lexsort((vv, uu))
-    # uu = uu[order]
-    # vv = vv[order]
-    # ww = w[order]
-    # change = np.r_[True, (uu[1:] != uu[:-1]) | (vv[1:] != vv[:-1])]
-    # gidx = np.flatnonzero(change)
-    # ww = np.minimum.reduceat(ww, gidx)
-    # uu = uu[gidx]
-    # vv = vv[gidx]
     if verbeux:
         print(f"Arêtes uniques (U<V): {U.size}")
     order = np.argsort(W) # parallel_sort si besoin
@@ -152,8 +145,6 @@ def HypergraphPercol(
     liste_composantes = kruskal(U,V,W,N)
     if verbeux :
         print(f"Kruskal appliqué. Nombre de composantes connexes : {len(liste_composantes)}")
-    ### Ici répartir les poids des points sur les faces = (K-1)-simplexes
-    # W_nodes = ...
 
     labels_faces = -np.ones(N, dtype=np.int64)
     idx_cluster = 0
@@ -184,7 +175,7 @@ def HypergraphPercol(
         idx_cluster += max_index +1
 
     labels_points_multiple = [[] for _ in range(n)]
-    for i,liste_faces_w in enumerate(Points) :
+    for p,liste_faces_w in enumerate(Points_w) :
         clusters = {-1:0.}
         for face,w in liste_faces_w :
             cl = labels_faces[face]
@@ -192,12 +183,12 @@ def HypergraphPercol(
                 clusters[cl] += w
             else :
                 clusters[cl] = w
-        labels_points_multiple[i] = sorted(clusters.items(), key=lambda x: x[1], reverse=True)
+        labels_points_multiple[p] = sorted(clusters.items(), key=lambda x: x[1], reverse=True)
 
     labels_points_unique = -np.ones(n, dtype=np.int64)
-    for i, l_clusters in enumerate(labels_points_multiple) :
+    for p, l_clusters in enumerate(labels_points_multiple) :
         cl = l_clusters[0][0]
-        labels_points_unique[i] = cl
+        labels_points_unique[p] = cl
 
     def knn_fill_weighted(X_data: np.ndarray, labels: np.ndarray, k: int) -> np.ndarray:
         from sklearn.neighbors import KNeighborsClassifier
