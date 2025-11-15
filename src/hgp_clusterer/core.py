@@ -3,6 +3,7 @@ from .union_find import UnionFind
 from ._cython import kruskal
 
 import numpy as np
+import os
 
 from sklearn.decomposition import PCA
 
