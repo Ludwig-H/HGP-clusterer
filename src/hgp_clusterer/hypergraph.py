@@ -13,7 +13,7 @@ from sklearn.metrics import pairwise_distances
 from .delaunay import orderk_delaunay3
 from .geometry import kth_radius, minimum_enclosing_ball
 
-N_CPU_dispo = max(1, cpu_count() - 1)
+N_CPU_dispo = max(1, cpu_count())
 
 def _build_graph_KSimplexes(
     M: np.ndarray,
