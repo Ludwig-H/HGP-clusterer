@@ -49,6 +49,111 @@ ctypedef np.double_t DTYPE_t
 ctypedef np.int64_t ITYPE_t
 
 
+def kruskal(U, V, W, int N):
+    """
+    Kruskal sans tri (W déjà trié par ordre croissant).
+
+    Entrée:
+      - U, V: arrays d'entiers (0..N-1), U[i] < V[i]
+      - W:    array de flottants (poids), déjà trié croissant
+      - N:    nombre de sommets
+
+    Sortie:
+      - Une liste de ndarrays d'indices d'arêtes (dtype=np.intp), un par composante.
+        Les nœuds isolés donnent un tableau vide. Si le graphe est connexe: liste de taille 1.
+    """
+    cdef Py_ssize_t M = (<np.ndarray>U).shape[0]
+    if (<np.ndarray>V).shape[0] != M or (<np.ndarray>W).shape[0] != M:
+        raise ValueError("U, V et W doivent avoir la même longueur")
+
+    # Contiguïté + dtypes internes compacts
+    U = np.ascontiguousarray(U, dtype=np.intp)
+    V = np.ascontiguousarray(V, dtype=np.intp)
+    W = np.ascontiguousarray(W, dtype=np.float64)  # conservé pour cohérence d'API
+
+    cdef np.intp_t[:] Uv = U
+    cdef np.intp_t[:] Vv = V
+    cdef double[:]   Wv = W  # non utilisé par l'algo (déjà trié), laissé pour signature
+
+    # Union-Find fourni par l'utilisateur (doit être visible dans le module)
+    cdef UnionFind uf = UnionFind(N)
+
+    # Indices d'arêtes retenues (buffer max M)
+    cdef np.ndarray[np.intp_t, ndim=1] idx_mst = np.empty(M, dtype=np.intp)
+    cdef np.intp_t[:] idx_mstv = idx_mst
+    cdef Py_ssize_t k = 0
+
+    cdef Py_ssize_t i, e
+    cdef int a, b
+    cdef int components = N
+
+    # Boucle principale Kruskal (arêtes déjà triées)
+    for i in range(M):
+        a = <int> Uv[i]
+        b = <int> Vv[i]
+        if uf.union(a, b):
+            idx_mstv[k] = <np.intp_t> i
+            k += 1
+            components -= 1
+            if components == 1:  # arrêt anticipé si connexe
+                break
+
+    # --- Regroupement par composante: schéma 2 passes, sans dict ---
+
+    # 1) Racine de chaque sommet
+    cdef np.ndarray[np.intp_t, ndim=1] roots_arr = np.empty(N, dtype=np.intp)
+    cdef np.intp_t[:] roots = roots_arr
+    for i in range(N):
+        roots[i] = uf.find(<int> i)
+
+    # 2) Compactage racine -> id de composante 0..C-1 (root_to_cc), init à -1
+    cdef np.ndarray[np.intp_t, ndim=1] root_to_cc = np.empty(N, dtype=np.intp)
+    cdef np.intp_t[:] r2c = root_to_cc
+    for i in range(N):
+        r2c[i] = -1
+
+    cdef np.intp_t C = 0
+    cdef int r
+    for i in range(N):
+        r = <int> roots[i]
+        if r2c[r] == -1:
+            r2c[r] = C
+            C += 1
+
+    # 3) Compter le nb d'arêtes MST par composante
+    cdef np.ndarray[np.intp_t, ndim=1] counts = np.zeros(C, dtype=np.intp)
+    cdef np.intp_t[:] cnt = counts
+    for i in range(k):
+        e = <Py_ssize_t> idx_mstv[i]
+        r = <int> roots[ Uv[e] ]  # U[e] et V[e] ont la même racine dans le MST
+        cnt[ r2c[r] ] += 1
+
+    # 4) Allouer les sorties et offsets
+    cdef list out = [None] * C
+    cdef np.ndarray[np.intp_t, ndim=1] offsets = np.zeros(C, dtype=np.intp)
+    cdef np.intp_t[:] off = offsets
+
+    cdef np.ndarray[np.intp_t, ndim=1] arr
+    for i in range(C):
+        if cnt[i] == 0:
+            out[i] = np.empty(0, dtype=np.intp)
+        else:
+            out[i] = np.empty(cnt[i], dtype=np.intp)
+
+    # 5) Remplissage des indices par composante
+    cdef np.intp_t c
+    for i in range(k):
+        e = <Py_ssize_t> idx_mstv[i]
+        r = <int> roots[ Uv[e] ]
+        c = r2c[r]
+        arr = <np.ndarray[np.intp_t, ndim=1]> out[c]
+        (<np.intp_t[:]> arr)[ off[c] ] = <np.intp_t> e
+        off[c] += 1
+
+    return out
+
+
+
 cpdef double bary_weight_one(
     DTYPE_t[:, ::1] M,
     DTYPE_t[::1] s2_all,
