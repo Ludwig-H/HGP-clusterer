@@ -32,7 +32,7 @@ def HypergraphPercol(
     cgal_root: str | os.PathLike[str] | None = "/content/HypergraphPercol/CGALDelaunay",
 ) -> np.ndarray | tuple[np.ndarray, list[list[tuple[int, float, float]]]]:
     if method is None:
-        method = "leaf"
+        method = "eom"
     is_sparse_metric = metric == "sparse"
     if is_sparse_metric:
         M = np.asarray(M, dtype=np.float64)
