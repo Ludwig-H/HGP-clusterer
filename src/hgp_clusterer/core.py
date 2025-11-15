@@ -18,7 +18,7 @@ def HypergraphPercol(
     min_cluster_size: int | None = None,
     min_samples: int | None = None,
     metric: str = "euclidean",
-    method = None,
+    method = 'eom',
     splitting = None,
     weight_face: str = "lambda", # "lambda" ∝ 1/r ; "uniform" ∝ 1 ; "unique" 1 on the face with min r
     label_all_points: bool = False,
