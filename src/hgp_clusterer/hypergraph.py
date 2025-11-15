@@ -132,8 +132,7 @@ def _build_graph_KSimplexes(
             for drop in range(K + 1):
                 face = [simplex[vert[i]] for i in range(K + 1) if i != drop]
                 faces_raw.append(face)
-            for idx in range(K+1) :
-                faces_Simplexes.append((base+idx, float(weight)))
+                faces_Simplexes.append((base+drop, face, float(weight))) 
             for idx in range(K):
                 e_u.append(base + idx)
                 e_v.append(base + idx + 1)
