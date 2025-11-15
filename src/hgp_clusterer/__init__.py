@@ -10,9 +10,9 @@ __all__ = ["HypergraphPercol"]
 
 def __getattr__(name: str) -> Any:  # pragma: no cover - simple lazy import shim
     if name == "HypergraphPercol":
-        module = import_module("hypergraphpercol.core")
+        module = import_module("hgp_clusterer.core")
         return module.HypergraphPercol
-    raise AttributeError(f"module 'hypergraphpercol' has no attribute {name!r}")
+    raise AttributeError(f"module 'hgp_clusterer' has no attribute {name!r}")
 
 
 def __dir__() -> list[str]:  # pragma: no cover - cosmetic helper
