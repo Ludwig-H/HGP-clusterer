@@ -21,11 +21,11 @@ dependencies = [
   "joblib",
   "hdbscan",
   "gudhi",
-  "cyminiball>=2.1.1",
 ]
 
 [project.optional-dependencies]
 umap = ["umap-learn"]
+geometry = ["cyminiball>=2.1.1"]
 
 [project.urls]
 Homepage = "https://github.com/Ludwig-H/HGP-clusterer"
