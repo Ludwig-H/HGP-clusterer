@@ -145,7 +145,22 @@ def HypergraphPercol(
                 max_index = idx
             labels_faces[uniques[nodes]] = idx_cluster + idx
         idx_cluster += max_index +1
-    
+
+    labels_points_multiple = [[] for _ in range(n)]
+    for i,liste_faces_w in enumerate(Points) :
+        clusters = {-1:0.}
+        for face,w in liste_faces_w :
+            cl = labels_faces[face]
+            if cl in clusters :
+                clusters[cl] += w
+            else :
+                clusters[cl] = w
+        labels_points_multiple[i] = sorted(clusters.items(), key=lambda x: x[1], reverse=True)
+
+    labels_points_unique = -np.ones(n, dtype=np.int64)
+    for i, l_clusters in enumerate(labels_points_multiple) :
+        cl = l_clusters[0][0]
+        labels_points_unique[i] = cl
 
     def knn_fill_weighted(X_data: np.ndarray, labels: np.ndarray, k: int) -> np.ndarray:
         from sklearn.neighbors import KNeighborsClassifier
