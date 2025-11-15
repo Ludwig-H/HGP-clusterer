@@ -1,3 +1,4 @@
+from .hypergraph import _build_graph_KSimplexes
 from .union_find import UnionFind
 from ._cython import kruskal
 
@@ -64,7 +65,7 @@ def HypergraphPercol(
             X = reducer.fit_transform(M)
             if verbeux:
                 print(f"Dimension réduite par UMAP : {d} → {r}")
-    faces_raw, e_u, e_v, e_w, KSimplexes = _build_graph_KSimplexes(
+    faces_raw, e_u, e_v, e_w, faces_Simplexes, nS = _build_graph_KSimplexes(
         X,
         K,
         min_samples,
@@ -76,7 +77,7 @@ def HypergraphPercol(
         cgal_root=cgal_root,
     )
     if verbeux:
-        print(f"{K}-simplices={len(KSimplexes)}")
+        print(f"{K}-simplices={nS}")
     # if not faces_raw:
     #     if not is_sparse_metric and K > d:
     #         print("Warning: K too high compared to the dimension of the data. No clustering possible with such a K.")
@@ -92,11 +93,38 @@ def HypergraphPercol(
     if verbeux :
         print(f"Faces uniques: {N} (compression {faces_raw.shape[0]}→{faces_unique.shape[0]})")
     # face_to_index = {}
-    Points = [{} for _ in range(n)]
-    for i in range(N) :
-        face = tuple(faces_unique[i,:])
-        for p in face :
-        # face_to_index[face] = i
+    Points = [[] for _ in range(n)]
+    for (old_idx, points_face, w_face) in faces_Simplexes :
+        idx_face = inv[old_idx]
+        for p in points_face :
+            Points[p].append((idx_face,w_face))
+    Points_w = [{} if weight_face == "uniform" or weight_face == "lambda" else [(-1,0)] for _ in range(n)]
+    for p,liste_faces in enumerate(Points) :
+        for (idx_face,w_face) in liste_faces :
+            if weight_face == "uniform" or weight_face == "lambda" :
+                ajout = 1 if weight_face == "uniform" else 1/w_face
+                if idx_face in Points_w[p] :
+                    Points_w[p][idx_face] += ajout
+                else :
+                    Points_w[p][idx_face] = ajout
+            elif weight_face == "unique" :
+                if Points_w[p][0][1] < 1/w_face :
+                    Points_w[p][0] = (idx_face, 1/w_face)
+            else :
+                1/0
+        if weight_face == "uniform" or weight_face == "lambda" :
+            liste_faces_w = list(Points[p].items())
+            Points_w[p] = liste_faces_w
+        somme = 0
+        for _,s in Points_w[p] :
+            somme += s
+        for i,(idx,s) in enumerate(Points_w[p]) :
+            Points_w[p][i] = (idx,s/somme)
+
+    W_nodes = np.zeros(N,dtype=np.float64)
+    for p,liste_faces in enumerate(Points_w) :
+        for idx,s in liste_faces :
+            W_nodes[idx] += s
     if verbeux :
         print("face_to_index écrit")
     u = inv[e_u]
