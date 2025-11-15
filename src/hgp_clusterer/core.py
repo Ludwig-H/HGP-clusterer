@@ -84,12 +84,17 @@ def HypergraphPercol(
     )
     if verbeux:
         print(f"{K}-simplices={nS}")
-    # if not faces_raw:
-    #     if not is_sparse_metric and K > d:
-    #         print("Warning: K too high compared to the dimension of the data. No clustering possible with such a K.")
-    #     if return_multi_clusters:
-    #         return np.full(n, -1, dtype=np.int64), [(-1, 1.0, 1.0)] * n
-    #     return np.full(n, 0, dtype=np.int64)
+    if not faces_raw:
+        if verbeux and not is_sparse_metric and K > d:
+            print(
+                "Warning: K too high compared to the dimension of the data. "
+                "No clustering possible with such a K."
+            )
+        empty_labels = np.full(n, -1, dtype=np.int64)
+        if return_multi_clusters:
+            empty_multi = [[(-1, 1.0)] for _ in range(n)]
+            return empty_labels, empty_multi
+        return empty_labels
     faces_raw_arr = np.asarray(faces_raw, dtype=np.int64, order="C")
     e_u = np.asarray(e_u, dtype=np.int64)
     e_v = np.asarray(e_v, dtype=np.int64)
