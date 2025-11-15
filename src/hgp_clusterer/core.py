@@ -116,32 +116,36 @@ def HypergraphPercol(
     if verbeux :
         print(f"Kruskal appliqué. Nombre de composantes connexes : {len(liste_composantes)}")
     ### Ici répartir les poids des points sur les faces = (K-1)-simplexes
+    # W_nodes = ...
 
+    labels_faces = -np.ones(N, dtype=np.int64)
+    idx_cluster = 0
     for idx_cc in liste_composantes :
         U_mst = U[idx_cc]
         V_mst = V[idx_cc]
         W_mst = W[idx_cc]
-        faces_unique.shape[0]
+        # On met tous les indices bout à bout
+        all_nodes = np.concatenate((U_mst.ravel(), V_mst.ravel()))
     
+        # uniques : anciens indices triés
+        # inverse : pour chaque entrée de all_nodes, le nouvel indice (0..nb_indices-1)
+        uniques, inverse = np.unique(all_nodes, return_inverse=True)
+        nb_indices = uniques.size
     
+        # On sépare à nouveau pour retrouver la forme de U_mst / V_mst
+        M = U_mst.size
+        U_new = inverse[:M]
+        V_new = inverse[M:]
+        W_nodes_cc = W_nodes[uniques]
+        Z_cc = condense_tree(W_nodes_cc, U_new, V_new, W_mst, min_cluster_size=min_cluster_size, check_sorted=True) # check_sorted à mettre à False
+        res = GetClusters(Z_cc, method, splitting=splitting, verbose=verbeux)
+        max_index = -1
+        for idx, nodes in enumerate(res['clusters']):
+            if idx > max_index :
+                max_index = idx
+            labels_faces[uniques[nodes]] = idx_cluster + idx
+        idx_cluster += max_index +1
     
-    
-    UF_faces = UnionFind(faces_unique.shape[0])
-    mst_faces_sorted = _kruskal_mst_from_edges(faces_unique.shape[0], uu, vv, ww, UF_faces)
-    if verbeux:
-        m = faces_unique.shape[0]
-        e_mst = len(mst_faces_sorted)
-        comps = max(0, m - e_mst) if m else 0
-        print(f"MST faces: {e_mst} arêtes, composantes estimées: {comps}")
-    labels_points_unique, labels_points_multiple = build_Z_mst_occurrences_components(
-        faces_unique,
-        mst_faces_sorted,
-        min_cluster_size=min_cluster_size,
-        verbose=verbeux,
-        distinct_mode="owner",
-        DBSCAN_threshold=DBSCAN_threshold,
-    )
-    labels_points_unique = np.asarray(labels_points_unique)
 
     def knn_fill_weighted(X_data: np.ndarray, labels: np.ndarray, k: int) -> np.ndarray:
         from sklearn.neighbors import KNeighborsClassifier
