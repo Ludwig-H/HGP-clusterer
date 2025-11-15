@@ -62,32 +62,34 @@ def kruskal(U, V, W, int N):
       - Une liste de ndarrays d'indices d'arêtes (dtype=np.intp), un par composante.
         Les nœuds isolés donnent un tableau vide. Si le graphe est connexe: liste de taille 1.
     """
-    cdef Py_ssize_t M = (<np.ndarray>U).shape[0]
-    if (<np.ndarray>V).shape[0] != M or (<np.ndarray>W).shape[0] != M:
-        raise ValueError("U, V et W doivent avoir la même longueur")
+    cdef Py_ssize_t M
+    cdef Py_ssize_t i, e
+    cdef int a, b
+    cdef int components = N
+    cdef int r
+    cdef np.intp_t C, c
 
-    # Contiguïté + dtypes internes compacts
+    # Contiguïté + dtypes internes
     U = np.ascontiguousarray(U, dtype=np.intp)
     V = np.ascontiguousarray(V, dtype=np.intp)
-    W = np.ascontiguousarray(W, dtype=np.float64)  # conservé pour cohérence d'API
+    W = np.ascontiguousarray(W, dtype=np.float64)
+
+    M = (<np.ndarray> U).shape[0]
+    if (<np.ndarray> V).shape[0] != M or (<np.ndarray> W).shape[0] != M:
+        raise ValueError("U, V et W doivent avoir la même longueur")
 
     cdef np.intp_t[:] Uv = U
     cdef np.intp_t[:] Vv = V
-    cdef double[:]   Wv = W  # non utilisé par l'algo (déjà trié), laissé pour signature
+    # On ne touche pas à W ici, les arêtes sont déjà triées
 
-    # Union-Find fourni par l'utilisateur (doit être visible dans le module)
     cdef UnionFind uf = UnionFind(N)
 
-    # Indices d'arêtes retenues (buffer max M)
+    # Indices des arêtes retenues (buffer max M)
     cdef np.ndarray[np.intp_t, ndim=1] idx_mst = np.empty(M, dtype=np.intp)
     cdef np.intp_t[:] idx_mstv = idx_mst
     cdef Py_ssize_t k = 0
 
-    cdef Py_ssize_t i, e
-    cdef int a, b
-    cdef int components = N
-
-    # Boucle principale Kruskal (arêtes déjà triées)
+    # Boucle principale de Kruskal
     for i in range(M):
         a = <int> Uv[i]
         b = <int> Vv[i]
@@ -112,8 +114,7 @@ def kruskal(U, V, W, int N):
     for i in range(N):
         r2c[i] = -1
 
-    cdef np.intp_t C = 0
-    cdef int r
+    C = 0
     for i in range(N):
         r = <int> roots[i]
         if r2c[r] == -1:
@@ -124,7 +125,7 @@ def kruskal(U, V, W, int N):
     cdef np.ndarray[np.intp_t, ndim=1] counts = np.zeros(C, dtype=np.intp)
     cdef np.intp_t[:] cnt = counts
     for i in range(k):
-        e = <Py_ssize_t> idx_mstv[i]
+        e = idx_mstv[i]
         r = <int> roots[ Uv[e] ]  # U[e] et V[e] ont la même racine dans le MST
         cnt[ r2c[r] ] += 1
 
@@ -134,6 +135,8 @@ def kruskal(U, V, W, int N):
     cdef np.intp_t[:] off = offsets
 
     cdef np.ndarray[np.intp_t, ndim=1] arr
+    cdef np.intp_t[:] arr_view
+
     for i in range(C):
         if cnt[i] == 0:
             out[i] = np.empty(0, dtype=np.intp)
@@ -141,13 +144,13 @@ def kruskal(U, V, W, int N):
             out[i] = np.empty(cnt[i], dtype=np.intp)
 
     # 5) Remplissage des indices par composante
-    cdef np.intp_t c
     for i in range(k):
-        e = <Py_ssize_t> idx_mstv[i]
+        e = idx_mstv[i]
         r = <int> roots[ Uv[e] ]
         c = r2c[r]
         arr = <np.ndarray[np.intp_t, ndim=1]> out[c]
-        (<np.intp_t[:]> arr)[ off[c] ] = <np.intp_t> e
+        arr_view = arr  # <- conversion propre en memoryview
+        arr_view[ off[c] ] = <np.intp_t> e
         off[c] += 1
 
     return out
