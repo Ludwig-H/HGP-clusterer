@@ -25,8 +25,8 @@ if git -C "$WORKDIR" symbolic-ref -q HEAD >/dev/null; then
   git -C "$WORKDIR" pull --ff-only || true
 fi
 
-python -m pip install --upgrade "pip>=24.0"
-python -m pip install --upgrade "setuptools>=68" wheel "Cython>=3.0" "numpy>=1.24"
+# python -m pip install --upgrade "pip>=24.0"
+# python -m pip install --upgrade "setuptools>=68" wheel "Cython>=3.0" "numpy>=1.24"
 python -m pip install --no-build-isolation "$WORKDIR"
 
 COMMIT=$(git -C "$WORKDIR" rev-parse HEAD)
