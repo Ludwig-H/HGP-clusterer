@@ -68,3 +68,11 @@ X = np.random.RandomState(0).randn(20, 3)
 print(HypergraphPercol(X, K=2, complex_chosen='rips'))
 PY
 ```
+
+### Exemple 2D (20 points)
+
+Le script `scripts/simple_2d_cloud_demo.py` génère deux amas gaussiens en 2D (10 points chacun) et exécute `HypergraphPercol` avec `K=2` et `min_cluster_size=5`. Lancez-le pour reproduire le test demandé :
+
+```bash
+python scripts/simple_2d_cloud_demo.py
+```

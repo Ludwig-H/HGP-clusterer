@@ -97,7 +97,9 @@ def HypergraphPercol(
     faces_unique, inv = np.unique(faces_raw_arr, axis=0, return_inverse=True)
     N = faces_unique.shape[0]
     if verbeux :
-        print(f"Faces uniques: {N} (compression {faces_raw.shape[0]}→{faces_unique.shape[0]})")
+        print(
+            f"Faces uniques: {N} (compression {faces_raw_arr.shape[0]}→{faces_unique.shape[0]})"
+        )
     
     ### Ici répartir les poids des points sur les faces = (K-1)-simplexes
     Points = [[] for _ in range(n)]
