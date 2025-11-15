@@ -1,4 +1,5 @@
 import numpy as np
+import os
 
 from .delaunay import orderk_delaunay3
 from .geometry import kth_radius, minimum_enclosing_ball
