@@ -335,7 +335,7 @@ def _eom_select(Z: Dict[str, Any]) -> List[int]:
     return sorted(set(selected))
 
 
-def GetClusters(Z: Dict[str, Any], method, splitting=None, verbose: bool = False) -> Dict[str, Any]:
+def GetClusters(Z: Dict[str, Any], method, splitting=None, points=None, Face_to_points=None, verbose: bool = False) -> Dict[str, Any]:
     """Return clusters as lists of point indices according to a selection method and optional recursive splitting.
 
     Parameters
@@ -369,7 +369,8 @@ def GetClusters(Z: Dict[str, Any], method, splitting=None, verbose: bool = False
     @lru_cache(maxsize=None)
     def _apply_splitting_on_cid(cid: int) -> Tuple[Tuple[Tuple[int, ...], ...], float]:
         nodes = nodes_per_cid[cid]
-        loss_here = float(splitting(nodes))
+        points_cl = points[Face_to_points[nodes]],
+        loss_here = float(splitting(points_cl))
         ch = children[cid]
         if not ch:
             return (tuple(nodes.tolist()),), loss_here
