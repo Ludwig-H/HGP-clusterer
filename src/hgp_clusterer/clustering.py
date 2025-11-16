@@ -409,7 +409,7 @@ def GetClusters(Z: Dict[str, Any], method, splitting=None, points=None, Face_to_
             return (tuple(nodes.tolist()),), loss_here
         left_nodes, loss_left = _apply_splitting_on_cid(ch[0])
         right_nodes, loss_right = _apply_splitting_on_cid(ch[1])
-        if loss_left + loss_right <= loss_here:
+        if loss_left + loss_right <= loss_here + EPS:
             return left_nodes + right_nodes, float(loss_left + loss_right)
         else:
             return (tuple(nodes.tolist()),), loss_here
