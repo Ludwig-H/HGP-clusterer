@@ -108,9 +108,11 @@ def HypergraphPercol(
     
     ### Ici répartir les poids des points sur les faces = (K-1)-simplexes
     Points = [[] for _ in range(n)]
+    Face_to_points = [set() for _ in range(N)]
     for (old_idx, points_face, r_face) in faces_Simplexes :
         idx_face = inv[old_idx]
         for p in points_face :
+            Face_to_points[idx_face].add(p)
             Points[p].append((idx_face,r_face))
     Points_w = [{} if weight_face == "uniform" or weight_face == "lambda" else [(-1, 0)] for _ in range(n)]
     for p,liste_faces in enumerate(Points) :
@@ -178,7 +180,10 @@ def HypergraphPercol(
         V_new = inverse[M:]
         W_nodes_cc = W_nodes[uniques]
         Z_cc = condense_tree(W_nodes_cc, U_new, V_new, W_mst, min_cluster_size=min_cluster_size, check_sorted=True) # check_sorted à mettre à False
-        res = GetClusters(Z_cc, method, splitting=splitting, verbose=verbeux)
+        if splitting is None :
+            res = GetClusters(Z_cc, method, splitting=splitting, verbose=verbeux)
+        else :
+            res = GetClusters(Z_cc, method, splitting=splitting, points=M, Face_to_points=Face_to_points, verbose=verbeux)    
         max_index = -1
         for idx, nodes in enumerate(res['clusters']):
             if idx > max_index :
