@@ -183,7 +183,7 @@ def HypergraphPercol(
         if splitting is None :
             res = GetClusters(Z_cc, method, splitting=splitting, verbose=verbeux)
         else :
-            res = GetClusters(Z_cc, method, splitting=splitting, points=M, Face_to_points=Face_to_points, verbose=verbeux)    
+            res = GetClusters(Z_cc, method, splitting=splitting, points=X, Face_to_points=Face_to_points, verbose=verbeux)    
         max_index = -1
         for idx, nodes in enumerate(res['clusters']):
             if idx > max_index :
@@ -225,7 +225,7 @@ def HypergraphPercol(
         return y
 
     if label_all_points and delaunay_possible:
-        labels_points_unique = knn_fill_weighted(M, labels_points_unique, min_samples)
+        labels_points_unique = knn_fill_weighted(X, labels_points_unique, min_samples)
     if return_multi_clusters:
         return labels_points_unique, labels_points_multiple
     return labels_points_unique
