@@ -364,12 +364,45 @@ def GetClusters(Z: Dict[str, Any], method, splitting=None, points=None, Face_to_
     nodes_per_cid = _compute_nodes_all(Z)
     set2cid = {tuple(arr.tolist()): j for j, arr in enumerate(nodes_per_cid) if arr.size > 0}
 
+    points_per_cid = None
+    if splitting is not None:
+        if points is None or Face_to_points is None:
+            raise ValueError(
+                "When providing a splitting function you must also pass both "
+                "'points' (array of point coordinates) and 'Face_to_points' "
+                "(mapping from faces to originating point indices)."
+            )
+        points = np.asarray(points)
+
+        def _points_for_nodes(nodes: np.ndarray) -> np.ndarray:
+            point_indices: set[int] = set()
+            for node in nodes:
+                pts = Face_to_points[int(node)]
+                if pts is None:
+                    continue
+                if isinstance(pts, np.ndarray):
+                    iterable = pts.tolist()
+                elif isinstance(pts, (list, tuple, set)):
+                    iterable = pts
+                else:
+                    iterable = [pts]
+                for p in iterable:
+                    point_indices.add(int(p))
+            if not point_indices:
+                return points[[]]
+            ordered_idx = np.fromiter(sorted(point_indices), dtype=np.int64)
+            return points[ordered_idx]
+
+        points_per_cid = [_points_for_nodes(nodes) for nodes in nodes_per_cid]
+
     from functools import lru_cache
 
     @lru_cache(maxsize=None)
     def _apply_splitting_on_cid(cid: int) -> Tuple[Tuple[Tuple[int, ...], ...], float]:
         nodes = nodes_per_cid[cid]
-        points_cl = points[Face_to_points[nodes]],
+        if points_per_cid is None:
+            raise RuntimeError("splitting cache not initialized")
+        points_cl = points_per_cid[cid]
         loss_here = float(splitting(points_cl))
         ch = children[cid]
         if not ch:
