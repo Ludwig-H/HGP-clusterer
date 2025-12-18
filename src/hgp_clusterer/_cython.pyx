@@ -436,14 +436,9 @@ def condense_tree_cython(
             death_r.push_back(NAN)
             stability.push_back(0.0)
             
-            # Merge edges of children + current edge
-            new_edges.clear() # Clear reused vector
-            if not cluster_edges[cid_u].empty():
-                new_edges.insert(new_edges.end(), cluster_edges[cid_u].begin(), cluster_edges[cid_u].end())
-            if not cluster_edges[cid_v].empty():
-                new_edges.insert(new_edges.end(), cluster_edges[cid_v].begin(), cluster_edges[cid_v].end())
-            new_edges.push_back(i)
-            cluster_edges.push_back(new_edges)
+            # OPTIMIZATION: Do not copy children edges! Only store local edges.
+            cluster_edges.push_back(vector[ITYPE_t]())
+            cluster_edges.back().push_back(i)
             
             n_parent = n_in_cluster[cid_u] + n_in_cluster[cid_v]
             size_at_birth.push_back(n_parent)
@@ -587,3 +582,45 @@ cpdef tuple build_leaf_dfs_intervals(
         pos_v[lo_v[i]] = i
 
     return pos, first, last, leaf_order
+
+from libcpp.algorithm cimport sort as std_sort, unique as std_unique
+
+def get_all_nodes_cython(
+    list children,
+    list cluster_edges,
+    ITYPE_t[::1] U_mst,
+    ITYPE_t[::1] V_mst
+):
+    """
+    Reconstructs the full set of nodes for each cluster from the diff-based edge lists.
+    """
+    cdef Py_ssize_t n_clusters = len(children)
+    cdef vector[vector[ITYPE_t]] nodes_all = vector[vector[ITYPE_t]](n_clusters)
+    cdef vector[ITYPE_t] edges_local
+    cdef vector[ITYPE_t] ch
+    cdef ITYPE_t u, v, e_idx
+    cdef Py_ssize_t i, j
+    for i in range(n_clusters):
+        ch = children[i]
+        for j in range(ch.size()):
+            nodes_all[i].insert(nodes_all[i].end(), nodes_all[ch[j]].begin(), nodes_all[ch[j]].end())
+        edges_local = cluster_edges[i]
+        for j in range(edges_local.size()):
+            e_idx = edges_local[j]
+            nodes_all[i].push_back(U_mst[e_idx])
+            nodes_all[i].push_back(V_mst[e_idx])
+        std_sort(nodes_all[i].begin(), nodes_all[i].end())
+        nodes_all[i].erase(std_unique(nodes_all[i].begin(), nodes_all[i].end()), nodes_all[i].end())
+    py_nodes_all = []
+    cdef np.ndarray[np.int64_t, ndim=1] arr
+    cdef np.int64_t[:] arr_view
+    for i in range(n_clusters):
+        if nodes_all[i].empty():
+            py_nodes_all.append(np.empty(0, dtype=np.int64))
+        else:
+            arr = np.empty(nodes_all[i].size(), dtype=np.int64)
+            arr_view = arr
+            for j in range(nodes_all[i].size()):
+                arr_view[j] = nodes_all[i][j]
+            py_nodes_all.append(arr)
+    return py_nodes_all

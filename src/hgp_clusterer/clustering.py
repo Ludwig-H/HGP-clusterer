@@ -69,7 +69,7 @@ EPS = 1e-12
 # Core: condensed tree
 # ======================
 
-from ._cython import condense_tree_cython
+from ._cython import condense_tree_cython, get_all_nodes_cython
 
 # ======================
 # Core: condensed tree
@@ -308,17 +308,12 @@ def _compute_nodes_all(Z: Dict[str, Any]) -> List[np.ndarray]:
     """Return per-cluster list of node indices (sorted unique). Reconstructs from Z['edges'] and MST (U,V).
     Assumes every cluster's edges stay internal to that cluster, which holds for this construction.
     """
-    U = Z['U']; V = Z['V']; M = Z['M']
-    nodes_all: List[np.ndarray] = []
-    for edges in Z['edges']:
-        if not edges:
-            nodes_all.append(np.empty(0, dtype=np.int64))
-            continue
-        idx = np.asarray(edges, dtype=np.int64)
-        idx = idx[(idx >= 0) & (idx < M)]
-        pts = np.unique(np.r_[U[idx], V[idx]].astype(np.int64))
-        nodes_all.append(pts)
-    return nodes_all
+    U = Z['U']; V = Z['V']
+    children = Z['children']
+    cluster_edges = Z['edges'] # These are now diffs only!
+    
+    # Use optimized Cython reconstruction
+    return get_all_nodes_cython(children, cluster_edges, U, V)
 
 
 def _roots_of_Z(Z: Dict[str, Any]) -> List[int]:
