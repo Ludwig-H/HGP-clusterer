@@ -271,6 +271,231 @@ cdef inline np.int64_t _max_i64(np.int64_t a, np.int64_t b) nogil:
     return a if a >= b else b
 
 
+from libcpp.vector cimport vector
+from libc.math cimport NAN, isnan, fabs
+
+def condense_tree_cython(
+    DTYPE_t[::1] W_nodes,
+    ITYPE_t[::1] U_mst,
+    ITYPE_t[::1] V_mst,
+    DTYPE_t[::1] W_mst,
+    ITYPE_t min_cluster_size,
+    bint check_sorted=True
+):
+    """
+    Cython optimized version of condense_tree.
+    """
+    cdef Py_ssize_t N = W_nodes.shape[0]
+    cdef Py_ssize_t M = W_mst.shape[0]
+    cdef Py_ssize_t i
+    
+    # Declarations for inside loop
+    cdef vector[ITYPE_t] new_ch
+    cdef vector[ITYPE_t] new_edges
+
+    # Internal Union-Find state (we don't use the class to avoid overhead/api mismatch)
+    cdef vector[ITYPE_t] parent = vector[ITYPE_t](N)
+    cdef vector[double] comp_weight = vector[double](N)
+    cdef vector[ITYPE_t] comp_cid = vector[ITYPE_t](N)
+    cdef vector[vector[ITYPE_t]] comp_edges = vector[vector[ITYPE_t]](N)
+
+    # Cluster data
+    cdef vector[vector[ITYPE_t]] children
+    cdef vector[double] birth_r
+    cdef vector[double] death_r
+    cdef vector[double] stability
+    cdef vector[vector[ITYPE_t]] cluster_edges
+    cdef vector[double] size_at_birth
+    cdef vector[double] n_in_cluster
+    cdef vector[double] sum_join_lambda
+
+    cdef double EPS = 1e-12
+    cdef ITYPE_t u, v, ru, rv, cid, cid_u, cid_v, cid_new
+    cdef double r, lam, n_in, n_parent
+
+    if U_mst.shape[0] != M or V_mst.shape[0] != M:
+        raise ValueError("U_mst, V_mst, W_mst must have same length M")
+    if N != M + 1:
+        raise ValueError(f"Expected N = M + 1, got N={N}, M={M}")
+    
+    if check_sorted:
+        for i in range(M - 1):
+            if W_mst[i+1] < W_mst[i]:
+                raise ValueError("W_mst must be sorted in non-decreasing order")
+    
+    for i in range(N):
+        parent[i] = i
+        comp_weight[i] = W_nodes[i]
+        comp_cid[i] = -1
+
+    for i in range(M):
+        u = U_mst[i]
+        v = V_mst[i]
+        r = W_mst[i]
+        lam = 1.0 / (r + EPS)
+
+        # Find with path compression
+        ru = u
+        while parent[ru] != ru:
+            parent[ru] = parent[parent[ru]]
+            ru = parent[ru]
+        
+        rv = v
+        while parent[rv] != rv:
+            parent[rv] = parent[parent[rv]]
+            rv = parent[rv]
+        
+        if ru == rv:
+            continue
+            
+        # elig_u/elig_v based on comp_cid != -1
+        # Python: elig_u = comp_cid[ru] != -1
+        
+        if comp_cid[ru] == -1 and comp_cid[rv] == -1:
+            # Case 1: Both ineligible
+            if comp_weight[ru] < comp_weight[rv]:
+                ru, rv = rv, ru
+            parent[rv] = ru
+            comp_weight[ru] += comp_weight[rv]
+            
+            # Merge edges
+            if not comp_edges[rv].empty():
+                comp_edges[ru].insert(comp_edges[ru].end(), comp_edges[rv].begin(), comp_edges[rv].end())
+                comp_edges[rv].clear()
+            comp_edges[ru].push_back(i)
+            
+            # Check if becomes eligible
+            if comp_cid[ru] == -1 and comp_weight[ru] >= min_cluster_size:
+                # New leaf
+                cid = children.size()
+                children.push_back(vector[ITYPE_t]())
+                birth_r.push_back(r)
+                death_r.push_back(NAN)
+                stability.push_back(0.0)
+                cluster_edges.push_back(comp_edges[ru]) # Copy
+                comp_edges[ru].clear()
+                
+                size_at_birth.push_back(comp_weight[ru])
+                n_in_cluster.push_back(comp_weight[ru])
+                sum_join_lambda.push_back(comp_weight[ru] * lam)
+                
+                comp_cid[ru] = cid
+
+        elif comp_cid[ru] != -1 and comp_cid[rv] == -1:
+            # Case 2: ru eligible, rv ineligible -> attach rv to ru
+            parent[rv] = ru
+            comp_weight[ru] += comp_weight[rv]
+            cid = comp_cid[ru]
+            
+            if not comp_edges[rv].empty():
+                cluster_edges[cid].insert(cluster_edges[cid].end(), comp_edges[rv].begin(), comp_edges[rv].end())
+                comp_edges[rv].clear()
+            cluster_edges[cid].push_back(i)
+            
+            n_in = comp_weight[rv]
+            n_in_cluster[cid] += n_in
+            sum_join_lambda[cid] += n_in * lam
+
+        elif comp_cid[ru] == -1 and comp_cid[rv] != -1:
+            # Case 3: ru ineligible, rv eligible -> attach ru to rv
+            parent[ru] = rv
+            comp_weight[rv] += comp_weight[ru]
+            cid = comp_cid[rv]
+            
+            if not comp_edges[ru].empty():
+                cluster_edges[cid].insert(cluster_edges[cid].end(), comp_edges[ru].begin(), comp_edges[ru].end())
+                comp_edges[ru].clear()
+            cluster_edges[cid].push_back(i)
+            
+            n_in = comp_weight[ru]
+            n_in_cluster[cid] += n_in
+            sum_join_lambda[cid] += n_in * lam
+            
+        else:
+            # Case 4: Both eligible -> Merge two clusters
+            cid_u = comp_cid[ru]
+            cid_v = comp_cid[rv]
+            
+            # Close children
+            if isnan(death_r[cid_u]):
+                death_r[cid_u] = r
+                stability[cid_u] += sum_join_lambda[cid_u] - n_in_cluster[cid_u] * lam
+            
+            if isnan(death_r[cid_v]):
+                death_r[cid_v] = r
+                stability[cid_v] += sum_join_lambda[cid_v] - n_in_cluster[cid_v] * lam
+            
+            # Create parent
+            cid_new = children.size()
+            new_ch.clear() # Clear reused vector
+            new_ch.push_back(cid_u)
+            new_ch.push_back(cid_v)
+            children.push_back(new_ch)
+            
+            birth_r.push_back(r)
+            death_r.push_back(NAN)
+            stability.push_back(0.0)
+            
+            # Merge edges of children + current edge
+            new_edges.clear() # Clear reused vector
+            if not cluster_edges[cid_u].empty():
+                new_edges.insert(new_edges.end(), cluster_edges[cid_u].begin(), cluster_edges[cid_u].end())
+            if not cluster_edges[cid_v].empty():
+                new_edges.insert(new_edges.end(), cluster_edges[cid_v].begin(), cluster_edges[cid_v].end())
+            new_edges.push_back(i)
+            cluster_edges.push_back(new_edges)
+            
+            n_parent = n_in_cluster[cid_u] + n_in_cluster[cid_v]
+            size_at_birth.push_back(n_parent)
+            n_in_cluster.push_back(n_parent)
+            sum_join_lambda.push_back(n_parent * lam)
+            
+            # Union components
+            if comp_weight[ru] < comp_weight[rv]:
+                ru, rv = rv, ru
+            parent[rv] = ru
+            comp_weight[ru] += comp_weight[rv]
+            comp_cid[ru] = cid_new
+            comp_cid[rv] = -1
+
+    # Finalize stability
+    cdef Py_ssize_t n_clusters = children.size()
+    cdef np.ndarray[np.float64_t, ndim=1] lambda_birth_arr = np.empty(n_clusters, dtype=np.float64)
+    cdef np.ndarray[np.float64_t, ndim=1] lambda_death_arr = np.empty(n_clusters, dtype=np.float64)
+    
+    for i in range(n_clusters):
+        lambda_birth_arr[i] = 1.0 / (birth_r[i] + EPS)
+        if isnan(death_r[i]):
+            stability[i] += sum_join_lambda[i]
+            lambda_death_arr[i] = 0.0
+        else:
+            lambda_death_arr[i] = 1.0 / (death_r[i] + EPS)
+            
+    # Convert vectors to Python objects for return
+    py_children = []
+    for i in range(n_clusters):
+        py_children.append(children[i])
+        
+    py_cluster_edges = []
+    for i in range(n_clusters):
+        py_cluster_edges.append(cluster_edges[i])
+        
+    return {
+        'children': py_children,
+        'r': np.asarray(birth_r, dtype=np.float64),
+        'stability': np.asarray(stability, dtype=np.float64),
+        'edges': py_cluster_edges,
+        'size': np.asarray(size_at_birth, dtype=np.float64),
+        'lambda_birth': lambda_birth_arr,
+        'lambda_death': lambda_death_arr,
+        'U': np.asarray(U_mst),
+        'V': np.asarray(V_mst),
+        'W': np.asarray(W_mst),
+        'N': int(N),
+        'M': int(M),
+    }
+
+
 cpdef tuple build_leaf_dfs_intervals(
     np.ndarray[np.int64_t, ndim=1] left,
     np.ndarray[np.int64_t, ndim=1] right,

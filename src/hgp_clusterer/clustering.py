@@ -69,6 +69,12 @@ EPS = 1e-12
 # Core: condensed tree
 # ======================
 
+from ._cython import condense_tree_cython
+
+# ======================
+# Core: condensed tree
+# ======================
+
 def condense_tree(
     W_nodes: np.ndarray,
     U_mst: np.ndarray,
@@ -97,6 +103,23 @@ def condense_tree(
     Z : dict
         Condensed tree structure as described in the module docstring.
     """
+    # Delegate to the optimized Cython implementation
+    return condense_tree_cython(
+        W_nodes, U_mst, V_mst, W_mst, min_cluster_size, check_sorted
+    )
+
+# The original pure Python implementation is preserved below for reference.
+# It is commented out to ensure the optimized Cython version is used.
+"""
+def condense_tree(
+    W_nodes: np.ndarray,
+    U_mst: np.ndarray,
+    V_mst: np.ndarray,
+    W_mst: np.ndarray,
+    min_cluster_size: int,
+    check_sorted: bool = True,
+) -> Dict[str, Any]:
+    # ... (Original docstring) ...
     W_nodes = np.asarray(W_nodes, dtype=float)
     U_mst = np.asarray(U_mst, dtype=np.int64)
     V_mst = np.asarray(V_mst, dtype=np.int64)
@@ -138,9 +161,8 @@ def condense_tree(
     sum_join_lambda: List[float] = []
 
     def new_leaf_from_component(root: int, r_birth: float, lam: float):
-        """Promote an ineligible component to an eligible *leaf* cluster at radius r_birth.
-        All current members join at lambda=lam, contributing later until the cluster dies.
-        """
+        # Promote an ineligible component to an eligible *leaf* cluster at radius r_birth.
+        # All current members join at lambda=lam, contributing later until the cluster dies.
         cid = len(children)
         children.append([])
         birth_r.append(float(r_birth))
@@ -275,6 +297,7 @@ def condense_tree(
         'M': int(M),
     }
     return Z
+"""
 
 
 # =====================================
