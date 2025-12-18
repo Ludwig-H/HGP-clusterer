@@ -585,42 +585,70 @@ cpdef tuple build_leaf_dfs_intervals(
 
 from libcpp.algorithm cimport sort as std_sort, unique as std_unique
 
-def get_all_nodes_cython(
-    list children,
+def get_nodes_from_cids_cython(
+    list cids_to_extract,
+    list children, 
     list cluster_edges,
     ITYPE_t[::1] U_mst,
     ITYPE_t[::1] V_mst
 ):
     """
-    Reconstructs the full set of nodes for each cluster from the diff-based edge lists.
+    Reconstructs the set of nodes for specific clusters by traversing their subtrees
+    and collecting local edges (diffs).
     """
-    cdef Py_ssize_t n_clusters = len(children)
-    cdef vector[vector[ITYPE_t]] nodes_all = vector[vector[ITYPE_t]](n_clusters)
+    cdef Py_ssize_t n_requested = len(cids_to_extract)
+    cdef vector[vector[ITYPE_t]] results = vector[vector[ITYPE_t]](n_requested)
+    
+    cdef vector[ITYPE_t] stack
     cdef vector[ITYPE_t] edges_local
     cdef vector[ITYPE_t] ch
-    cdef ITYPE_t u, v, e_idx
-    cdef Py_ssize_t i, j
-    for i in range(n_clusters):
-        ch = children[i]
-        for j in range(ch.size()):
-            nodes_all[i].insert(nodes_all[i].end(), nodes_all[ch[j]].begin(), nodes_all[ch[j]].end())
-        edges_local = cluster_edges[i]
-        for j in range(edges_local.size()):
-            e_idx = edges_local[j]
-            nodes_all[i].push_back(U_mst[e_idx])
-            nodes_all[i].push_back(V_mst[e_idx])
-        std_sort(nodes_all[i].begin(), nodes_all[i].end())
-        nodes_all[i].erase(std_unique(nodes_all[i].begin(), nodes_all[i].end()), nodes_all[i].end())
-    py_nodes_all = []
+    cdef ITYPE_t cid, curr, e_idx, u, v
+    cdef Py_ssize_t i, j, k
+    
+    for i in range(n_requested):
+        cid = cids_to_extract[i]
+        if cid < 0:
+            # Handle empty/invalid cid if necessary, though typical logic shouldn't pass -1
+            continue
+            
+        stack.clear()
+        stack.push_back(cid)
+        
+        # DFS to collect all edges in the subtree
+        while not stack.empty():
+            curr = stack.back()
+            stack.pop_back()
+            
+            # 1. Collect nodes from local edges of the current cluster/component
+            edges_local = cluster_edges[curr]
+            for j in range(edges_local.size()):
+                e_idx = edges_local[j]
+                results[i].push_back(U_mst[e_idx])
+                results[i].push_back(V_mst[e_idx])
+            
+            # 2. Push children to stack
+            ch = children[curr]
+            for j in range(ch.size()):
+                stack.push_back(ch[j])
+                
+        # Sort and Unique to get the set of points
+        if not results[i].empty():
+            std_sort(results[i].begin(), results[i].end())
+            results[i].erase(std_unique(results[i].begin(), results[i].end()), results[i].end())
+
+    # Convert to Python list of numpy arrays
+    py_results = []
     cdef np.ndarray[np.int64_t, ndim=1] arr
     cdef np.int64_t[:] arr_view
-    for i in range(n_clusters):
-        if nodes_all[i].empty():
-            py_nodes_all.append(np.empty(0, dtype=np.int64))
+    
+    for i in range(n_requested):
+        if results[i].empty():
+            py_results.append(np.empty(0, dtype=np.int64))
         else:
-            arr = np.empty(nodes_all[i].size(), dtype=np.int64)
+            arr = np.empty(results[i].size(), dtype=np.int64)
             arr_view = arr
-            for j in range(nodes_all[i].size()):
-                arr_view[j] = nodes_all[i][j]
-            py_nodes_all.append(arr)
-    return py_nodes_all
+            for j in range(results[i].size()):
+                arr_view[j] = results[i][j]
+            py_results.append(arr)
+            
+    return py_results
