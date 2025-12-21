@@ -211,13 +211,15 @@ def HypergraphPercol(
         W_nodes_cc = W_nodes[uniques]
         Z_cc = condense_tree(W_nodes_cc, U_new, V_new, W_mst, min_cluster_size=min_cluster_size, check_sorted=True) # check_sorted à mettre à False
         if verbeux :
-            print(f"condense_tree appliqué. Z_cc = {Z_cc}")
+            print(f"condense_tree appliqué. Z_cc (keys): {list(Z_cc.keys())}")
+            
         if splitting is None :
             res = GetClusters(Z_cc, method, splitting=splitting, verbose=verbeux)
         else :
             res = GetClusters(Z_cc, method, splitting=splitting, points=X, Face_to_points=Face_to_points, verbose=verbeux)    
         if verbeux :
-            print("GetClusters")
+            print("GetClusters appliqué.")
+
         max_index = -1
         for idx, nodes in enumerate(res['clusters']):
             if idx > max_index :
