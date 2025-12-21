@@ -219,11 +219,7 @@ def _eom_select(Z: Dict[str, Any]) -> List[int]:
 
 def _build_dfs_structure(Z: Dict[str, Any]) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
     """
-    Prepares the O(1) node extraction structure.
-    Returns:
-        nodes_ordered: Array of node indices sorted by their leaf's DFS rank.
-        first: Array of shape (n_clusters,) - start index in nodes_ordered for each cluster.
-        last: Array of shape (n_clusters,) - end index (exclusive) in nodes_ordered for each cluster.
+    Prepares the O(1) node extraction structure using Full Post-Order Traversal.
     """
     children = Z['children']
     initial_membership = Z.get('initial_membership')
@@ -231,164 +227,90 @@ def _build_dfs_structure(Z: Dict[str, Any]) -> Tuple[np.ndarray, np.ndarray, np.
         raise ValueError("Z does not contain 'initial_membership'. Re-run condense_tree.")
 
     n_clusters = len(children)
-    # 1. Build binary tree arrays for Cython
-    # In condense_tree, new clusters are strictly binary merges (except leaves which have no children)
-    # Indices are topological: children < parent.
-    # However, to be safe with Cython logic which expects [0..t-1] leaves and [t..m+t-2] internal,
-    # we need to be careful. Our Z indices are just 0..K-1 mixed.
-    # But wait, our condense_tree logic (standard HDBSCAN) creates a structure where:
-    # - Leaves are created first? Not necessarily.
-    # - But parents are always created AFTER children.
-    # The Cython `build_leaf_dfs_intervals` expects a specific SciPy-like linkage format:
-    # leaves are 0..N-1, internal nodes N..2N-2.
-    # OUR Z STRUCTURE IS NOT SCIPY-LIKE. It's a general list where children can be anywhere < current.
-    #
-    # ADAPTATION: We will map our Z indices to a SciPy-like structure for the traversal.
-    # Or, simpler: We rewrite the DFS in Python here because the structure conversion cost
-    # might outweigh the traversal gain for "only" millions of points but "only" thousands of clusters.
-    # Actually, the number of clusters is O(N) worst case but usually much smaller.
-    # Let's do a fast iterative DFS in Python/NumPy. It's safe for thousands of clusters.
     
-    # Identify leaves in Z
-    is_leaf = np.array([not bool(ch) for ch in children])
-    leaves_z_idx = np.where(is_leaf)[0]
-    n_leaves = len(leaves_z_idx)
-    
-    # Map Z_index -> Leaf_Rank (0..n_leaves-1) for leaves, -1 otherwise
-    leaf_rank = np.full(n_clusters, -1, dtype=np.int64)
-    leaf_rank[leaves_z_idx] = np.arange(n_leaves)
-    
-    # Compute interval [min_rank, max_rank] for each cluster
-    # Iterative post-order traversal (bottom-up) is easy because parents > children in Z construction?
-    # Actually condense_tree appends parents after children. So we can just iterate backwards or forwards?
-    # Forward iteration 0..K-1 works perfectly for bottom-up accumulation!
-    
-    min_rank = np.full(n_clusters, 2**60, dtype=np.int64)
-    max_rank = np.full(n_clusters, -1, dtype=np.int64)
-    
-    # Initialize leaves
-    min_rank[leaves_z_idx] = leaf_rank[leaves_z_idx]
-    max_rank[leaves_z_idx] = leaf_rank[leaves_z_idx] + 1 # Exclusive end
-    
-    # Propagate up
-    # However, we need the specific DFS order for this to be a single interval.
-    # Simply propagating min/max is only valid if the tree is planar/ordered such that leaves are contiguous.
-    # We must enforce an ordering. A simple DFS traversal defines this ordering.
-    
-    # DFS to assign ranks
-    # Recursive is risky. Iterative DFS:
-    stack = list(_roots_of_Z(Z))
-    # We need to visit leaves in order.
-    # Pre-order traversal to collect leaves?
-    # Actually we want the mapping: Leaf_Z_ID -> DFS_Order_Index
-    
-    dfs_order_leaves = []
-    
-    # Standard Iterative DFS
-    visited = set()
-    stack = list(reversed(_roots_of_Z(Z))) # Process roots
-    while stack:
-        curr = stack.pop()
-        ch = children[curr]
-        if not ch:
-            dfs_order_leaves.append(curr)
-        else:
-            # Push children right then left so left is processed first
-            stack.append(ch[1])
-            stack.append(ch[0])
-            
-    # Now we have the correct permutation of leaves
-    leaf_z_to_dfs_rank = np.full(n_clusters, -1, dtype=np.int64)
-    dfs_order_leaves_arr = np.array(dfs_order_leaves, dtype=np.int64)
-    leaf_z_to_dfs_rank[dfs_order_leaves_arr] = np.arange(n_leaves)
-    
-    # Now propagate intervals bottom-up
-    # Since Z is topologically sorted (parents > children), we can just loop 0..K-1?
-    # NO. Z indices are chronological by edge weight, not strictly topological in hierarchy depth?
-    # Actually condense_tree appends new clusters. So a parent ALWAYS has a higher index than its children.
-    # Proof: Parent created at merge of u, v. u and v must exist (have indices) before merge.
-    # So iterating 0..K-1 is valid for leaves, but iterating 0..K-1 is also valid for bottom-up!
-    
-    min_dfs = np.full(n_clusters, 2**60, dtype=np.int64)
+    dfs_rank = np.full(n_clusters, -1, dtype=np.int64)
+    min_dfs = np.full(n_clusters, -1, dtype=np.int64)
     max_dfs = np.full(n_clusters, -1, dtype=np.int64)
     
-    # Initialize leaves with their new rank
-    # Note: loop over all clusters to handle leaves and propagate
-    for i in range(n_clusters):
-        if not children[i]:
-            rank = leaf_z_to_dfs_rank[i]
-            if rank != -1: # Should be true
-                min_dfs[i] = rank
-                max_dfs[i] = rank + 1
+    # Iterative Post-Order
+    visit_stack = list(_roots_of_Z(Z))
+    process_stack = []
+    
+    while visit_stack:
+        curr = visit_stack.pop()
+        process_stack.append(curr)
+        ch = children[curr]
+        if ch:
+            for c in ch:
+                visit_stack.append(c)
+    
+    current_rank_cursor = 0
+    
+    # Iterate in Post-Order (Children -> Root)
+    for curr in reversed(process_stack):
+        ch = children[curr]
+        
+        my_rank = current_rank_cursor
+        current_rank_cursor += 1
+        dfs_rank[curr] = my_rank
+        
+        if not ch:
+            # Leaf
+            min_dfs[curr] = my_rank
+            max_dfs[curr] = my_rank + 1
         else:
-            # Merge children intervals
-            # Since we defined DFS order by traversing left then right child,
-            # the interval is [min(left), max(right)]
-            c1, c2 = children[i]
-            # Because i > c1 and i > c2, c1 and c2 are already processed
-            low = min(min_dfs[c1], min_dfs[c2])
-            high = max(max_dfs[c1], max_dfs[c2])
-            min_dfs[i] = low
-            max_dfs[i] = high
+            child_starts = [min_dfs[c] for c in ch]
+            min_dfs[curr] = min(child_starts)
+            max_dfs[curr] = my_rank + 1
 
     # 2. Sort the actual points
-    # initial_membership contains Leaf_Z_IDs.
-    # We map them to DFS_ranks.
-    # Points with membership -1 (noise) get rank -1
+    mask_noise = initial_membership == -1
+    valid_membership = initial_membership[~mask_noise]
     
-    # Vectorized map
-    membership_dfs_rank = np.full_like(initial_membership, -1)
-    mask = initial_membership != -1
-    # Only map valid memberships
-    valid_members = initial_membership[mask]
-    membership_dfs_rank[mask] = leaf_z_to_dfs_rank[valid_members]
+    # Valid membership must be within [0, n_clusters-1]
+    # Check bounds (DEBUG)
+    # if len(valid_membership) > 0:
+    #    print(f"DEBUG: valid_membership range [{valid_membership.min()}, {valid_membership.max()}]")
+        
+    valid_ranks = dfs_rank[valid_membership]
     
-    # Sort points by this rank
-    # We want noise (-1) at the end or beginning?
-    # argsort puts -1 at the beginning.
-    # We need to know where the first real leaf starts.
+    # Check validity of ranks (DEBUG)
+    # n_invalid_ranks = (valid_ranks == -1).sum()
+    # if n_invalid_ranks > 0:
+    #    print(f"DEBUG: FOUND {n_invalid_ranks} points pointing to unvisited clusters!")
     
-    order = np.argsort(membership_dfs_rank)
-    sorted_ranks = membership_dfs_rank[order]
+    full_ranks = np.full(len(initial_membership), -1, dtype=np.int64)
+    full_ranks[~mask_noise] = valid_ranks
     
-    # Find start of non-noise
-    # searchsorted finds the first index >= 0
+    order = np.argsort(full_ranks)
+    sorted_ranks = full_ranks[order]
+    
     start_valid_idx = np.searchsorted(sorted_ranks, 0)
     
-    # The leaves cover the range [0, n_leaves) in rank space.
-    # In node array space, rank R starts at 'start_of_R' and ends at 'end_of_R'.
-    # We can precompute these offsets efficiently.
+    n_ranks = n_clusters # Rank can go up to n_clusters-1
+    # Actually current_rank_cursor is the number of ranks used. It should equal len(process_stack).
+    # If process_stack < n_clusters, some nodes are unreachable (forest?) -> they stay rank -1.
     
-    # Counts per rank
-    # Bincount works on non-negative integers.
-    if n_leaves > 0:
-        counts = np.bincount(sorted_ranks[start_valid_idx:])
-        # Check if counts matches n_leaves
-        if len(counts) < n_leaves:
-            # Pad if some leaves are empty (possible?)
-            counts = np.pad(counts, (0, n_leaves - len(counts)))
+    if n_ranks > 0:
+        counts = np.bincount(sorted_ranks[start_valid_idx:], minlength=n_ranks)
         
-        offsets = np.zeros(n_leaves + 1, dtype=np.int64)
+        offsets = np.zeros(n_ranks + 1, dtype=np.int64)
         offsets[0] = start_valid_idx
         np.cumsum(counts, out=offsets[1:])
         
-        # Now, for any cluster C, its points are nodes_ordered[offsets[min_dfs[C]] : offsets[max_dfs[C]]]
-        # Because the interval [min_dfs, max_dfs) in ranks corresponds to range of offsets.
+        cluster_start = np.take(offsets, min_dfs)
+        cluster_end = np.take(offsets, max_dfs)
         
-        # Map back to cluster arrays
-        # We need efficient lookup.
-        # Let's return the simplified arrays
-        
-        # Global arrays for GetClusters
-        # Access: nodes_ordered[ cluster_start[cid] : cluster_end[cid] ]
-        
-        cluster_start = np.take(offsets, min_dfs) # shape (n_clusters,)
-        cluster_end = np.take(offsets, max_dfs)   # shape (n_clusters,)
-        
-        # Safety for clusters that are effectively empty or invalid?
-        # If min_dfs > max_dfs (should not happen), slice is empty.
+        # Handle nodes that were not visited (rank -1)
+        # min_dfs/max_dfs are -1 for them.
+        # take(-1) takes the last element. We should handle this.
+        # Set their range to empty [0,0] or similar.
+        mask_unvisited = (min_dfs == -1)
+        cluster_start[mask_unvisited] = 0
+        cluster_end[mask_unvisited] = 0
         
         return order, cluster_start, cluster_end
+        
     else:
         return np.arange(len(initial_membership)), np.zeros(n_clusters, dtype=int), np.zeros(n_clusters, dtype=int)
 
