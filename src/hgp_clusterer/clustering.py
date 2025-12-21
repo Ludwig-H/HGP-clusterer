@@ -176,8 +176,9 @@ def _eom_select(Z: Dict[str, Any]) -> List[int]:
     # let's use a boolean array: keep_self[i] = True if stab[i] >= V[children]
     keep_self = np.ones(n_clusters, dtype=bool)
     
-    # Iterate backwards (leaves are already processed implicitly as they have no children)
-    for i in range(n_clusters - 1, -1, -1):
+    # Iterate forward (0 to n_clusters-1).
+    # Since children indices < parent indices, this ensures Children are processed BEFORE Parents (Bottom-Up).
+    for i in range(n_clusters):
         ch = children[i]
         if ch:
             # Sum of max_stabilities of children
