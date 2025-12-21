@@ -297,21 +297,26 @@ def condense_tree_cython(
     cdef vector[ITYPE_t] parent = vector[ITYPE_t](N)
     cdef vector[double] comp_weight = vector[double](N)
     cdef vector[ITYPE_t] comp_cid = vector[ITYPE_t](N)
-    cdef vector[vector[ITYPE_t]] comp_edges = vector[vector[ITYPE_t]](N)
+    # REPLACE comp_edges with comp_nodes to track points until they enter a cluster
+    cdef vector[vector[ITYPE_t]] comp_nodes = vector[vector[ITYPE_t]](N)
+
+    # Output: Map each point to the FIRST cluster (leaf) it enters. -1 if noise/never eligible.
+    cdef np.ndarray[np.int64_t, ndim=1] initial_membership = np.full(N, -1, dtype=np.int64)
 
     # Cluster data
     cdef vector[vector[ITYPE_t]] children
     cdef vector[double] birth_r
     cdef vector[double] death_r
     cdef vector[double] stability
-    cdef vector[vector[ITYPE_t]] cluster_edges
+    # No explicit edge tracking per cluster anymore
     cdef vector[double] size_at_birth
     cdef vector[double] n_in_cluster
     cdef vector[double] sum_join_lambda
 
     cdef double EPS = 1e-12
-    cdef ITYPE_t u, v, ru, rv, cid, cid_u, cid_v, cid_new
+    cdef ITYPE_t u, v, ru, rv, cid, cid_u, cid_v, cid_new, node_idx
     cdef double r, lam, n_in, n_parent
+    cdef Py_ssize_t j_node
 
     if U_mst.shape[0] != M or V_mst.shape[0] != M:
         raise ValueError("U_mst, V_mst, W_mst must have same length M")
@@ -327,6 +332,8 @@ def condense_tree_cython(
         parent[i] = i
         comp_weight[i] = W_nodes[i]
         comp_cid[i] = -1
+        # Initialize component with itself
+        comp_nodes[i].push_back(i)
 
     for i in range(M):
         u = U_mst[i]
@@ -347,37 +354,40 @@ def condense_tree_cython(
         
         if ru == rv:
             continue
-            
-        # elig_u/elig_v based on comp_cid != -1
-        # Python: elig_u = comp_cid[ru] != -1
         
         if comp_cid[ru] == -1 and comp_cid[rv] == -1:
             # Case 1: Both ineligible
-            if comp_weight[ru] < comp_weight[rv]:
+            # Weighted Union (Size of node set) for efficiency (Small-to-Large)
+            if comp_nodes[ru].size() < comp_nodes[rv].size():
                 ru, rv = rv, ru
+            
             parent[rv] = ru
             comp_weight[ru] += comp_weight[rv]
             
-            # Merge edges
-            if not comp_edges[rv].empty():
-                comp_edges[ru].insert(comp_edges[ru].end(), comp_edges[rv].begin(), comp_edges[rv].end())
-                comp_edges[rv].clear()
-            comp_edges[ru].push_back(i)
+            # Merge nodes: Move rv nodes to ru
+            comp_nodes[ru].insert(comp_nodes[ru].end(), comp_nodes[rv].begin(), comp_nodes[rv].end())
+            comp_nodes[rv].clear() # Release memory of child component
             
             # Check if becomes eligible
-            if comp_cid[ru] == -1 and comp_weight[ru] >= min_cluster_size:
+            if comp_weight[ru] >= min_cluster_size:
                 # New leaf
                 cid = children.size()
                 children.push_back(vector[ITYPE_t]())
                 birth_r.push_back(r)
                 death_r.push_back(NAN)
                 stability.push_back(0.0)
-                cluster_edges.push_back(comp_edges[ru]) # Copy
-                comp_edges[ru].clear()
                 
                 size_at_birth.push_back(comp_weight[ru])
                 n_in_cluster.push_back(comp_weight[ru])
                 sum_join_lambda.push_back(comp_weight[ru] * lam)
+                
+                # Assign all current nodes to this new leaf cluster
+                for j_node in range(comp_nodes[ru].size()):
+                    node_idx = comp_nodes[ru][j_node]
+                    initial_membership[node_idx] = cid
+                
+                # Clear nodes from memory, they are now tracked by initial_membership
+                comp_nodes[ru].clear()
                 
                 comp_cid[ru] = cid
 
@@ -387,11 +397,14 @@ def condense_tree_cython(
             comp_weight[ru] += comp_weight[rv]
             cid = comp_cid[ru]
             
-            if not comp_edges[rv].empty():
-                cluster_edges[cid].insert(cluster_edges[cid].end(), comp_edges[rv].begin(), comp_edges[rv].end())
-                comp_edges[rv].clear()
-            cluster_edges[cid].push_back(i)
-            
+            # The nodes in rv (ineligible) are now joining an existing cluster system
+            # Note: In standard HDBSCAN, they join the *current* cluster `cid`.
+            # We map them to `cid` in initial_membership.
+            for j_node in range(comp_nodes[rv].size()):
+                node_idx = comp_nodes[rv][j_node]
+                initial_membership[node_idx] = cid
+            comp_nodes[rv].clear()
+
             n_in = comp_weight[rv]
             n_in_cluster[cid] += n_in
             sum_join_lambda[cid] += n_in * lam
@@ -402,10 +415,10 @@ def condense_tree_cython(
             comp_weight[rv] += comp_weight[ru]
             cid = comp_cid[rv]
             
-            if not comp_edges[ru].empty():
-                cluster_edges[cid].insert(cluster_edges[cid].end(), comp_edges[ru].begin(), comp_edges[ru].end())
-                comp_edges[ru].clear()
-            cluster_edges[cid].push_back(i)
+            for j_node in range(comp_nodes[ru].size()):
+                node_idx = comp_nodes[ru][j_node]
+                initial_membership[node_idx] = cid
+            comp_nodes[ru].clear()
             
             n_in = comp_weight[ru]
             n_in_cluster[cid] += n_in
@@ -435,10 +448,6 @@ def condense_tree_cython(
             birth_r.push_back(r)
             death_r.push_back(NAN)
             stability.push_back(0.0)
-            
-            # OPTIMIZATION: Do not copy children edges! Only store local edges.
-            cluster_edges.push_back(vector[ITYPE_t]())
-            cluster_edges.back().push_back(i)
             
             n_parent = n_in_cluster[cid_u] + n_in_cluster[cid_v]
             size_at_birth.push_back(n_parent)
@@ -471,15 +480,11 @@ def condense_tree_cython(
     for i in range(n_clusters):
         py_children.append(children[i])
         
-    py_cluster_edges = []
-    for i in range(n_clusters):
-        py_cluster_edges.append(cluster_edges[i])
-        
     return {
         'children': py_children,
         'r': np.asarray(birth_r, dtype=np.float64),
         'stability': np.asarray(stability, dtype=np.float64),
-        'edges': py_cluster_edges,
+        'initial_membership': initial_membership,
         'size': np.asarray(size_at_birth, dtype=np.float64),
         'lambda_birth': lambda_birth_arr,
         'lambda_death': lambda_death_arr,
@@ -583,72 +588,3 @@ cpdef tuple build_leaf_dfs_intervals(
 
     return pos, first, last, leaf_order
 
-from libcpp.algorithm cimport sort as std_sort, unique as std_unique
-
-def get_nodes_from_cids_cython(
-    list cids_to_extract,
-    list children, 
-    list cluster_edges,
-    ITYPE_t[::1] U_mst,
-    ITYPE_t[::1] V_mst
-):
-    """
-    Reconstructs the set of nodes for specific clusters by traversing their subtrees
-    and collecting local edges (diffs).
-    """
-    cdef Py_ssize_t n_requested = len(cids_to_extract)
-    cdef vector[vector[ITYPE_t]] results = vector[vector[ITYPE_t]](n_requested)
-    
-    cdef vector[ITYPE_t] stack
-    cdef vector[ITYPE_t] edges_local
-    cdef vector[ITYPE_t] ch
-    cdef ITYPE_t cid, curr, e_idx, u, v
-    cdef Py_ssize_t i, j, k
-    
-    for i in range(n_requested):
-        cid = cids_to_extract[i]
-        if cid < 0:
-            # Handle empty/invalid cid if necessary, though typical logic shouldn't pass -1
-            continue
-            
-        stack.clear()
-        stack.push_back(cid)
-        
-        # DFS to collect all edges in the subtree
-        while not stack.empty():
-            curr = stack.back()
-            stack.pop_back()
-            
-            # 1. Collect nodes from local edges of the current cluster/component
-            edges_local = cluster_edges[curr]
-            for j in range(edges_local.size()):
-                e_idx = edges_local[j]
-                results[i].push_back(U_mst[e_idx])
-                results[i].push_back(V_mst[e_idx])
-            
-            # 2. Push children to stack
-            ch = children[curr]
-            for j in range(ch.size()):
-                stack.push_back(ch[j])
-                
-        # Sort and Unique to get the set of points
-        if not results[i].empty():
-            std_sort(results[i].begin(), results[i].end())
-            results[i].erase(std_unique(results[i].begin(), results[i].end()), results[i].end())
-
-    # Convert to Python list of numpy arrays
-    py_results = []
-    cdef np.ndarray[np.int64_t, ndim=1] arr
-    cdef np.int64_t[:] arr_view
-    
-    for i in range(n_requested):
-        if results[i].empty():
-            py_results.append(np.empty(0, dtype=np.int64))
-        else:
-            arr = np.empty(results[i].size(), dtype=np.int64)
-            arr_view = arr
-            for j in range(results[i].size()):
-                arr_view[j] = results[i][j]
-            py_results.append(arr)
-            
-    return py_results
