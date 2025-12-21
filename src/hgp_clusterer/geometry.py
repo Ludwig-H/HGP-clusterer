@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import numpy as np
+from collections import Counter
 
 try:
     import cyminiball as _CYMINIBALL  # type: ignore
@@ -18,6 +19,104 @@ except ImportError:  # pragma: no cover - fallback used when extension unavailab
     _cython_bary_weight_one = None
     _cython_bary_weight_batch = None
     _cython_union_if_adjacent_int = None
+
+# Optional KNN backends
+try:
+    import faiss
+    _HAS_FAISS = True
+except ImportError:
+    _HAS_FAISS = False
+
+try:
+    from scipy.spatial import cKDTree
+    _HAS_SCIPY = True
+except ImportError:
+    _HAS_SCIPY = False
+
+
+def fast_knn_indices(X_train: np.ndarray, X_query: np.ndarray, k: int, metric: str = "euclidean") -> tuple[np.ndarray, np.ndarray]:
+    """
+    Find k-nearest neighbors using the fastest available backend (FAISS > SciPy > Sklearn).
+    Returns (distances, indices).
+    """
+    X_train = np.ascontiguousarray(X_train, dtype=np.float32)
+    X_query = np.ascontiguousarray(X_query, dtype=np.float32)
+    n_samples, d = X_train.shape
+    
+    # 1. FAISS (Euclidean only, but extremely fast)
+    if _HAS_FAISS and metric == "euclidean":
+        # IndexFlatL2 is exact search. For very large N, IVFFlat could be used but requires training.
+        # For clustering sub-samples, exact L2 is usually fine and safe.
+        index = faiss.IndexFlatL2(d)
+        # Check if GPU is available? For now, CPU FAISS is already huge win.
+        index.add(X_train)
+        D, I = index.search(X_query, k)
+        # FAISS returns squared distances
+        return np.sqrt(D), I
+
+    # 2. SciPy cKDTree (Euclidean/Minkowski)
+    if _HAS_SCIPY and metric == "euclidean":
+        tree = cKDTree(X_train)
+        D, I = tree.query(X_query, k=k, workers=-1)
+        return D, I
+
+    # 3. Sklearn (Fallback for other metrics or if deps missing)
+    from sklearn.neighbors import NearestNeighbors
+    nn = NearestNeighbors(n_neighbors=k, metric=metric, n_jobs=-1)
+    nn.fit(X_train)
+    D, I = nn.kneighbors(X_query)
+    return D, I
+
+
+def propagate_labels_knn(X_train: np.ndarray, y_train: np.ndarray, X_query: np.ndarray, k: int = 5, metric: str = "euclidean") -> np.ndarray:
+    """
+    Propagate labels from X_train to X_query using k-NN majority vote.
+    """
+    if k <= 0:
+        raise ValueError("k must be >= 1")
+    
+    # Special case: 1-NN (no voting needed, faster)
+    if k == 1:
+        _, indices = fast_knn_indices(X_train, X_query, k=1, metric=metric)
+        # indices shape (n_query, 1) or (n_query,) depending on backend? 
+        # FAISS returns (n, k), SciPy (n,) if k=1 but we asked for k.
+        # Let's ensure shape.
+        indices = indices.reshape(X_query.shape[0], -1)
+        return y_train[indices[:, 0]]
+
+    _, indices = fast_knn_indices(X_train, X_query, k=k, metric=metric)
+    
+    # Majority Vote
+    # This can be slow in pure Python for millions of points.
+    # We can use SciPy mode if available, or a simple bincount per row.
+    # Since k is small (e.g. 5), a loop is acceptable or we try to vectorize.
+    
+    n_query = X_query.shape[0]
+    y_pred = np.empty(n_query, dtype=y_train.dtype)
+    
+    # Get neighbors labels: shape (n_query, k)
+    neighbor_labels = y_train[indices]
+    
+    # Fast voting for small k
+    from scipy.stats import mode
+    mode_result = mode(neighbor_labels, axis=1, keepdims=False)
+    # SciPy < 1.11 returns ModeResult.mode as array. 
+    # SciPy >= 1.11 uses keepdims.
+    # Let's handle return type safely.
+    if hasattr(mode_result, 'mode'):
+        res = mode_result.mode
+        if np.ndim(res) > 1:
+            y_pred = res.flatten()
+        else:
+            y_pred = res
+    else:
+        # Fallback if scipy mode behaves unexpectedly
+        for i in range(n_query):
+            counts = Counter(neighbor_labels[i])
+            y_pred[i] = counts.most_common(1)[0][0]
+            
+    return y_pred
+
 
 def bary_weight_one(
     M: np.ndarray,
