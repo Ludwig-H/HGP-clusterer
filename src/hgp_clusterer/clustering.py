@@ -145,28 +145,76 @@ def _roots_of_Z(Z: Dict[str, Any]) -> List[int]:
 
 
 def _eom_select(Z: Dict[str, Any]) -> List[int]:
-    """Excess-of-Mass style selection (maximize sum of stabilities over disjoint clusters)."""
+    """Excess-of-Mass style selection (maximize sum of stabilities over disjoint clusters).
+    Iterative implementation to avoid RecursionError on deep trees.
+    """
     children = Z['children']
     stab = Z['stability']
-    from functools import lru_cache
-
-    @lru_cache(maxsize=None)
-    def best_under(j: int) -> Tuple[Tuple[int, ...], float]:
-        ch = children[j]
-        if not ch:
-            return (j,), float(stab[j])
-        sel_l, val_l = best_under(ch[0])
-        sel_r, val_r = best_under(ch[1])
-        if val_l + val_r > stab[j]:
-            return tuple(sel_l + sel_r), float(val_l + val_r)
+    n_clusters = len(children)
+    
+    # We need to compute 'val' (max stability of subtree) and 'selection' for each node.
+    # Since n_clusters can be large, we use arrays/lists.
+    # selection[i] will store a list of selected cluster indices for the subtree rooted at i.
+    # However, storing full lists for every node is O(N^2) memory in worst case (a line).
+    # Optimization: We only need the list if we select the children. If we select the node itself, the list is just [i].
+    # Actually, we only need to know: "Do we select this node i?" (bool)
+    # If yes, we discard children selections. If no, we keep children selections.
+    # So we can just compute a boolean array `is_selected`.
+    # But wait, EOM is global.
+    # Let V[i] be the max stability sum for the subtree at i.
+    # V[i] = max(stab[i], V[left] + V[right])
+    # If stab[i] > sum(V[children]), we mark i as selected (and unmark descendants).
+    
+    # 1. Compute V[i] bottom-up (Post-order traversal)
+    # We can use an iterative post-order or just iterate backwards if indices are topological?
+    # In condense_tree, parents are appended after children. So iterating n_clusters-1 down to 0 ?
+    # Let's verify: "cid_new = len(children)". Yes, parents always have higher index than children.
+    # So reverse iteration is a valid topological sort.
+    
+    max_stab = np.array(stab, dtype=np.float64) # Initialize with self stability
+    # We also need to track WHICH choice we made (Self vs Children)
+    # let's use a boolean array: keep_self[i] = True if stab[i] >= V[children]
+    keep_self = np.ones(n_clusters, dtype=bool)
+    
+    # Iterate backwards (leaves are already processed implicitly as they have no children)
+    for i in range(n_clusters - 1, -1, -1):
+        ch = children[i]
+        if ch:
+            # Sum of max_stabilities of children
+            sum_children_stab = 0.0
+            for c in ch:
+                sum_children_stab += max_stab[c]
+            
+            if sum_children_stab > max_stab[i]:
+                max_stab[i] = sum_children_stab
+                keep_self[i] = False
+            else:
+                # max_stab[i] remains stab[i]
+                keep_self[i] = True
         else:
-            return (j,), float(stab[j])
+            # Leaf: max_stab is already stab[i], keep_self is True
+            pass
 
-    selected: List[int] = []
-    for r in _roots_of_Z(Z):
-        s, _ = best_under(r)
-        selected.extend(list(s))
-    return sorted(set(selected))
+    # 2. Collect selected clusters top-down
+    # Start from roots. If a node is kept, add it and stop. Else recurse to children.
+    selected = []
+    stack = list(_roots_of_Z(Z))
+    
+    while stack:
+        curr = stack.pop()
+        if keep_self[curr]:
+            selected.append(curr)
+        else:
+            # Propagate to children
+            ch = children[curr]
+            if ch:
+                stack.extend(ch)
+            else:
+                # Should not happen if keep_self is False (implies children existed and had better score)
+                # But for safety:
+                selected.append(curr)
+                
+    return sorted(selected)
 
 
 def _build_dfs_structure(Z: Dict[str, Any]) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
