@@ -69,9 +69,68 @@ EPS = 1e-12
 # Core: condensed tree
 # ======================
 
+# ======================
+# Core: condensed tree
+# ======================
+
 from ._cython import condense_tree_cython, build_leaf_dfs_intervals
 
-# ... (condense_tree and _roots_of_Z are unchanged) ...
+# ======================
+# Core: condensed tree
+# ======================
+
+def condense_tree(
+    W_nodes: np.ndarray,
+    U_mst: np.ndarray,
+    V_mst: np.ndarray,
+    W_mst: np.ndarray,
+    min_cluster_size: int,
+    check_sorted: bool = True,
+) -> Dict[str, Any]:
+    """Build a HDBSCAN-like condensed tree directly from a MST.
+
+    Parameters
+    ----------
+    W_nodes : (N,) float
+        Node weights.
+    U_mst, V_mst : (M,) int
+        Endpoints of MST edges.
+    W_mst : (M,) float
+        Edge weights, sorted in non-decreasing order (ascending).
+    min_cluster_size : int
+        Minimum sum of W_nodes required for a component to become an eligible cluster.
+    check_sorted : bool
+        If True, validates that W_mst is non-decreasing.
+
+    Returns
+    -------
+    Z : dict
+        Condensed tree structure as described in the module docstring.
+    """
+    # Delegate to the optimized Cython implementation
+    return condense_tree_cython(
+        W_nodes, U_mst, V_mst, W_mst, min_cluster_size, check_sorted
+    )
+
+# The original pure Python implementation is preserved below for reference.
+# It is commented out to ensure the optimized Cython version is used.
+"""
+def condense_tree(
+    W_nodes: np.ndarray,
+    U_mst: np.ndarray,
+    V_mst: np.ndarray,
+    W_mst: np.ndarray,
+    min_cluster_size: int,
+    check_sorted: bool = True,
+) -> Dict[str, Any]:
+    # ... (Original docstring) ...
+    pass 
+"""
+
+
+# =====================================
+# Convert Z to clusters and selections
+# =====================================
 
 def _roots_of_Z(Z: Dict[str, Any]) -> List[int]:
     children = Z['children']
