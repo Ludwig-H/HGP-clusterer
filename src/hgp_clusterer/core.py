@@ -302,6 +302,7 @@ def HypergraphPercol(
         idx_cluster += max_index +1
 
     labels_points_multiple = []
+    labels_points_unique = -np.ones(n, dtype=np.int64) # Initialize here to be safe across all branches
     
     # --- Final Point Labeling (Vectorized/Sparse Optimization) ---
     # Goal: Aggregate votes from faces to points.
