@@ -302,111 +302,101 @@ def HypergraphPercol(
         idx_cluster += max_index +1
 
     labels_points_multiple = []
-    if return_multi_clusters:
+    
+    # --- Final Point Labeling (Vectorized/Sparse Optimization) ---
+    # Goal: Aggregate votes from faces to points.
+    # Vote(p, c) = Sum_{f in C, p in f} (weight(f) / T_points[p])
+    # For unique labels (ArgMax), we can ignore T_points[p] as it's constant for p.
+    
+    HAS_SCIPY = False
+    try:
+        from scipy.sparse import coo_matrix
+        HAS_SCIPY = True
+    except ImportError:
+        pass
+
+    if weight_face in ["lambda", "uniform"] and HAS_SCIPY and idx_cluster > 0:
+        # Prepare Sparse Matrix Data
+        # Filter out faces that are noise (-1)
+        mask_valid_faces = labels_faces != -1
+        
+        # We need to expand the validity mask to the flattened structure
+        # labels_faces is (N,), we need mask for (N*K,)
+        # faces_unique is (N, K)
+        n_vertices_per_face = faces_unique.shape[1]
+        
+        # valid_faces_indices = np.where(mask_valid_faces)[0] 
+        # But we need to mask the FLATTENED arrays.
+        
+        # Expand labels to match flattened faces
+        labels_expanded = np.repeat(labels_faces, n_vertices_per_face)
+        S_faces_expanded = np.repeat(S_faces, n_vertices_per_face)
+        flat_faces = faces_unique.flatten()
+        
+        # Mask for valid clusters (>= 0)
+        mask = labels_expanded >= 0
+        
+        rows = flat_faces[mask]
+        cols = labels_expanded[mask]
+        
+        if return_multi_clusters:
+            # For probabilities, we need the normalized weights
+            # Expand T_points to match flattened structure
+            T_points_expanded = T_points[flat_faces]
+            # Avoid div by zero
+            with np.errstate(divide='ignore', invalid='ignore'):
+                norm_weights = S_faces_expanded / T_points_expanded
+                norm_weights[~np.isfinite(norm_weights)] = 0
+            
+            data = norm_weights[mask]
+            
+            # Build Sparse Matrix (Sum duplicates)
+            mat = coo_matrix((data, (rows, cols)), shape=(n, idx_cluster)).tocsr()
+            
+            # Convert to list of tuples
+            labels_points_multiple = [[] for _ in range(n)]
+            for i in range(n):
+                row = mat[i]
+                if row.nnz > 0:
+                    # Extract (col, val) pairs and sort
+                    pairs = zip(row.indices, row.data)
+                    labels_points_multiple[i] = sorted(pairs, key=lambda x: x[1], reverse=True)
+            
+            # Extract unique from multiple
+            for p, l_clusters in enumerate(labels_points_multiple) :
+                if l_clusters:
+                    labels_points_unique[p] = l_clusters[0][0]
+                else:
+                    labels_points_unique[p] = -1
+                    
+        else:
+            # OPTIMIZATION: For ArgMax, we DO NOT need to normalize by T_points[p]
+            # because T_points[p] is constant for a given point p across all clusters.
+            # Max(Sum(S/T)) == Max(Sum(S)/T) == Max(Sum(S))
+            
+            data = S_faces_expanded[mask]
+            
+            # Build Sparse Matrix
+            mat = coo_matrix((data, (rows, cols)), shape=(n, idx_cluster)).tocsr()
+            
+            # Argmax per row
+            # mat.argmax(axis=1) returns matrix of shape (n, 1)
+            best_clusters = np.asarray(mat.argmax(axis=1)).flatten()
+            
+            # Handle points that have no votes (row sum is 0) -> Noise
+            # argmax on all-zeros returns 0 (which is a valid cluster ID). We must mask them.
+            # Using getnnz is fast
+            has_votes = mat.getnnz(axis=1) > 0
+            
+            labels_points_unique[has_votes] = best_clusters[has_votes]
+            labels_points_unique[~has_votes] = -1
+
+    else:
+        # --- Fallback (No Scipy OR 'unique' mode OR idx_cluster=0) ---
         labels_points_multiple = [[] for _ in range(n)]
         
-        if weight_face in ["lambda", "uniform"]:
-            # Vectorized reconstruction of probabilities
-            # Prob(p -> Cluster C) = Sum_{f in C, p in f} (S_faces[f] / T_points[p])
-            
-            # Create a score accumulator: dict or sparse matrix?
-            # List of dicts is probably fine here as this is only output conversion
-            point_cluster_scores = [{} for _ in range(n)]
-            
-            # Iterate over faces to distribute votes
-            # S_faces and T_points are available from the vector block
-            # If they aren't (scope issue?), we re-derive or ensure scope. 
-            # (In Python function scope, they are available if defined in if block above)
-            
-            # Optimization: Iterate over faces_unique
-            # For each face f, we know its cluster `c = labels_faces[f]`
-            # If c == -1, it contributes to noise (or nothing?) - usually noise is -1.
-            # We construct the contribution: val = S_faces[f]
-            
-            for f_idx in range(N):
-                c = labels_faces[f_idx]
-                val_f = S_faces[f_idx]
-                
-                # Distribute to all points in this face
-                # Points in face f are faces_unique[f_idx]
-                for p in faces_unique[f_idx]:
-                    # Normalized contribution
-                    # weight = val_f / T_points[p]
-                    if T_points[p] > 0:
-                        w = val_f / T_points[p]
-                        if c in point_cluster_scores[p]:
-                            point_cluster_scores[p][c] += w
-                        else:
-                            point_cluster_scores[p][c] = w
-            
-            # Convert to sorted list format
-            for p in range(n):
-                # Add implicit noise if sum < 1? Or just sort items.
-                labels_points_multiple[p] = sorted(point_cluster_scores[p].items(), key=lambda x: x[1], reverse=True)
-        
-        else:
-             # Fallback for 'unique' mode using Points_w (which was built in slow path)
-             for p in range(n):
-                clusters = {-1:0.}
-                # Points_w[p] is list of (face, weight) (normalized)
-                if Points_w[p]:
-                    for face, w in Points_w[p]:
-                        cl = labels_faces[face]
-                        clusters[cl] = clusters.get(cl, 0.0) + w
-                labels_points_multiple[p] = sorted(clusters.items(), key=lambda x: x[1], reverse=True)
-
-
-    labels_points_unique = -np.ones(n, dtype=np.int64)
-    # Simple assignment from labels_faces (majority vote was implicit in W_nodes construction?)
-    # Actually, labels_points_unique logic was:
-    # for p, l_clusters in enumerate(labels_points_multiple) : cl = l_clusters[0][0]
-    # But we want to avoid building multiple if not asked.
-    
-    # We need to assign a unique label to each point.
-    # The standard way is ArgMax of the weights.
-    # If we haven't built point_cluster_scores, we can do it efficiently or just rely on the fact that
-    # W_nodes guided the clustering, but for the final point label, we need to know which cluster claimed it most.
-    # If return_multi_clusters is False, we still need the ArgMax.
-    
-    # Let's compute the unique label efficiently without full dicts if possible.
-    # But ArgMax requires checking all candidates.
-    # Re-using the logic above is safest.
-    
-    if not return_multi_clusters:
-        if weight_face in ["lambda", "uniform"]:
-             # Fast ArgMax
-             # We can iterate faces and update "max_score" and "best_cluster" per point
-             max_scores = np.full(n, -1.0, dtype=np.float64)
-             best_clusters = np.full(n, -1, dtype=np.int64)
-             
-             for f_idx in range(N):
-                c = labels_faces[f_idx]
-                if c == -1: continue # Noise usually doesn't win unless everything is noise
-                
-                val_f = S_faces[f_idx]
-                pts = faces_unique[f_idx]
-                
-                # This is still a loop over N*K.
-                # Is there a pure numpy way?
-                # sparse matrix multiplication: (Points x Faces) * (Faces x Clusters) -> Points x Clusters
-                # Faces x Clusters is a one-hot (or weight) vector.
-                # Actually, Faces map to Clusters. We can sum weights per cluster.
-                # But N_clusters can be large.
-                
-                # Loop is fine for N*K ~ 10M operations.
-                for p in pts:
-                    if T_points[p] > 0:
-                        w = val_f / T_points[p]
-                        # We can't just keep max single face contribution, we need Sum per Cluster.
-                        # So we DO need to aggregate per cluster.
-                        pass
-             
-             # Okay, we MUST aggregate per cluster to find the ArgMax.
-             # So the "point_cluster_scores" logic is necessary.
-             # Let's run the accumulation (it's O(N*K), linear in input size, very fast compared to Python dict overhead if we use arrays?)
-             # Using Python dicts for 100k points is fine. For 10M, it's slow.
-             # But we saved the massive Points_w construction.
-             
+        if weight_face in ["lambda", "uniform"] and idx_cluster > 0:
+             # Python Loop Fallback for standard modes
              point_cluster_scores = [{} for _ in range(n)]
              for f_idx in range(N):
                 c = labels_faces[f_idx]
@@ -419,17 +409,24 @@ def HypergraphPercol(
                             point_cluster_scores[p][c] += w
                         else:
                             point_cluster_scores[p][c] = w
-                            
-             for p in range(n):
-                 best_c = -1
-                 best_s = -1.0
-                 for c, s in point_cluster_scores[p].items():
-                     if s > best_s:
-                         best_s = s
-                         best_c = c
-                 labels_points_unique[p] = best_c
+             
+             if return_multi_clusters:
+                 for p in range(n):
+                     labels_points_multiple[p] = sorted(point_cluster_scores[p].items(), key=lambda x: x[1], reverse=True)
+                     if labels_points_multiple[p]:
+                         labels_points_unique[p] = labels_points_multiple[p][0][0]
+             else:
+                 for p in range(n):
+                     best_c = -1
+                     best_s = -1.0
+                     for c, s in point_cluster_scores[p].items():
+                         if s > best_s:
+                             best_s = s
+                             best_c = c
+                     labels_points_unique[p] = best_c
+
         else:
-             # Unique mode (slow path)
+             # 'unique' mode OR no clusters found
              for p in range(n):
                 best_c = -1
                 best_s = -1.0
@@ -438,20 +435,18 @@ def HypergraphPercol(
                     for face, w in Points_w[p]:
                         cl = labels_faces[face]
                         clusters[cl] = clusters.get(cl, 0.0) + w
-                    # Argmax
-                    for c, s in clusters.items():
-                        if s > best_s:
-                            best_s = s
-                            best_c = c
+                    
+                    if return_multi_clusters:
+                        labels_points_multiple[p] = sorted(clusters.items(), key=lambda x: x[1], reverse=True)
+                        if labels_points_multiple[p]:
+                            best_c = labels_points_multiple[p][0][0]
+                    else:
+                        for c, s in clusters.items():
+                            if s > best_s:
+                                best_s = s
+                                best_c = c
+                
                 labels_points_unique[p] = best_c
-    
-    else:
-        # We already computed labels_points_multiple above
-        for p, l_clusters in enumerate(labels_points_multiple) :
-            if l_clusters:
-                labels_points_unique[p] = l_clusters[0][0]
-            else:
-                labels_points_unique[p] = -1
 
     # 4. Label Propagation / Cleanup
     # If subsampling was used, we need to map core labels back to full dataset AND propagate to missing points
