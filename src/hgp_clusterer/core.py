@@ -138,12 +138,25 @@ def HypergraphPercol(
     
     ### Ici répartir les poids des points sur les faces = (K-1)-simplexes
     Points = [[] for _ in range(n)]
-    Face_to_points = [set() for _ in range(N)]
+    # Face_to_points n'est plus construit ici, on utilise faces_unique directement
+    
+    for (old_idx, _, r_face) in faces_Simplexes :
+        idx_face = inv[old_idx]
+        # On ne remplit plus Face_to_points ici
+        # Pour récupérer les points d'une face 'idx_face', on utilisera faces_unique[idx_face]
+        
+        # Cependant, pour construire Points, on a besoin de savoir quels points sont dans cette face.
+        # faces_unique[idx_face] nous le donne.
+        # Mais faces_Simplexes itère sur les faces brutes.
+        # 'points_face' (le _ ci-dessus) contient les points de la face courante.
+        # C'est plus rapide d'utiliser le tuple/liste 'points_face' déjà là que d'aller chercher dans faces_unique.
+        
+    # Re-itération propre pour construire Points
     for (old_idx, points_face, r_face) in faces_Simplexes :
         idx_face = inv[old_idx]
         for p in points_face :
-            Face_to_points[idx_face].add(p)
             Points[p].append((idx_face,r_face))
+            
     Points_w = [{} if weight_face == "uniform" or weight_face == "lambda" else [(-1, 0)] for _ in range(n)]
     for p,liste_faces in enumerate(Points) :
         for (idx_face,w_face) in liste_faces :
@@ -209,14 +222,24 @@ def HypergraphPercol(
         U_new = inverse[:M]
         V_new = inverse[M:]
         W_nodes_cc = W_nodes[uniques]
-        Z_cc = condense_tree(W_nodes_cc, U_new, V_new, W_mst, min_cluster_size=min_cluster_size, check_sorted=True) # check_sorted à mettre à False
+        # Optimisation : W_mst est déjà trié car issu de W trié
+        Z_cc = condense_tree(W_nodes_cc, U_new, V_new, W_mst, min_cluster_size=min_cluster_size, check_sorted=False)
         if verbeux :
             print(f"condense_tree appliqué. Z_cc (keys): {list(Z_cc.keys())}")
             
         if splitting is None :
             res = GetClusters(Z_cc, method, splitting=splitting, verbose=verbeux)
         else :
-            res = GetClusters(Z_cc, method, splitting=splitting, points=X, Face_to_points=Face_to_points, verbose=verbeux)    
+            # Pour le splitting, on a besoin de la map Faces->Points.
+            # On passe faces_unique. Attention, il faut passer le sous-ensemble correspondant à la composante connexe si on veut être strict,
+            # mais GetClusters travaille avec des indices globaux ou locaux ?
+            # Z_cc est local (indices 0..nb_indices-1).
+            # GetClusters retourne des indices locaux.
+            # Il faut donc mapper indices locaux -> indices globaux (uniques) -> points (faces_unique)
+            # On peut passer une fonction ou adapter GetClusters.
+            # Le plus simple : reconstruire le subset de faces pour cette CC.
+            faces_cc = faces_unique[uniques]
+            res = GetClusters(Z_cc, method, splitting=splitting, points=X, Face_to_points=faces_cc, verbose=verbeux)    
         if verbeux :
             print("GetClusters appliqué.")
 

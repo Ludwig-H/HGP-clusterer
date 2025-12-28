@@ -422,21 +422,23 @@ def GetClusters(Z: Dict[str, Any], method, splitting=None, points=None, Face_to_
         points = np.asarray(points)
 
         def _points_for_nodes(nodes: np.ndarray) -> np.ndarray:
-            point_indices: set[int] = set()
-            for node in nodes:
-                pts = Face_to_points[int(node)]
-                if pts is None: continue
-                # Handle single or iterable
-                if isinstance(pts, (np.ndarray, list, tuple, set)):
-                    iterable = pts
-                else:
-                    iterable = (pts,)
-                for p in iterable:
-                    point_indices.add(int(p))
-            if not point_indices:
+            if Face_to_points is None:
                 return points[[]]
-            ordered_idx = np.fromiter(sorted(point_indices), dtype=np.int64)
-            return points[ordered_idx]
+            # Face_to_points is now a numpy array (N_faces, K) passed from core.py
+            # We select the faces corresponding to 'nodes'
+            faces_selected = Face_to_points[nodes]
+            
+            # Find unique points involved in these faces
+            unique_pts = np.unique(faces_selected)
+            
+            # Optional: filter out potential -1 padding if any (though usually faces are fully valid indices)
+            if unique_pts.size > 0 and unique_pts[0] < 0:
+                unique_pts = unique_pts[unique_pts >= 0]
+                
+            if unique_pts.size == 0:
+                return points[[]]
+                
+            return points[unique_pts]
 
         from functools import lru_cache
 
