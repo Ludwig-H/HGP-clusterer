@@ -1,0 +1,102 @@
+import numpy as np
+import matplotlib.pyplot as plt
+import time
+from sklearn.datasets import make_blobs, make_moons
+import hdbscan
+
+# Import de votre librairie
+from hgp_clusterer import HypergraphPercol
+
+# --- 1. Génération du Dataset "Advanced HDBSCAN style" ---
+# On génère assez de points (10k) pour que le subsample=0.1 soit pertinent
+n_samples = 10000
+moons, _ = make_moons(n_samples=n_samples // 2, noise=0.05)
+blobs, _ = make_blobs(n_samples=n_samples // 2, centers=[(-0.75, 2.25), (1.0, 2.0), (-2, 0.5)], cluster_std=[0.3, 0.25, 0.4])
+# On décale les moons pour qu'elles se mélangent bien
+moons[:, 0] -= 0.5
+X = np.vstack([moons, blobs])
+# Ajout de bruit uniforme
+rng = np.random.default_rng(42)
+noise = rng.uniform(low=np.min(X, axis=0)-1, high=np.max(X, axis=0)+1, size=(int(n_samples * 0.1), 2))
+X = np.vstack([X, noise])
+
+print(f"Jeu de données généré : {X.shape[0]} points")
+
+# --- 2. Paramètres ---
+K = 2
+min_cluster_size = 100
+min_samples = K + 1
+method = 'eom'
+splitting = None
+weight_face = "lambda"      # "lambda" ∝ 1/r ; "uniform" ∝ 1 ; "unique" 1 sur la face min r
+label_all_points = False
+return_multi_clusters = False
+complex_chosen = "orderk_delaunay"
+expZ = 3
+subsample = 0.1
+cgal_root = "/content/HGP-clusterer/CGALDelaunay"
+verbeux = True
+
+# --- 3. Exécution HypergraphPercol ---
+print("\n--- Lancement HypergraphPercol ---")
+start_time = time.time()
+labels_hgp = HypergraphPercol(
+    X,
+    K=K,
+    min_cluster_size=min_cluster_size,
+    min_samples=min_samples,
+    metric="euclidean",
+    method=method,
+    splitting=splitting,
+    weight_face=weight_face,
+    label_all_points=label_all_points,
+    return_multi_clusters=return_multi_clusters,
+    complex_chosen=complex_chosen,
+    expZ=expZ,
+    subsample=subsample,
+    cgal_root=cgal_root,
+    verbeux=verbeux
+)
+hgp_time = time.time() - start_time
+n_clusters_hgp = len(np.unique(labels_hgp)) - (1 if -1 in labels_hgp else 0)
+print(f"HypergraphPercol terminé en {hgp_time:.2f}s. Clusters trouvés : {n_clusters_hgp}")
+
+# --- 4. Exécution HDBSCAN (Baseline) ---
+print("\n--- Lancement HDBSCAN Standard ---")
+start_time = time.time()
+clusterer = hdbscan.HDBSCAN(
+    min_cluster_size=min_cluster_size,
+    min_samples=min_samples,
+    cluster_selection_method=method
+)
+labels_hdb = clusterer.fit_predict(X)
+hdb_time = time.time() - start_time
+n_clusters_hdb = len(np.unique(labels_hdb)) - (1 if -1 in labels_hdb else 0)
+print(f"HDBSCAN terminé en {hdb_time:.2f}s. Clusters trouvés : {n_clusters_hdb}")
+
+# --- 5. Comparaison Visuelle ---
+fig, axes = plt.subplots(1, 2, figsize=(20, 8))
+
+# Palette de couleurs : gris pour le bruit (-1), couleurs vives pour le reste
+def plot_clusters(data, labels, ax, title):
+    unique_labels = np.unique(labels)
+    colors = plt.cm.turbo(np.linspace(0, 1, len(unique_labels)))
+    
+    # On trace le bruit en premier et en gris
+    noise_mask = labels == -1
+    ax.scatter(data[noise_mask, 0], data[noise_mask, 1], c='lightgray', s=2, alpha=0.3, label='Noise')
+    
+    # On trace les clusters
+    for k, col in zip(unique_labels, colors):
+        if k == -1: continue
+        mask = labels == k
+        ax.scatter(data[mask, 0], data[mask, 1], color=col, s=5, alpha=0.8)
+    
+    ax.set_title(title, fontsize=14)
+    ax.axis('off')
+
+plot_clusters(X, labels_hdb, axes[0], f"HDBSCAN\nTime: {hdb_time:.2f}s | Clusters: {n_clusters_hdb}")
+plot_clusters(X, labels_hgp, axes[1], f"HypergraphPercol (Subsample={subsample})\nTime: {hgp_time:.2f}s | Clusters: {n_clusters_hgp}")
+
+plt.tight_layout()
+plt.show()
