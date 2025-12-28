@@ -136,13 +136,6 @@ def HypergraphPercol(
             f"Faces uniques: {N} (compression {faces_raw_arr.shape[0]}→{faces_unique.shape[0]})"
         )
     
-    faces_unique, inv = np.unique(faces_raw_arr, axis=0, return_inverse=True)
-    N = faces_unique.shape[0]
-    if verbeux :
-        print(
-            f"Faces uniques: {N} (compression {faces_raw_arr.shape[0]}→{faces_unique.shape[0]})"
-        )
-    
     # --- Vectorized Weight Calculation ---
     
     # 1. Unpack simplex data efficiently
