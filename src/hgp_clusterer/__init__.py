@@ -5,7 +5,10 @@ from __future__ import annotations
 from importlib import import_module
 from typing import Any
 
-__all__ = ["HypergraphPercol"]
+from .core import HypergraphPercol
+from .estimator import HGPClusterer
+
+__all__ = ["HypergraphPercol", "HGPClusterer"]
 
 
 def __getattr__(name: str) -> Any:  # pragma: no cover - simple lazy import shim

@@ -133,25 +133,42 @@ def _build_graph_KSimplexes(
             if expZ_local != 2:
                 filt = filt ** (expZ_local / 2)
             Simplexes.append((simplex, float(filt)))
-    faces_raw: list[list[int]] = []
-    e_u: list[int] = []
-    e_v: list[int] = []
-    e_w: list[float] = []
-    nS = 0
-    faces_Simplexes = []
-    for simplex, weight in Simplexes:
-        if len(simplex) <= K:
-            continue
-        for vertices in itertools.combinations(range(len(simplex)), K + 1):
-            nS += 1
-            vert = tuple(sorted(vertices))
-            base = len(faces_raw)
-            for drop in range(K + 1):
-                face = [simplex[vert[i]] for i in range(K + 1) if i != drop]
-                faces_raw.append(face)
-                faces_Simplexes.append((base + drop, face, float(weight)))
-            for idx in range(K):
-                e_u.append(base + idx)
-                e_v.append(base + idx + 1)
-                e_w.append(float(weight))
+            
+    # --- Cython Optimization ---
+    try:
+        from ._cython import build_dual_graph_cython
+        
+        simplexes_list = [s[0] for s in Simplexes]
+        weights_list = [s[1] for s in Simplexes]
+        
+        faces_raw, e_u, e_v, e_w, faces_Simplexes, nS = build_dual_graph_cython(
+            simplexes_list, weights_list, K
+        )
+        
+    except ImportError:
+        # Fallback if Cython compilation failed or function missing
+        if verbose:
+             print("Warning: Cython build_dual_graph_cython not found. Using slow Python loop.")
+        faces_raw: list[list[int]] = []
+        e_u: list[int] = []
+        e_v: list[int] = []
+        e_w: list[float] = []
+        nS = 0
+        faces_Simplexes = []
+        for simplex, weight in Simplexes:
+            if len(simplex) <= K:
+                continue
+            for vertices in itertools.combinations(range(len(simplex)), K + 1):
+                nS += 1
+                vert = tuple(sorted(vertices))
+                base = len(faces_raw)
+                for drop in range(K + 1):
+                    face = [simplex[vert[i]] for i in range(K + 1) if i != drop]
+                    faces_raw.append(face)
+                    faces_Simplexes.append((base + drop, face, float(weight)))
+                for idx in range(K):
+                    e_u.append(base + idx)
+                    e_v.append(base + idx + 1)
+                    e_w.append(float(weight))
+                    
     return faces_raw, e_u, e_v, e_w, faces_Simplexes, nS

@@ -620,3 +620,119 @@ cpdef tuple build_leaf_dfs_intervals(
         pos_v[lo_v[i]] = i
 
     return pos, first, last, leaf_order
+
+
+# =============================================================================
+# OPTIMIZATION: Hypergraph Construction
+# =============================================================================
+
+from cython.operator cimport dereference as deref, preincrement as inc
+
+cdef void combinations_k_plus_1_indices(
+    Py_ssize_t n, 
+    int K, 
+    vector[vector[Py_ssize_t]]& out_indices
+):
+    """
+    Generates all combinations of indices 0..n-1 of size K+1.
+    """
+    cdef int k = K + 1
+    if k > n:
+        return
+        
+    cdef vector[Py_ssize_t] v
+    v.resize(k)
+    
+    cdef int i
+    for i in range(k):
+        v[i] = i
+        
+    cdef int j
+    
+    while True:
+        out_indices.push_back(v)
+        
+        if v[k-1] < n - 1:
+            v[k-1] += 1
+        else:
+            j = k - 2
+            while j >= 0 and v[j] >= n - k + j:
+                j -= 1
+            if j < 0:
+                break
+            v[j] += 1
+            for i in range(j+1, k):
+                v[i] = v[i-1] + 1
+
+def build_dual_graph_cython(
+    list simplexes_list, # List of lists of ints
+    list weights_list,   # List of floats
+    int K
+):
+    cdef Py_ssize_t n_simplexes = len(simplexes_list)
+    cdef Py_ssize_t i, j, idx, t, n_verts, base
+    cdef int drop 
+    cdef vector[ITYPE_t] simplex
+    cdef double weight
+    
+    # Outputs
+    cdef vector[vector[ITYPE_t]] faces_raw
+    cdef vector[ITYPE_t] e_u
+    cdef vector[ITYPE_t] e_v
+    cdef vector[double] e_w
+    cdef vector[double] face_weights
+    
+    cdef vector[vector[Py_ssize_t]] combinations
+    cdef vector[Py_ssize_t] vert
+    cdef vector[ITYPE_t] face
+    cdef int nS = 0
+    
+    for i in range(n_simplexes):
+        simplex_py = simplexes_list[i]
+        weight = weights_list[i]
+        n_verts = len(simplex_py)
+        
+        if n_verts <= K:
+            continue
+            
+        simplex.clear()
+        for x in simplex_py:
+            simplex.push_back(<ITYPE_t>x)
+            
+        combinations.clear()
+        combinations_k_plus_1_indices(n_verts, K, combinations)
+        
+        for j in range(combinations.size()):
+            nS += 1
+            vert = combinations[j] # Indices into simplex (0..n_verts-1)
+            base = faces_raw.size()
+            
+            # Generate K+1 faces by dropping one vertex from the combination
+            for drop in range(K + 1):
+                face.clear()
+                # Construct face
+                for t in range(K + 1):
+                    if t == drop: continue
+                    # vert[t] is index in simplex, simplex[vert[t]] is global point index
+                    face.push_back(simplex[vert[t]])
+                faces_raw.push_back(face)
+                face_weights.push_back(weight)
+            
+            # Generate K edges linking these faces linearly
+            for idx in range(K):
+                e_u.push_back(base + idx)
+                e_v.push_back(base + idx + 1)
+                e_w.push_back(weight)
+                
+    # Convert to Python
+    py_faces_raw = []
+    py_faces_Simplexes = []
+    
+    cdef Py_ssize_t n_total = faces_raw.size()
+    for i in range(n_total):
+        # Convert vector<ITYPE_t> to python list
+        f_list = [x for x in faces_raw[i]] 
+        py_faces_raw.append(f_list)
+        py_faces_Simplexes.append((i, f_list, face_weights[i]))
+        
+    return py_faces_raw, e_u, e_v, e_w, py_faces_Simplexes, nS

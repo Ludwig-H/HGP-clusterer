@@ -401,20 +401,87 @@ def GetClusters(Z: Dict[str, Any], method, splitting=None, points=None, Face_to_
         if Face_to_points is None:
             raise ValueError("Splitting requires 'Face_to_points'.")
         
+        # --- OPTIMIZATION: Pre-compute Leaf Points ---
+        # Instead of mapping Faces -> Points at every node (expensive),
+        # we map Leaves -> Points once, then merge sets bottom-up.
+        
+        initial_membership = Z.get('initial_membership')
+        if initial_membership is None:
+            raise ValueError("Z must contain 'initial_membership' for splitting optimization.")
+            
+        # Identify all leaves involved in the hierarchy
+        # We only need to compute points for leaves that are descendants of selected_cids
+        # But computing for all leaves is likely fast enough and simpler.
+        
         from functools import lru_cache
+        
+        # 1. Map Leaf ID -> Array of Points
+        # initial_membership aligns with Face_to_points (N faces)
+        # We group Face_to_points by initial_membership
+        
+        # Filter noise (-1)
+        valid_mask = initial_membership != -1
+        valid_faces = Face_to_points[valid_mask]
+        valid_labels = initial_membership[valid_mask]
+        
+        # Sort by label to allow efficient grouping
+        order = np.argsort(valid_labels)
+        sorted_faces = valid_faces[order]
+        sorted_labels = valid_labels[order]
+        
+        # Find split indices
+        unique_labels, split_indices = np.unique(sorted_labels, return_index=True)
+        
+        # Store in a dict or list (if labels are dense 0..n_leaves-1)
+        # Labels are cluster IDs, they are dense 0..n_clusters-1, but not all are leaves.
+        leaf_points_map = {}
+        
+        # np.split is slow on many splits. Iterating slices is better.
+        # split_indices[i] is start of unique_labels[i]
+        n_groups = len(unique_labels)
+        for i in range(n_groups):
+            lbl = unique_labels[i]
+            start = split_indices[i]
+            end = split_indices[i+1] if i + 1 < n_groups else len(sorted_labels)
+            
+            # Extract faces for this leaf
+            faces_in_leaf = sorted_faces[start:end]
+            
+            # Flatten and Unique
+            pts = np.unique(faces_in_leaf)
+            if pts.size > 0 and pts[0] < 0: # Remove padding/noise -1 if present
+                 pts = pts[pts >= 0]
+                 
+            leaf_points_map[lbl] = pts
 
         @lru_cache(maxsize=None)
-        def _get_points_idx(cid: int) -> tuple:
-            # Helper to cache point indices extraction
-            nodes = get_nodes(cid)
-            # Face_to_points is a numpy array (N_faces, K)
-            faces_selected = Face_to_points[nodes]
-            # Flatten and unique
-            unique_pts = np.unique(faces_selected)
-            # Filter -1 noise padding
-            if unique_pts.size > 0 and unique_pts[0] < 0:
-                unique_pts = unique_pts[unique_pts >= 0]
-            return tuple(unique_pts.tolist())
+        def _get_points_idx(cid: int) -> np.ndarray:
+            """
+            Returns the set of unique points belonging to cluster `cid`.
+            Recursive bottom-up construction.
+            """
+            # Check if leaf in our pre-computed map
+            # Note: A node in Z might be a 'leaf' in the tree structure (no children)
+            # but might not have any faces assigned to it in initial_membership if it was transient?
+            # Or it should be there.
+            
+            # If it is a leaf in the tree:
+            ch = children[cid]
+            if not ch:
+                return leaf_points_map.get(cid, np.array([], dtype=np.int64))
+            
+            # Internal node: Union of children
+            child_point_arrays = [_get_points_idx(c) for c in ch]
+            
+            # Fast Union of sorted arrays (np.unique returns sorted)
+            # standard np.union1d for 2, but for N?
+            # recursive reduce or concatenating all then unique.
+            # Concatenate + Unique is usually faster than N unions
+            if not child_point_arrays:
+                return np.array([], dtype=np.int64)
+                
+            merged = np.concatenate(child_point_arrays)
+            return np.unique(merged)
 
         def _recursive_decision(cid: int) -> List[np.ndarray]:
             ch = children[cid]
@@ -424,12 +491,12 @@ def GetClusters(Z: Dict[str, Any], method, splitting=None, points=None, Face_to_
             
             # Prepare data for splitting function
             # Parent points
-            parent_pts_idx = np.array(_get_points_idx(cid), dtype=np.int64)
+            parent_pts_idx = _get_points_idx(cid)
             
             # Children points
             children_pts_idx_list = []
             for child in ch:
-                c_pts_idx = np.array(_get_points_idx(child), dtype=np.int64)
+                c_pts_idx = _get_points_idx(child)
                 children_pts_idx_list.append(c_pts_idx)
             
             # Call user function
