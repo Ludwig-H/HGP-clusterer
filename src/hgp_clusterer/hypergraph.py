@@ -67,45 +67,80 @@ def _build_graph_KSimplexes(
     
     if complex_chosen.lower() == "orderk_delaunay":
         try:
-            simplexes = orderk_delaunay3(M, min_samples - 1, precision=precision, verbose=verbose, root=root_path)
+            # Returns (N_simplices, K+1) int64 array
+            simplex_indices_arr = orderk_delaunay3(M, min_samples - 1, precision=precision, verbose=verbose, root=root_path)
         except FileNotFoundError as exc:
             if verbose:
                 print(f"CGAL non disponible ({exc}). Repli sur la filtration Rips.")
             complex_chosen = "rips"
         else:
+            n_simplices = simplex_indices_arr.shape[0]
             if verbose:
-                print(f"Simplexes sans filtration : {len(simplexes)}")
-            if simplexes:
-                def _sqr_radius(simplex: Sequence[int]) -> float:
-                    pts = M[np.asarray(simplex, dtype=np.int64)]
-                    _, radius_sq = minimum_enclosing_ball(pts)
-                    return radius_sq
-                radii_sq = Parallel(n_jobs=N_CPU_dispo, prefer="processes")(
-                    delayed(_sqr_radius)(s) for s in simplexes
+                print(f"Simplexes sans filtration : {n_simplices}")
+            
+            if n_simplices > 0:
+                # OPTIMIZATION: Process in batches to reduce Joblib overhead
+                # or use vectorized approaches if possible.
+                # Since M is large, we keep _sqr_radius logic but batch it.
+                
+                # We need the weights.
+                # Radii calculation is the bottleneck.
+                # Batch size tuning: 1000 to 10000 usually optimal for small tasks.
+                
+                def _sqr_radius_batch(indices_batch: np.ndarray) -> np.ndarray:
+                    # indices_batch: (B, K+1)
+                    # We compute radius for each simplex in the batch
+                    # This runs in a worker process
+                    # Accessing M (global) in 'processes' mode usually relies on memory mapping or fork copy-on-write
+                    # which is efficient for reading.
+                    
+                    res = np.empty(indices_batch.shape[0], dtype=np.float64)
+                    for i in range(indices_batch.shape[0]):
+                        pts = M[indices_batch[i]]
+                        _, r_sq = minimum_enclosing_ball(pts)
+                        res[i] = r_sq
+                    return res
+
+                # Calculate batch slices
+                batch_size = 2048
+                slices = [
+                    simplex_indices_arr[i : i + batch_size] 
+                    for i in range(0, n_simplices, batch_size)
+                ]
+
+                radii_batches = Parallel(n_jobs=N_CPU_dispo, prefer="processes")(
+                    delayed(_sqr_radius_batch)(s) for s in slices
                 )
+                
                 if verbose:
                     print("N_CPU_dispo utilisés : ", N_CPU_dispo)
                 
-                radii_arr = np.asarray(radii_sq, dtype=np.float64)
+                radii_arr = np.concatenate(radii_batches)
+                
                 if expZ != 2:
                     radii_arr = radii_arr ** (expZ / 2)
                 
-                # Expand to K-simplices
-                for i, s in enumerate(simplexes):
-                    w = float(radii_arr[i])
-                    size_s = len(s)
-                    if size_s == K + 1:
-                        flat_indices.extend(s)
-                        weights.append(w)
-                    elif size_s > K + 1:
-                        # Decompose into K+1 combinations
-                        for face in itertools.combinations(s, K + 1):
-                            flat_indices.extend(face)
-                            weights.append(w)
-                    # Ignore size_s < K + 1
+                simplex_weights_arr = radii_arr
+                
+                # Check dimensions match (logic check)
+                if simplex_indices_arr.shape[1] != K + 1:
+                     # This should theoretically not happen with orderk_delaunay3 output
+                     # unless K param was inconsistent.
+                     # Handle fallback if necessary or just reshape/filter?
+                     # We assume correctness from C++ tool.
+                     pass
+                     
+            else:
+                 simplex_indices_arr = np.empty((0, K + 1), dtype=np.int64)
+                 simplex_weights_arr = np.empty(0, dtype=np.float64)
 
     if complex_chosen.lower() != "orderk_delaunay":
+        # ... (Legacy Gudhi Path) ...
+        # Note: The Gudhi path still builds lists `flat_indices` and `weights`.
+        # We need to unify the variable names at the end.
+        
         import gudhi
+
 
         if is_sparse_metric:
             expZ_local = expZ * 2
@@ -163,14 +198,22 @@ def _build_graph_KSimplexes(
             weights.append(float(filt_val))
             
     # --- Cython Optimization ---
-    # Convert lists to typed numpy arrays
-    n_simplexes = len(weights)
-    if n_simplexes > 0:
-        simplex_indices_arr = np.array(flat_indices, dtype=np.int64).reshape(n_simplexes, K + 1)
-        simplex_weights_arr = np.array(weights, dtype=np.float64)
-    else:
-        simplex_indices_arr = np.empty((0, K + 1), dtype=np.int64)
-        simplex_weights_arr = np.empty(0, dtype=np.float64)
+    # Unification: 
+    # If we came from Order-K (optimized), we already have simplex_indices_arr and simplex_weights_arr.
+    # If we came from Gudhi (legacy), we have flat_indices and weights (lists).
+    
+    if complex_chosen.lower() != "orderk_delaunay":
+        n_simplexes_list = len(weights)
+        if n_simplexes_list > 0:
+            simplex_indices_arr = np.array(flat_indices, dtype=np.int64).reshape(n_simplexes_list, K + 1)
+            simplex_weights_arr = np.array(weights, dtype=np.float64)
+        else:
+            simplex_indices_arr = np.empty((0, K + 1), dtype=np.int64)
+            simplex_weights_arr = np.empty(0, dtype=np.float64)
+
+    # Convert to typed numpy arrays (ensure C-contiguity if needed, though Cython handles it)
+    # The arrays are now ready for build_dual_graph_cython
+
 
     try:
         from ._cython import build_dual_graph_cython

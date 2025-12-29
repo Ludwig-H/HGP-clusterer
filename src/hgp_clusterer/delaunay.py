@@ -13,7 +13,7 @@ def orderk_delaunay3(
     precision: str = "safe",
     verbose: bool = False,
     root: Path | None = None,
-) -> list[list[int]]:
+) -> np.ndarray:
     """
     Compute Order-K Delaunay triangulation using the optimized C++ implementation.
     """
@@ -70,7 +70,8 @@ def orderk_delaunay3(
             return []
         
     if result.size == 0:
-        return []
+        return np.empty((0, K + 1), dtype=np.int64)
         
-    return result.tolist()
+    return result # Returns np.ndarray (M, K+1) directly
+
 
