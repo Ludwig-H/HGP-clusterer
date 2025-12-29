@@ -1,4 +1,4 @@
-# EdgesCGALWeightedDelaunay3D & Order-K Delaunay
+# Order-K Delaunay
 
 A high-performance C++ framework for Computational Geometry, utilizing **CGAL** and **TBB**. This project provides specialized tools for extracting Weighted Delaunay Triangulations (Regular Triangulations) and computing **Order-$k$ Delaunay** diagrams in 2D, 3D, and arbitrary dimensions.
 
