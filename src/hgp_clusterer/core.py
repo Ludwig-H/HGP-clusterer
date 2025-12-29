@@ -46,6 +46,7 @@ class HGPClusterer(BaseEstimator, ClusterMixin):
                  method='eom',
                  splitting=None,
                  weight_face='lambda',
+                 label_all_points=False,
                  complex_chosen='auto',
                  expZ=2.0,
                  precision='safe',
@@ -63,6 +64,7 @@ class HGPClusterer(BaseEstimator, ClusterMixin):
         self.method = method
         self.splitting = splitting
         self.weight_face = weight_face
+        self.label_all_points = label_all_points
         self.complex_chosen = complex_chosen
         self.expZ = expZ
         self.precision = precision
@@ -346,7 +348,48 @@ class HGPClusterer(BaseEstimator, ClusterMixin):
         if self.X_full_ is not None and len(self.X_full_) > len(self.X_core_):
              # Propagate KNN
              # ... (Similar to core.py) ...
-             pass
+             # Create full label array
+             n_full = len(self.X_full_)
+             labels_full = np.full(n_full, -1, dtype=np.int64)
+             labels_full[self.idx_core_] = final_labels
+             
+             # Propagate to non-core points using FAISS/KDTree
+             mask_core = np.zeros(n_full, dtype=bool)
+             mask_core[self.idx_core_] = True
+             X_query = self.X_full_[~mask_core]
+             
+             if X_query.shape[0] > 0:
+                 if self.verbose:
+                     print(f"Propagating labels to {X_query.shape[0]} non-core points (k=5)...")
+                 
+                 # Use k=5 weighted vote or simple majority?
+                 # Geometry module's propagate_labels_knn uses majority vote on k neighbors.
+                 # Core points are self.X_core_, their labels are final_labels
+                 y_pred = propagate_labels_knn(self.X_core_, final_labels, X_query, k=5, metric=self.metric)
+                 labels_full[~mask_core] = y_pred
+                 
+             final_labels = labels_full
+             
+        # Denoising (label_all_points)
+        if self.label_all_points and not self.is_sparse_metric_:
+             # Which dataset to use?
+             X_target = self.X_full_ if self.X_full_ is not None else self.X_core_
+             
+             # Check for noise
+             mask_noise = (final_labels == -1)
+             if np.any(mask_noise):
+                 mask_valid = ~mask_noise
+                 if np.any(mask_valid):
+                     if self.verbose:
+                         print(f"Denoising {np.sum(mask_noise)} noise points using 1-NN...")
+                     
+                     X_train = X_target[mask_valid]
+                     y_train = final_labels[mask_valid]
+                     X_query = X_target[mask_noise]
+                     
+                     # 1-NN propagation for denoising
+                     y_filled = propagate_labels_knn(X_train, y_train, X_query, k=1, metric=self.metric)
+                     final_labels[mask_noise] = y_filled
              
         return final_labels
 

@@ -628,11 +628,118 @@ cpdef tuple build_leaf_dfs_intervals(
 
 from cython.operator cimport dereference as deref, preincrement as inc
 
+def build_dual_graph_cython(
+    ITYPE_t[:, ::1] simplex_indices,
+    DTYPE_t[::1] simplex_weights,
+    int K
+):
+    cdef Py_ssize_t n_simplexes = simplex_indices.shape[0]
+    # Check dimensions
+    if simplex_indices.shape[1] != K + 1:
+         # Fallback or error? The Python code should guarantee this.
+         # But technically we might receive simplices of varying lengths if not careful.
+         # The optimization assumes fixed K+1 size for all simplices in the array.
+         # If existing code supports varying sizes, we might need a ragged array or flat array + offsets.
+         # However, _build_graph_KSimplexes logic usually builds uniform K-simplices for the dual graph construction.
+         # Actually, looking at hypergraph.py logic:
+         # "for simplex, filt in st.get_skeleton(K): if len(simplex) != K + 1: continue"
+         # So yes, we only have K-simplices (which have K+1 vertices).
+         pass
+
+    cdef Py_ssize_t i, j, idx, t, n_verts, base
+    cdef int drop
+    cdef vector[ITYPE_t] simplex
+    cdef double weight
+    
+    # Outputs
+    cdef vector[vector[ITYPE_t]] faces_raw
+    cdef vector[ITYPE_t] e_u
+    cdef vector[ITYPE_t] e_v
+    cdef vector[double] e_w
+    cdef vector[double] face_weights
+    
+    cdef vector[vector[Py_ssize_t]] combinations
+    cdef vector[Py_ssize_t] vert
+    cdef vector[ITYPE_t] face
+    cdef int nS = 0
+    
+    # Pre-allocate simplex vector to size K+1 to avoid reallocs
+    simplex.reserve(K + 1)
+    
+    with nogil:
+        for i in range(n_simplexes):
+            weight = simplex_weights[i]
+            n_verts = K + 1 # Fixed size for K-simplices
+            
+            # Since n_verts == K+1, we don't need combinations logic for the simplex itself?
+            # Wait, the original code logic was:
+            # "combinations_k_plus_1_indices(n_verts, K, combinations)"
+            # If n_verts == K+1, there is exactly ONE combination of size K+1: [0, 1, ..., K].
+            # So the logic simplifies drastically!
+            # The original code loop:
+            # "for j in range(combinations.size()):" -> Runs once.
+            
+            # Let's verify:
+            # build_dual_graph_cython takes `simplexes_list`.
+            # In hypergraph.py: `st.get_skeleton(K)` returns simplices of dimension <= K.
+            # But the code filters: `if len(simplex) != K + 1: continue`.
+            # So yes, ALL inputs are exactly size K+1.
+            
+            # Optimization: We don't need `combinations_k_plus_1_indices`.
+            # We just process the single simplex [v0, v1, ..., vK].
+            
+            nS += 1
+            base = faces_raw.size()
+            
+            # Copy simplex indices to vector (optional, can access directly)
+            # But we need it for face construction loop
+            
+            # Generate K+1 faces by dropping one vertex
+            for drop in range(K + 1):
+                face.clear()
+                # Construct face (all indices except 'drop')
+                for t in range(K + 1):
+                    if t == drop: continue
+                    face.push_back(simplex_indices[i, t])
+                faces_raw.push_back(face)
+                face_weights.push_back(weight)
+            
+            # Generate K edges linking these faces linearly
+            # Wait, why "linearly"?
+            # e_u.push_back(base + idx)
+            # e_v.push_back(base + idx + 1)
+            # This links face 0-1, 1-2, 2-3...
+            # In a dual graph of a simplex, all faces are connected pairwise.
+            # But linking them linearly (0-1, 1-2, ...) is enough to ensure the simplex component is connected
+            # in the dual graph?
+            # Yes, standard optimization to avoid K*(K+1)/2 edges. A spanning tree of the dual-clique is enough
+            # to say "these faces belong to the same simplex".
+            # MST logic handles the rest.
+            
+            for idx in range(K):
+                e_u.push_back(base + idx)
+                e_v.push_back(base + idx + 1)
+                e_w.push_back(weight)
+                
+    # Convert to Python
+    py_faces_raw = []
+    py_faces_Simplexes = []
+    
+    cdef Py_ssize_t n_total = faces_raw.size()
+    cdef list f_list
+    for i in range(n_total):
+        # Convert vector<ITYPE_t> to python list
+        f_list = [x for x in faces_raw[i]] 
+        py_faces_raw.append(f_list)
+        py_faces_Simplexes.append((i, f_list, face_weights[i]))
+        
+    return py_faces_raw, e_u, e_v, e_w, py_faces_Simplexes, nS
+
 cdef void combinations_k_plus_1_indices(
     Py_ssize_t n, 
     int K, 
     vector[vector[Py_ssize_t]]& out_indices
-):
+) nogil:
     """
     Generates all combinations of indices 0..n-1 of size K+1.
     """
@@ -663,76 +770,3 @@ cdef void combinations_k_plus_1_indices(
             v[j] += 1
             for i in range(j+1, k):
                 v[i] = v[i-1] + 1
-
-def build_dual_graph_cython(
-    list simplexes_list, # List of lists of ints
-    list weights_list,   # List of floats
-    int K
-):
-    cdef Py_ssize_t n_simplexes = len(simplexes_list)
-    cdef Py_ssize_t i, j, idx, t, n_verts, base
-    cdef int drop 
-    cdef vector[ITYPE_t] simplex
-    cdef double weight
-    
-    # Outputs
-    cdef vector[vector[ITYPE_t]] faces_raw
-    cdef vector[ITYPE_t] e_u
-    cdef vector[ITYPE_t] e_v
-    cdef vector[double] e_w
-    cdef vector[double] face_weights
-    
-    cdef vector[vector[Py_ssize_t]] combinations
-    cdef vector[Py_ssize_t] vert
-    cdef vector[ITYPE_t] face
-    cdef int nS = 0
-    
-    for i in range(n_simplexes):
-        simplex_py = simplexes_list[i]
-        weight = weights_list[i]
-        n_verts = len(simplex_py)
-        
-        if n_verts <= K:
-            continue
-            
-        simplex.clear()
-        for x in simplex_py:
-            simplex.push_back(<ITYPE_t>x)
-            
-        combinations.clear()
-        combinations_k_plus_1_indices(n_verts, K, combinations)
-        
-        for j in range(combinations.size()):
-            nS += 1
-            vert = combinations[j] # Indices into simplex (0..n_verts-1)
-            base = faces_raw.size()
-            
-            # Generate K+1 faces by dropping one vertex from the combination
-            for drop in range(K + 1):
-                face.clear()
-                # Construct face
-                for t in range(K + 1):
-                    if t == drop: continue
-                    # vert[t] is index in simplex, simplex[vert[t]] is global point index
-                    face.push_back(simplex[vert[t]])
-                faces_raw.push_back(face)
-                face_weights.push_back(weight)
-            
-            # Generate K edges linking these faces linearly
-            for idx in range(K):
-                e_u.push_back(base + idx)
-                e_v.push_back(base + idx + 1)
-                e_w.push_back(weight)
-                
-    # Convert to Python
-    py_faces_raw = []
-    py_faces_Simplexes = []
-    
-    cdef Py_ssize_t n_total = faces_raw.size()
-    for i in range(n_total):
-        # Convert vector<ITYPE_t> to python list
-        f_list = [x for x in faces_raw[i]] 
-        py_faces_raw.append(f_list)
-        py_faces_Simplexes.append((i, f_list, face_weights[i]))
-        
-    return py_faces_raw, e_u, e_v, e_w, py_faces_Simplexes, nS
