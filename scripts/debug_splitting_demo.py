@@ -1,5 +1,5 @@
 """
-Demonstration script for the 'splitting' callback in HypergraphPercol.
+Demonstration script for the 'splitting' callback in HGPClusterer.
 
 This script shows how to inject custom domain logic to refine clusters
 after the standard selection (EOM/Leaf).
@@ -11,10 +11,10 @@ import numpy as np
 # Ensure src is in path
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "../src")))
 
-from hgp_clusterer import HypergraphPercol
+from hgp_clusterer import HGPClusterer
 
 def demo_splitting():
-    print("=== HypergraphPercol Splitting Callback Demo ===")
+    print("=== HGPClusterer Splitting Callback Demo ===")
     
     # 1. Generate Data: Two overlapping blobs
     # They form a single connected component in the graph, but have distinct density centers.
@@ -55,15 +55,15 @@ def demo_splitting():
     # 3. Run Clustering
     # We use a large min_samples to ensure the graph connects the two blobs initially.
     print("\n--- Running Clustering with Splitting Rule ---")
-    labels = HypergraphPercol(
-        X,
+    clusterer = HGPClusterer(
         min_cluster_size=10,
         K=2,
         min_samples=15, 
         metric="euclidean",
         splitting=max_size_splitting_rule,
-        verbeux=False # Set to True to see algorithm internals
+        verbose=False # Set to True to see algorithm internals
     )
+    labels = clusterer.fit_predict(X)
 
     # 4. Analyze Results
     unique_labels = np.unique(labels[labels >= 0])

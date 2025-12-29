@@ -1,5 +1,5 @@
 import numpy as np
-from hgp_clusterer import HypergraphPercol
+from hgp_clusterer import HGPClusterer
 
 def test_splitting_simple():
     # 1. Generate some data (2 clusters + noise)
@@ -20,15 +20,15 @@ def test_splitting_simple():
             assert isinstance(children_list_idx[0], np.ndarray)
         return True # Always split to test deep recursion
 
-    # 3. Run HypergraphPercol with splitting
-    print("Running HypergraphPercol with splitting...")
-    labels = HypergraphPercol(
-        X, 
+    # 3. Run HGPClusterer with splitting
+    print("Running HGPClusterer with splitting...")
+    clusterer = HGPClusterer(
         min_cluster_size=10, 
         epsilon_fusion=0.1, # Trigger batch processing logic
         splitting=my_splitting,
-        verbeux=True
+        verbose=True
     )
+    labels = clusterer.fit_predict(X)
     
     print("Labels unique:", np.unique(labels))
     print("Test passed!")

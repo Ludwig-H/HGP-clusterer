@@ -6,9 +6,16 @@ try:
     from sklearn.cluster import HDBSCAN
 except ImportError:
     # Fallback for older sklearn
-    import hdbscan as HDBSCAN
+    try:
+        import hdbscan
+        # Wrap hdbscan.HDBSCAN if needed, but usually it has same API
+        class HDBSCAN(hdbscan.HDBSCAN):
+             pass
+    except ImportError:
+        print("HDBSCAN not installed.")
+        HDBSCAN = None
 
-from hgp_clusterer import HypergraphPercol
+from hgp_clusterer import HGPClusterer
 from sklearn.metrics import adjusted_rand_score
 
 def make_dataset(n_samples=1500, seed=42):
@@ -31,28 +38,31 @@ def main():
 
     # 1. HDBSCAN Classique (Sklearn implementation)
     print("\n--- HDBSCAN (Sklearn) ---")
-    start = time.time()
-    try:
-        # Sklearn HDBSCAN uses min_samples directly
-        clusterer = HDBSCAN(min_cluster_size=30, min_samples=10)
-        labels_hdb = clusterer.fit_predict(X)
-    except Exception as e:
-        print(f"HDBSCAN skipped due to error: {e}")
-        labels_hdb = np.full(len(X), -1)
-        
-    end = time.time()
-    n_clus_hdb = len(set(labels_hdb)) - (1 if -1 in labels_hdb else 0)
-    print(f"Temps: {end-start:.4f}s | Clusters: {n_clus_hdb}")
+    labels_hdb = np.full(len(X), -1)
+    if HDBSCAN is not None:
+        start = time.time()
+        try:
+            # Sklearn HDBSCAN uses min_samples directly
+            clusterer = HDBSCAN(min_cluster_size=30, min_samples=10)
+            labels_hdb = clusterer.fit_predict(X)
+        except Exception as e:
+            print(f"HDBSCAN skipped due to error: {e}")
+            
+        end = time.time()
+        n_clus_hdb = len(set(labels_hdb)) - (1 if -1 in labels_hdb else 0)
+        print(f"Temps: {end-start:.4f}s | Clusters: {n_clus_hdb}")
+    else:
+        print("HDBSCAN not available.")
     
     # 2. HGP-Clusterer (Plein)
     print("\n--- HGP (Full - Auto/Delaunay) ---")
     start = time.time()
     # Utilisation de 'auto' qui choisira Delaunay (ou Rips optimisé) selon la dispo
-    labels_hgp = HypergraphPercol(
-        X, min_cluster_size=30, min_samples=10, 
-        complex_chosen='delaunay', subsample=1.0, verbeux=False
+    clusterer = HGPClusterer(
+        min_cluster_size=30, min_samples=10, 
+        complex_chosen='delaunay', subsample=1.0, verbose=False
     )
-    if isinstance(labels_hgp, tuple): labels_hgp = labels_hgp[0]
+    labels_hgp = clusterer.fit_predict(X)
         
     end = time.time()
     n_clus_hgp = len(set(labels_hgp)) - (1 if -1 in labels_hgp else 0)
@@ -61,11 +71,11 @@ def main():
     # 3. HGP-Clusterer (Subsample 20%)
     print("\n--- HGP (Subsample 0.2) ---")
     start = time.time()
-    labels_hgp_sub = HypergraphPercol(
-        X, min_cluster_size=30, min_samples=10, 
-        complex_chosen='delaunay', subsample=0.2, verbeux=True
+    clusterer_sub = HGPClusterer(
+        min_cluster_size=30, min_samples=10, 
+        complex_chosen='delaunay', subsample=0.2, verbose=True
     )
-    if isinstance(labels_hgp_sub, tuple): labels_hgp_sub = labels_hgp_sub[0]
+    labels_hgp_sub = clusterer_sub.fit_predict(X)
 
     end = time.time()
     n_clus_sub = len(set(labels_hgp_sub)) - (1 if -1 in labels_hgp_sub else 0)

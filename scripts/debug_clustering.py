@@ -1,6 +1,6 @@
 
 import numpy as np
-from hgp_clusterer import HypergraphPercol
+from hgp_clusterer import HGPClusterer
 from hgp_clusterer.clustering import condense_tree, GetClusters, _build_dfs_structure
 
 def make_dataset(n_samples=300, seed=42):
@@ -16,15 +16,14 @@ def debug_run():
     print(f"Dataset shape: {X.shape}")
     
     # Run HGP
-    labels, Z_list = HypergraphPercol(
-        X, 
+    clusterer = HGPClusterer(
         K=2, 
         min_cluster_size=5, 
         min_samples=3,
         complex_chosen='orderk_delaunay', # Force Order-K Delaunay logic
-        verbeux=True,
-        return_multi_clusters=True
+        verbose=True
     )
+    labels = clusterer.fit_predict(X)
     
     unique_labels = np.unique(labels)
     print(f"Labels found: {unique_labels}")

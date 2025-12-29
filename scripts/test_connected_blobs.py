@@ -1,6 +1,6 @@
 
 import numpy as np
-from hgp_clusterer import HypergraphPercol
+from hgp_clusterer import HGPClusterer
 from sklearn.datasets import make_blobs
 
 def main():
@@ -18,15 +18,15 @@ def main():
     # Run HGP with Delaunay
     # min_cluster_size=20 pour ignorer les petits artefacts du bruit
     print("Running HypergraphPercol...")
-    labels = HypergraphPercol(
-        X, 
+    clusterer = HGPClusterer(
         K=2, 
         min_cluster_size=30, 
         min_samples=10, 
         complex_chosen='delaunay', 
-        verbeux=True, # Logs activés pour debugger
+        verbose=True, # Logs activés pour debugger
         subsample=1.0
     )
+    labels = clusterer.fit_predict(X)
     
     unique, counts = np.unique(labels, return_counts=True)
     print(f"\nRésultat final:")
