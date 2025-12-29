@@ -170,7 +170,7 @@ class HGPClusterer(BaseEstimator, ClusterMixin):
                  X_processed = reducer.fit_transform(X_processed)
 
         # 3. Build Hypergraph
-        faces_raw, e_u, e_v, e_w, faces_Simplexes, nS = _build_graph_KSimplexes(
+        faces_raw, e_u, e_v, e_w, faces_weights, nS = _build_graph_KSimplexes(
             X_processed,
             self.K,
             self.min_samples_,
@@ -182,36 +182,50 @@ class HGPClusterer(BaseEstimator, ClusterMixin):
             cgal_root=self.cgal_root,
         )
         
-        if not faces_raw:
+        if len(faces_raw) == 0:
             self.tree_ = None
             return
 
         # Store for splitting (Faces -> Points map)
-        # faces_raw is list of lists. Convert to efficient array.
-        self.faces_unique_, inv = np.unique(np.asarray(faces_raw, dtype=np.int64), axis=0, return_inverse=True)
+        # faces_raw is now a (N, K) int64 array.
+        # np.unique with axis=0 works on arrays.
+        # faces_raw might contain duplicates if multiple simplices share a face?
+        # In a dual graph construction, yes?
+        # No, faces_raw comes from decomposing simplices. Two simplices can share a face.
+        # So we need unique faces.
+        
+        self.faces_unique_, inv = np.unique(faces_raw, axis=0, return_inverse=True)
         N = self.faces_unique_.shape[0]
         
         # 4. Weight Calculation
-        # ... (Vectorized logic from core.py) ...
-        n_simplexes = len(faces_Simplexes)
-        sim_old_indices = np.empty(n_simplexes, dtype=np.int64)
-        sim_radii = np.empty(n_simplexes, dtype=np.float64)
-        for i, (oidx, _, r) in enumerate(faces_Simplexes):
-            sim_old_indices[i] = oidx
-            sim_radii[i] = r
-        sim_unique_indices = inv[sim_old_indices]
-
+        # Vectorized logic: we now have faces_weights (array of floats) aligned with faces_raw
+        
+        # faces_weights contains the 'r' (radius) or 'weight' of the originating simplex
+        # for each raw face.
+        
+        # We need to map these weights to the unique faces.
+        # But multiple raw faces map to the same unique face (shared face).
+        # We need to combine their weights?
+        # Original logic:
+        # S_faces = np.bincount(sim_unique_indices, weights=sim_weights, minlength=N)
+        # where sim_unique_indices was `inv`.
+        # And sim_weights was 1/r.
+        
+        sim_radii = faces_weights # These are 'r' or 'weight' from Cython
+        
+        # Calculate weights to accumulate
         if self.weight_face == "lambda":
             with np.errstate(divide='ignore'):
                 sim_weights = 1.0 / sim_radii
             sim_weights[~np.isfinite(sim_weights)] = 1e12 
         elif self.weight_face == "uniform":
-            sim_weights = np.ones(n_simplexes, dtype=np.float64)
+            sim_weights = np.ones(len(sim_radii), dtype=np.float64)
         else:
-             # Unique mode not fully supported in this fast class refactor yet, falling back to lambda
-             sim_weights = np.ones(n_simplexes, dtype=np.float64)
+             sim_weights = np.ones(len(sim_radii), dtype=np.float64)
 
-        S_faces = np.bincount(sim_unique_indices, weights=sim_weights, minlength=N)
+        # Accumulate weights on Unique Faces
+        # inv maps faces_raw[i] -> unique_face_index
+        S_faces = np.bincount(inv, weights=sim_weights, minlength=N)
         
         n_vertices_per_face = self.faces_unique_.shape[1]
         flat_faces = self.faces_unique_.flatten()
@@ -227,9 +241,13 @@ class HGPClusterer(BaseEstimator, ClusterMixin):
         
         # Store for extraction
         self.S_faces_ = S_faces
-        self.T_points_ = T_points # Needed for soft voting / multi-clusters
+        self.T_points_ = T_points 
         
         # 5. MST & Tree
+        # e_u, e_v are indices into faces_raw (0..TotalFaces)
+        # We need indices into faces_unique (0..N)
+        # inv maps 0..TotalFaces -> 0..N
+        
         u = inv[np.asarray(e_u, dtype=np.int64)]
         v = inv[np.asarray(e_v, dtype=np.int64)]
         w = np.asarray(e_w, dtype=np.float64)

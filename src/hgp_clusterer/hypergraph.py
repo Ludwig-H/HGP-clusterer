@@ -25,7 +25,7 @@ def _build_graph_KSimplexes(
     precision: str = "safe",
     verbose: bool = False,
     cgal_root: str | os.PathLike[str] | None = "../../CGALDelaunay",
-) -> tuple[list[list[int]], list[int], list[int], list[float], int]:
+) -> tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray, np.ndarray, int]:
     is_sparse_metric = metric == "sparse"
     if is_sparse_metric:
         M = np.asarray(M, dtype=np.float64)
@@ -219,11 +219,53 @@ def _build_graph_KSimplexes(
         from ._cython import build_dual_graph_cython
         
         # Pass memory views
-        faces_raw, e_u, e_v, e_w, faces_Simplexes, nS = build_dual_graph_cython(
+        faces_raw_arr, e_u_arr, e_v_arr, e_w_arr, face_weights_arr, nS = build_dual_graph_cython(
             simplex_indices_arr, simplex_weights_arr, K
         )
         
+        # Adapt for legacy compatibility if needed
+        # Old faces_Simplexes was list of tuples (i, face_list, weight)
+        # New is implicit indices + face_weights_arr
+        
+        # But wait, does core.py use faces_Simplexes explicitly?
+        # Let's check usage in core.py.
+        # core.py iterates faces_Simplexes to get (oidx, _, r). 
+        # Since we optimized core.py recently too (see Class HGPClusterer),
+        # we can pass the arrays directly if we update core.py logic!
+        
+        # However, to avoid breaking legacy code in this file, we return compatible types
+        # OR better: update the return signature of this function.
+        
+        # The function signature says: 
+        # -> tuple[list[list[int]], list[int], list[int], list[float], int]
+        # But we want to return arrays.
+        
+        # Let's return arrays and let Python handle duck typing (lists vs arrays)
+        # Exception: faces_Simplexes.
+        # The new Cython returns `face_weights_arr` instead of `faces_Simplexes`.
+        # We need to reconstruct faces_Simplexes ONLY if strictly needed by legacy callers.
+        # But constructing it defeats the memory saving purpose!
+        
+        # SOLUTION: We return a special object or arrays, and update core.py to handle it.
+        # Actually, let's construct a "Virtual" faces_Simplexes generator or just return the weights array
+        # and expect the caller to use it.
+        
+        # Let's verify what core.py expects.
+        # fit_core calls _build_graph_KSimplexes.
+        # Then:
+        # n_simplexes = len(faces_Simplexes)
+        # for i, (oidx, _, r) in enumerate(faces_Simplexes): ...
+        
+        # If we return `face_weights_arr` as `faces_Simplexes`, the loop will fail (float is not tuple).
+        
+        # We MUST update core.py to handle the new optimized return.
+        # Let's assume we will update core.py next.
+        # Return the raw arrays.
+        
+        return faces_raw_arr, e_u_arr, e_v_arr, e_w_arr, face_weights_arr, nS
+        
     except ImportError:
+
         # Fallback if Cython compilation failed or function missing
         if verbose:
              print("Warning: Cython build_dual_graph_cython not found. Using slow Python loop.")
