@@ -6,7 +6,8 @@
 
 import numpy as np
 cimport numpy as np
-
+from libcpp.vector cimport vector
+from libc.math cimport NAN, isnan, fabs
 
 cdef class UnionFind:
     cdef np.intp_t[:] parent
@@ -271,52 +272,50 @@ cdef inline np.int64_t _max_i64(np.int64_t a, np.int64_t b) nogil:
     return a if a >= b else b
 
 
-from libcpp.vector cimport vector
-from libc.math cimport NAN, isnan, fabs
-
 def condense_tree_cython(
     DTYPE_t[::1] W_nodes,
     ITYPE_t[::1] U_mst,
     ITYPE_t[::1] V_mst,
     DTYPE_t[::1] W_mst,
     ITYPE_t min_cluster_size,
-    bint check_sorted=True
+    bint check_sorted=True,
+    double epsilon=0.0
 ):
     """
-    Cython optimized version of condense_tree.
+    Cython optimized version of condense_tree with N-ary support via epsilon.
     """
     cdef Py_ssize_t N = W_nodes.shape[0]
     cdef Py_ssize_t M = W_mst.shape[0]
-    cdef Py_ssize_t i
+    cdef Py_ssize_t i, j, k
     
-    # Declarations for inside loop
-    cdef vector[ITYPE_t] new_ch
-    cdef vector[ITYPE_t] new_edges
-
-    # Internal Union-Find state (we don't use the class to avoid overhead/api mismatch)
-    cdef vector[ITYPE_t] parent = vector[ITYPE_t](N)
-    cdef vector[double] comp_weight = vector[double](N)
-    cdef vector[ITYPE_t] comp_cid = vector[ITYPE_t](N)
-    # REPLACE comp_edges with comp_nodes to track points until they enter a cluster
-    cdef vector[vector[ITYPE_t]] comp_nodes = vector[vector[ITYPE_t]](N)
-
-    # Output: Map each point to the FIRST cluster (leaf) it enters. -1 if noise/never eligible.
-    cdef np.ndarray[np.int64_t, ndim=1] initial_membership = np.full(N, -1, dtype=np.int64)
-
-    # Cluster data
+    # Output structures
     cdef vector[vector[ITYPE_t]] children
     cdef vector[double] birth_r
     cdef vector[double] death_r
     cdef vector[double] stability
-    # No explicit edge tracking per cluster anymore
     cdef vector[double] size_at_birth
     cdef vector[double] n_in_cluster
     cdef vector[double] sum_join_lambda
+    
+    # Internal state
+    cdef vector[ITYPE_t] parent = vector[ITYPE_t](N)
+    cdef vector[double] comp_weight = vector[double](N)
+    cdef vector[ITYPE_t] comp_cid = vector[ITYPE_t](N)
+    cdef vector[vector[ITYPE_t]] comp_nodes = vector[vector[ITYPE_t]](N)
+    
+    # To track which clusters are merging into a component during a batch
+    # tracked_cids[root] contains the list of cluster IDs (cids) currently inside this component
+    cdef vector[vector[ITYPE_t]] tracked_cids = vector[vector[ITYPE_t]](N)
+
+    # Map each point to the FIRST cluster (leaf) it enters.
+    cdef np.ndarray[np.int64_t, ndim=1] initial_membership = np.full(N, -1, dtype=np.int64)
 
     cdef double EPS = 1e-12
-    cdef ITYPE_t u, v, ru, rv, cid, cid_u, cid_v, cid_new, node_idx
-    cdef double r, lam, n_in, n_parent
-    cdef Py_ssize_t j_node
+    cdef ITYPE_t u, v, ru, rv, cid, node_idx
+    cdef double r, lam, n_in, w_start, w_current
+    cdef Py_ssize_t j_node, c_idx
+    cdef vector[ITYPE_t] new_ch
+    cdef bint has_clusters
 
     if U_mst.shape[0] != M or V_mst.shape[0] != M:
         raise ValueError("U_mst, V_mst, W_mst must have same length M")
@@ -328,139 +327,173 @@ def condense_tree_cython(
             if W_mst[i+1] < W_mst[i]:
                 raise ValueError("W_mst must be sorted in non-decreasing order")
     
+    # Initialization
     for i in range(N):
         parent[i] = i
         comp_weight[i] = W_nodes[i]
         comp_cid[i] = -1
-        # Initialize component with itself
         comp_nodes[i].push_back(i)
 
-    for i in range(M):
-        u = U_mst[i]
-        v = V_mst[i]
-        r = W_mst[i]
+    # We need to allocate `last_seen_batch` once outside.
+    cdef vector[Py_ssize_t] last_seen_batch = vector[Py_ssize_t](N, -1)
+    cdef vector[ITYPE_t] unique_roots
+    
+    # Reset loop index
+    i = 0
+    while i < M:
+        w_start = W_mst[i]
+        
+        # 1. Identify Batch
+        j = i
+        while j < M:
+            w_current = W_mst[j]
+            if w_current - w_start <= epsilon:
+                j += 1
+            else:
+                break
+        
+        # Lam for this batch
+        r = W_mst[j-1]
         lam = 1.0 / (r + EPS)
-
-        # Find with path compression
-        ru = u
-        while parent[ru] != ru:
-            parent[ru] = parent[parent[ru]]
-            ru = parent[ru]
         
-        rv = v
-        while parent[rv] != rv:
-            parent[rv] = parent[parent[rv]]
-            rv = parent[rv]
+        unique_roots.clear()
         
-        if ru == rv:
-            continue
-        
-        if comp_cid[ru] == -1 and comp_cid[rv] == -1:
-            # Case 1: Both ineligible
-            # Weighted Union (Size of node set) for efficiency (Small-to-Large)
-            if comp_nodes[ru].size() < comp_nodes[rv].size():
-                ru, rv = rv, ru
+        # 2. Process Merges
+        for k in range(i, j):
+            u = U_mst[k]
+            v = V_mst[k]
             
-            parent[rv] = ru
-            comp_weight[ru] += comp_weight[rv]
+            ru = u
+            while parent[ru] != ru: parent[ru] = parent[parent[ru]]; ru = parent[ru]
+            rv = v
+            while parent[rv] != rv: parent[rv] = parent[parent[rv]]; rv = parent[rv]
             
-            # Merge nodes: Move rv nodes to ru
-            comp_nodes[ru].insert(comp_nodes[ru].end(), comp_nodes[rv].begin(), comp_nodes[rv].end())
-            comp_nodes[rv].clear() # Release memory of child component
-            
-            # Check if becomes eligible
-            if comp_weight[ru] >= min_cluster_size:
-                # New leaf
-                cid = children.size()
-                children.push_back(vector[ITYPE_t]())
-                birth_r.push_back(r)
-                death_r.push_back(NAN)
-                stability.push_back(0.0)
+            if ru == rv:
+                continue
                 
-                size_at_birth.push_back(comp_weight[ru])
-                n_in_cluster.push_back(comp_weight[ru])
-                sum_join_lambda.push_back(comp_weight[ru] * lam)
-                
-                # Assign all current nodes to this new leaf cluster
-                for j_node in range(comp_nodes[ru].size()):
-                    node_idx = comp_nodes[ru][j_node]
-                    initial_membership[node_idx] = cid
-                
-                # Clear nodes from memory, they are now tracked by initial_membership
-                comp_nodes[ru].clear()
-                
-                comp_cid[ru] = cid
-
-        elif comp_cid[ru] != -1 and comp_cid[rv] == -1:
-            # Case 2: ru eligible, rv ineligible -> attach rv to ru
-            parent[rv] = ru
-            comp_weight[ru] += comp_weight[rv]
-            cid = comp_cid[ru]
-            
-            # The nodes in rv (ineligible) are now joining an existing cluster system
-            # Note: In standard HDBSCAN, they join the *current* cluster `cid`.
-            # We map them to `cid` in initial_membership.
-            for j_node in range(comp_nodes[rv].size()):
-                node_idx = comp_nodes[rv][j_node]
-                initial_membership[node_idx] = cid
-            comp_nodes[rv].clear()
-
-            n_in = comp_weight[rv]
-            n_in_cluster[cid] += n_in
-            sum_join_lambda[cid] += n_in * lam
-
-        elif comp_cid[ru] == -1 and comp_cid[rv] != -1:
-            # Case 3: ru ineligible, rv eligible -> attach ru to rv
-            parent[ru] = rv
-            comp_weight[rv] += comp_weight[ru]
-            cid = comp_cid[rv]
-            
-            for j_node in range(comp_nodes[ru].size()):
-                node_idx = comp_nodes[ru][j_node]
-                initial_membership[node_idx] = cid
-            comp_nodes[ru].clear()
-            
-            n_in = comp_weight[ru]
-            n_in_cluster[cid] += n_in
-            sum_join_lambda[cid] += n_in * lam
-            
-        else:
-            # Case 4: Both eligible -> Merge two clusters
-            cid_u = comp_cid[ru]
-            cid_v = comp_cid[rv]
-            
-            # Close children
-            if isnan(death_r[cid_u]):
-                death_r[cid_u] = r
-                stability[cid_u] += sum_join_lambda[cid_u] - n_in_cluster[cid_u] * lam
-            
-            if isnan(death_r[cid_v]):
-                death_r[cid_v] = r
-                stability[cid_v] += sum_join_lambda[cid_v] - n_in_cluster[cid_v] * lam
-            
-            # Create parent
-            cid_new = children.size()
-            new_ch.clear() # Clear reused vector
-            new_ch.push_back(cid_u)
-            new_ch.push_back(cid_v)
-            children.push_back(new_ch)
-            
-            birth_r.push_back(r)
-            death_r.push_back(NAN)
-            stability.push_back(0.0)
-            
-            n_parent = n_in_cluster[cid_u] + n_in_cluster[cid_v]
-            size_at_birth.push_back(n_parent)
-            n_in_cluster.push_back(n_parent)
-            sum_join_lambda.push_back(n_parent * lam)
-            
-            # Union components
             if comp_weight[ru] < comp_weight[rv]:
                 ru, rv = rv, ru
+            
+            # Collect children
+            if comp_cid[ru] != -1:
+                tracked_cids[ru].push_back(comp_cid[ru])
+                comp_cid[ru] = -1
+            if comp_cid[rv] != -1:
+                tracked_cids[rv].push_back(comp_cid[rv])
+                comp_cid[rv] = -1
+            
+            if not tracked_cids[rv].empty():
+                tracked_cids[ru].insert(tracked_cids[ru].end(), tracked_cids[rv].begin(), tracked_cids[rv].end())
+                tracked_cids[rv].clear()
+            
+            # Physical Union
             parent[rv] = ru
             comp_weight[ru] += comp_weight[rv]
-            comp_cid[ru] = cid_new
-            comp_cid[rv] = -1
+            comp_nodes[ru].insert(comp_nodes[ru].end(), comp_nodes[rv].begin(), comp_nodes[rv].end())
+            comp_nodes[rv].clear()
+            
+            # Track Root
+            if last_seen_batch[ru] != i:
+                unique_roots.push_back(ru)
+                last_seen_batch[ru] = i
+                
+        # 3. Analyze Roots
+        for k in range(unique_roots.size()):
+            ru = unique_roots[k]
+            
+            # It might have been merged into another root subsequent to being added to unique_roots
+            # Verify if it is still a root
+            if parent[ru] != ru:
+                continue
+                
+            # Logic for Cluster Creation
+            has_clusters = not tracked_cids[ru].empty()
+            
+            if comp_weight[ru] >= min_cluster_size:
+                if not has_clusters:
+                    # Case: New Leaf created from noise
+                    cid = children.size()
+                    children.push_back(vector[ITYPE_t]()) # No children
+                    birth_r.push_back(r)
+                    death_r.push_back(NAN)
+                    stability.push_back(0.0)
+                    size_at_birth.push_back(comp_weight[ru])
+                    n_in_cluster.push_back(comp_weight[ru])
+                    sum_join_lambda.push_back(comp_weight[ru] * lam)
+                    
+                    # Assign membership
+                    for j_node in range(comp_nodes[ru].size()):
+                        node_idx = comp_nodes[ru][j_node]
+                        initial_membership[node_idx] = cid
+                    comp_nodes[ru].clear()
+                    
+                    comp_cid[ru] = cid
+                    
+                else:
+                    # Case: We have children (merged clusters)
+                    # Count how many children
+                    if tracked_cids[ru].size() == 1:
+                        # Merged 1 cluster with noise -> Just Extend the cluster
+                        cid = tracked_cids[ru][0]
+                        
+                        n_in = comp_weight[ru] # Total weight now
+                        
+                        added_weight = 0.0
+                        for j_node in range(comp_nodes[ru].size()):
+                            node_idx = comp_nodes[ru][j_node]
+                            initial_membership[node_idx] = cid
+                            added_weight += W_nodes[node_idx]
+                        comp_nodes[ru].clear()
+                        
+                        n_in_cluster[cid] += added_weight
+                        sum_join_lambda[cid] += added_weight * lam
+                        
+                        # Restore comp_cid
+                        comp_cid[ru] = cid
+                        
+                    else:
+                        # Merged >= 2 clusters
+                        # Create NEW PARENT
+                        new_ch.clear()
+                        new_ch = tracked_cids[ru] # Copy
+                        
+                        # Update children's death
+                        n_parent = 0.0
+                        for c_idx in range(new_ch.size()):
+                            cid = new_ch[c_idx]
+                            if isnan(death_r[cid]):
+                                death_r[cid] = r
+                                stability[cid] += sum_join_lambda[cid] - n_in_cluster[cid] * lam
+                            n_parent += n_in_cluster[cid]
+                        
+                        # Add new noise to n_parent
+                        added_weight = 0.0
+                        
+                        cid_new = children.size()
+                        children.push_back(new_ch)
+                        birth_r.push_back(r)
+                        death_r.push_back(NAN)
+                        stability.push_back(0.0)
+                        
+                        for j_node in range(comp_nodes[ru].size()):
+                            node_idx = comp_nodes[ru][j_node]
+                            initial_membership[node_idx] = cid_new
+                            added_weight += W_nodes[node_idx]
+                        comp_nodes[ru].clear()
+                        
+                        n_parent += added_weight
+                        size_at_birth.push_back(n_parent)
+                        n_in_cluster.push_back(n_parent)
+                        sum_join_lambda.push_back(n_parent * lam)
+                        
+                        comp_cid[ru] = cid_new
+            
+            # Clear tracked_cids for next usage
+            tracked_cids[ru].clear()
+            
+        # Advance i
+        i = j
+
 
     # Finalize stability
     cdef Py_ssize_t n_clusters = children.size()
@@ -475,7 +508,7 @@ def condense_tree_cython(
         else:
             lambda_death_arr[i] = 1.0 / (death_r[i] + EPS)
             
-    # Convert vectors to Python objects for return
+    # Convert vectors to Python objects
     py_children = []
     for i in range(n_clusters):
         py_children.append(children[i])
@@ -587,4 +620,3 @@ cpdef tuple build_leaf_dfs_intervals(
         pos_v[lo_v[i]] = i
 
     return pos, first, last, leaf_order
-

@@ -32,6 +32,7 @@ def HypergraphPercol(
     verbeux: bool = False,
     cgal_root: str | os.PathLike[str] | None = "/content/HGP-clusterer/CGALDelaunay",
     subsample: float = 1.0,
+    epsilon_fusion: float = 0.0,
 ) -> np.ndarray | tuple[np.ndarray, list[list[tuple[int, float, float]]]]:
     if method is None:
         method = "eom"
@@ -274,7 +275,7 @@ def HypergraphPercol(
         V_new = inverse[M:]
         W_nodes_cc = W_nodes[uniques]
         # Optimisation : W_mst est déjà trié car issu de W trié
-        Z_cc = condense_tree(W_nodes_cc, U_new, V_new, W_mst, min_cluster_size=min_cluster_size, check_sorted=False)
+        Z_cc = condense_tree(W_nodes_cc, U_new, V_new, W_mst, min_cluster_size=min_cluster_size, check_sorted=False, epsilon=epsilon_fusion)
         if verbeux :
             print(f"condense_tree appliqué. Z_cc (keys): {list(Z_cc.keys())}")
             
@@ -428,26 +429,27 @@ def HypergraphPercol(
 
         else:
              # 'unique' mode OR no clusters found
-             for p in range(n):
-                best_c = -1
-                best_s = -1.0
-                if Points_w[p]:
-                    clusters = {}
-                    for face, w in Points_w[p]:
-                        cl = labels_faces[face]
-                        clusters[cl] = clusters.get(cl, 0.0) + w
+             if weight_face == "unique":
+                 for p in range(n):
+                    best_c = -1
+                    best_s = -1.0
+                    if Points_w[p]:
+                        clusters = {}
+                        for face, w in Points_w[p]:
+                            cl = labels_faces[face]
+                            clusters[cl] = clusters.get(cl, 0.0) + w
+                        
+                        if return_multi_clusters:
+                            labels_points_multiple[p] = sorted(clusters.items(), key=lambda x: x[1], reverse=True)
+                            if labels_points_multiple[p]:
+                                best_c = labels_points_multiple[p][0][0]
+                        else:
+                            for c, s in clusters.items():
+                                if s > best_s:
+                                    best_s = s
+                                    best_c = c
                     
-                    if return_multi_clusters:
-                        labels_points_multiple[p] = sorted(clusters.items(), key=lambda x: x[1], reverse=True)
-                        if labels_points_multiple[p]:
-                            best_c = labels_points_multiple[p][0][0]
-                    else:
-                        for c, s in clusters.items():
-                            if s > best_s:
-                                best_s = s
-                                best_c = c
-                
-                labels_points_unique[p] = best_c
+                    labels_points_unique[p] = best_c
 
     # 4. Label Propagation / Cleanup
     # If subsampling was used, we need to map core labels back to full dataset AND propagate to missing points

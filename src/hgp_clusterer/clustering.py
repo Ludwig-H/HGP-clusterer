@@ -86,6 +86,7 @@ def condense_tree(
     W_mst: np.ndarray,
     min_cluster_size: int,
     check_sorted: bool = True,
+    epsilon: float = 0.0,
 ) -> Dict[str, Any]:
     """Build a HDBSCAN-like condensed tree directly from a MST.
 
@@ -101,6 +102,8 @@ def condense_tree(
         Minimum sum of W_nodes required for a component to become an eligible cluster.
     check_sorted : bool
         If True, validates that W_mst is non-decreasing.
+    epsilon : float
+        Tolerance for merging edges with similar weights into a single N-ary node.
 
     Returns
     -------
@@ -109,7 +112,7 @@ def condense_tree(
     """
     # Delegate to the optimized Cython implementation
     return condense_tree_cython(
-        W_nodes, U_mst, V_mst, W_mst, min_cluster_size, check_sorted
+        W_nodes, U_mst, V_mst, W_mst, min_cluster_size, check_sorted, epsilon
     )
 
 # The original pure Python implementation is preserved below for reference.
@@ -326,7 +329,8 @@ def GetClusters(Z: Dict[str, Any], method, splitting=None, points=None, Face_to_
     method : {'eom','leaf', float>0}
         'eom' for stability-based selection; 'leaf' for all eligible leaves; float r_cut for DBSCAN-like cut on MST.
     splitting : callable or None
-        Optional loss function f(nodes: np.ndarray)->float.
+        Optional decision function f(parent_idx: np.ndarray, children_idx_list: list[np.ndarray]) -> bool.
+        Return True to split (descend), False to keep parent.
     verbose : bool
 
     Returns
@@ -359,30 +363,9 @@ def GetClusters(Z: Dict[str, Any], method, splitting=None, points=None, Face_to_
 
     elif isinstance(method, (float, int)) and not isinstance(method, bool):
         # DBSCAN-like Cut using the hierarchy
-        # A cluster is selected if it is "active" at r_cut.
-        # Active means: born before r_cut AND (dies after r_cut OR never dies)
-        # AND we usually want the most specific (deepest) clusters satisfying this,
-        # but in a condensed tree, branches are disjoint.
-        # If a parent is active, should we return it?
-        # In HDBSCAN cut: we take the connected components of the graph at threshold.
-        # In the condensed tree, this corresponds to the highest nodes (closest to root)
-        # that are born <= r_cut.
-        # Why? Because if a node is born <= r_cut, its children merged at that radius.
-        # If it dies > r_cut, it persists.
-        
         r_cut = float(method)
         lambda_cut = 1.0 / (r_cut + EPS) if r_cut > 0 else 1e20
         
-        # We traverse top-down or check all nodes?
-        # A node i is a root of a component at r_cut if:
-        # 1. lambda_birth[i] >= lambda_cut (born at sufficiently small radius)
-        # 2. Parent is NOT eligible (parent born at smaller lambda / larger radius).
-        # Actually in condense_tree, lambda_birth is when the cluster FORMS (merges children).
-        # So if lambda_birth[i] >= lambda_cut, the merge happened "tightly" enough.
-        
-        # Let's scan all nodes.
-        # We need parent info to check if we are maximal.
-        # Since parents > children, we can build parent map quickly.
         n_clusters = len(children)
         parent_map = np.full(n_clusters, -1, dtype=np.int64)
         for p, ch in enumerate(children):
@@ -395,8 +378,6 @@ def GetClusters(Z: Dict[str, Any], method, splitting=None, points=None, Face_to_
             # Check if this cluster exists at r_cut
             if lb[i] >= lambda_cut:
                 # It is formed. Is it a root at this level?
-                # It is a root if it has no parent OR parent is formed at lower lambda (larger radius)
-                # i.e., parent merge hasn't happened yet at r_cut.
                 p = parent_map[i]
                 if p == -1 or lb[p] < lambda_cut:
                     selected_cids.append(i)
@@ -417,56 +398,57 @@ def GetClusters(Z: Dict[str, Any], method, splitting=None, points=None, Face_to_
             clusters_cids.append(cid)
     else:
         # Splitting logic reused efficiently
-        if points is None or Face_to_points is None:
-            raise ValueError("Splitting requires 'points' and 'Face_to_points'.")
-        points = np.asarray(points)
-
-        def _points_for_nodes(nodes: np.ndarray) -> np.ndarray:
-            if Face_to_points is None:
-                return points[[]]
-            # Face_to_points is now a numpy array (N_faces, K) passed from core.py
-            # We select the faces corresponding to 'nodes'
-            faces_selected = Face_to_points[nodes]
-            
-            # Find unique points involved in these faces
-            unique_pts = np.unique(faces_selected)
-            
-            # Optional: filter out potential -1 padding if any (though usually faces are fully valid indices)
-            if unique_pts.size > 0 and unique_pts[0] < 0:
-                unique_pts = unique_pts[unique_pts >= 0]
-                
-            if unique_pts.size == 0:
-                return points[[]]
-                
-            return points[unique_pts]
-
+        if Face_to_points is None:
+            raise ValueError("Splitting requires 'Face_to_points'.")
+        
         from functools import lru_cache
 
         @lru_cache(maxsize=None)
-        def _apply_splitting_on_cid(cid: int) -> Tuple[Tuple[Tuple[int, ...], ...], float]:
+        def _get_points_idx(cid: int) -> tuple:
+            # Helper to cache point indices extraction
             nodes = get_nodes(cid)
-            points_cl = _points_for_nodes(nodes)
-            loss_here = float(splitting(points_cl))
-            
+            # Face_to_points is a numpy array (N_faces, K)
+            faces_selected = Face_to_points[nodes]
+            # Flatten and unique
+            unique_pts = np.unique(faces_selected)
+            # Filter -1 noise padding
+            if unique_pts.size > 0 and unique_pts[0] < 0:
+                unique_pts = unique_pts[unique_pts >= 0]
+            return tuple(unique_pts.tolist())
+
+        def _recursive_decision(cid: int) -> List[np.ndarray]:
             ch = children[cid]
             if not ch:
-                return (tuple(nodes.tolist()),), loss_here
+                # Leaf: cannot split further
+                return [get_nodes(cid)]
             
-            # Recursive check
-            left_tuples, loss_left = _apply_splitting_on_cid(ch[0])
-            right_tuples, loss_right = _apply_splitting_on_cid(ch[1])
+            # Prepare data for splitting function
+            # Parent points
+            parent_pts_idx = np.array(_get_points_idx(cid), dtype=np.int64)
             
-            if loss_left + loss_right <= loss_here + EPS:
-                return left_tuples + right_tuples, float(loss_left + loss_right)
+            # Children points
+            children_pts_idx_list = []
+            for child in ch:
+                c_pts_idx = np.array(_get_points_idx(child), dtype=np.int64)
+                children_pts_idx_list.append(c_pts_idx)
+            
+            # Call user function
+            should_split = splitting(parent_pts_idx, children_pts_idx_list)
+            
+            if should_split:
+                result = []
+                for child in ch:
+                    result.extend(_recursive_decision(child))
+                return result
             else:
-                return (tuple(nodes.tolist()),), loss_here
+                return [get_nodes(cid)]
 
         for cid in selected_cids:
-            tuples_list, _ = _apply_splitting_on_cid(cid)
-            for tnd in tuples_list:
-                nd = np.asarray(tnd, dtype=np.int64)
+            # We treat each selected cluster as a root for potential splitting
+            final_nodes_list = _recursive_decision(cid)
+            for nd in final_nodes_list:
                 clusters_nodes.append(nd)
-                clusters_cids.append(None)
+                clusters_cids.append(None) # ID lost after splitting
 
     if verbose:
         print(f"[GetClusters] method={method} -> {len(clusters_nodes)} clusters")
