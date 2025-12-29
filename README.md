@@ -1,78 +1,91 @@
 # HGP-clusterer
 
-HypergraphPercol est une implémentation Python du clustering par percolation d'hypergraphes. L'algorithme construit des complexes simpliciaux (ordre-k, Delaunay ou Rips), applique un arbre de Kruskal condensé à la HDBSCAN, puis assigne chaque point au cluster le plus probable.
+**HGP-clusterer** est une implémentation Python performante de l'algorithme de clustering par percolation d'hypergraphes. Il combine la topologie algébrique (complexes simpliciaux) et la théorie de la percolation pour détecter des clusters de formes complexes, même en présence de bruit important.
+
+L'algorithme suit ces étapes clés :
+1.  Construction d'un **hypergraphe** (complexe de Rips ou Delaunay).
+2.  Calcul d'un **Arbre Couvrant Minimum (MST)** sur le graphe dual (les faces deviennent des nœuds).
+3.  Condensation de l'arbre en une hiérarchie stable (similaire à HDBSCAN).
+4.  Sélection des clusters optimaux par **Excess of Mass (EOM)** ou critères de stabilité.
 
 ## Installation
 
+### Standard (Recommandé)
+
 ```bash
-python -m venv .venv
-source .venv/bin/activate
+pip install .
+```
+
+Pour bénéficier de l'accélération géométrique (sphères minimales via `cyminiball`) et des outils de réduction de dimension (UMAP) :
+
+```bash
+pip install .[geometry,umap]
+```
+
+### Développement
+
+Pour modifier le code source :
+
+```bash
 pip install -e .
 ```
 
-L'installation crée une extension Cython (`hgp_clusterer._cython`). Les dépendances de base couvrent `gudhi`, `hdbscan` et `scikit-learn`. Pour bénéficier de la détection de sphères minimales ultra précise, installez en plus `cyminiball` via l'extra `geometry` (facultatif sur Python ≥3.12 grâce au repli NumPy intégré) :
+### Pré-requis système
+- **Python** >= 3.9
+- **Compilateur C++** (g++ ou clang) pour l'extension Cython.
 
-```bash
-pip install -e .[geometry]
-```
+*(Optionnel)* Pour la filtration exacte "Order-k Delaunay", compilez les binaires CGAL fournis dans `CGALDelaunay/` avec `python scripts/setup_cgal.py`. Sinon, l'algorithme utilise automatiquement l'approximation Rips (très performante).
 
-### CGAL (optionnel)
+## Utilisation
 
-Pour activer la filtration « order-k Delaunay », compilez les binaires CGAL fournis dans `CGALDelaunay/` via `python scripts/setup_cgal.py`. Sans CGAL, l'API se replie automatiquement sur la filtration Rips/GUDHI.
-
-## Utilisation rapide
+La classe `HGPClusterer` suit l'API standard de scikit-learn (`fit`, `predict`).
 
 ```python
 import numpy as np
-from hgp_clusterer import HypergraphPercol
+from hgp_clusterer import HGPClusterer
 
-X = np.random.RandomState(0).randn(200, 3)
-labels = HypergraphPercol(
-    X,
-    K=2,
-    metric="euclidean",
-    complex_chosen="rips",   # "auto" choisit une filtration adaptée
-    min_cluster_size=15,
-    label_all_points=True,
-    verbeux=True,
+# Génération de données
+X = np.random.RandomState(42).randn(1000, 2)
+
+# Initialisation et ajustement
+clusterer = HGPClusterer(
+    min_cluster_size=20,  # Taille minimale d'un cluster
+    min_samples=5,        # Paramètre de robustesse au bruit
+    K=2,                  # Dimension des simplexes (2 = triangles)
+    verbose=True
 )
-print(np.unique(labels))
+
+labels = clusterer.fit_predict(X)
+
+print(f"Nombre de clusters trouvés : {len(np.unique(labels[labels >= 0]))}")
 ```
 
-Paramètres utiles :
+## Fonctionnalités Avancées
 
-- `K` : dimension des simplexes (2 ⇒ triangles).
-- `min_cluster_size` / `min_samples` : contrôle la condensation HDBSCAN.
-- `complex_chosen` : `"auto"`, `"rips"`, `"delaunay"` ou `"orderk_delaunay"`.
-- `metric` : `"euclidean"`, `"precomputed"` ou `"sparse"` (triplets `(i, j, d)`).
-- `weight_face` : pondération des points sur les (K-1)-faces (`"lambda"` par défaut).
-- `label_all_points` : comble les points bruit via k-NN pondéré.
+### Raffinement Dynamique (Splitting)
 
-`HypergraphPercol` retourne par défaut les étiquettes majoritaires. Passez `return_multi_clusters=True` pour récupérer, pour chaque point, la distribution pondérée des clusters atteints.
+Une force unique de HGP est la capacité de "découper" des clusters connectés par de fins ponts sans recalculer toute la structure géométrique. Vous pouvez définir une règle de découpage personnalisée et ré-extraire les clusters instantanément.
+
+```python
+# Après un premier fit()
+def ma_regle_de_split(parent_indices, children_list_indices):
+    # Exemple : diviser si le parent est trop gros (> 100 points)
+    if len(parent_indices) > 100:
+        return True
+    return False
+
+nouvelles_labels = clusterer.refine_clusters(splitting=ma_regle_de_split)
+```
+
+### Gestion de la Mémoire et Performance
+
+Le cœur de l'algorithme est écrit en **Cython** et optimise agressivement l'utilisation mémoire via des graphes duaux implicites et des structures union-find rapides. Il passe à l'échelle sur des millions de points.
 
 ## Dépannage
 
-1. **ImportError cyminiball** : un repli NumPy est désormais inclus. Pour de meilleures performances, installez l'extra `geometry`.
-2. **Binaire CGAL manquant** : l'API bascule automatiquement sur la filtration Rips. Compilez CGAL si vous souhaitez l'ordre-k exact.
-3. **Installation lente** : assurez-vous d'avoir un compilateur C++17 (`g++`).
+- **ImportError cyminiball** : Si l'installation échoue, le package bascule automatiquement sur une implémentation NumPy (légèrement plus lente mais universelle).
+- **Problèmes de compilation** : Assurez-vous que `python-dev` ou `python.h` est accessible. Sur Linux : `sudo apt install python3-dev`.
 
-## Tests rapides
+## Licence
 
-Après installation, un mini test permet de vérifier l'API :
-
-```bash
-python - <<'PY'
-import numpy as np
-from hgp_clusterer import HypergraphPercol
-X = np.random.RandomState(0).randn(20, 3)
-print(HypergraphPercol(X, K=2, complex_chosen='rips'))
-PY
-```
-
-### Exemple 2D (20 points)
-
-Le script `scripts/simple_2d_cloud_demo.py` génère deux amas gaussiens en 2D (10 points chacun) et exécute `HypergraphPercol` avec `K=2` et `min_cluster_size=5`. Lancez-le pour reproduire le test demandé :
-
-```bash
-python scripts/simple_2d_cloud_demo.py
-```
+MIT
