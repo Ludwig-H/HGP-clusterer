@@ -71,6 +71,10 @@ def orderk_delaunay3(
         
     if result.size == 0:
         return np.empty((0, K + 1), dtype=np.int64)
+    
+    # Ensure int64 for Cython compatibility
+    if result.dtype != np.int64:
+        result = result.astype(np.int64)
         
     return result # Returns np.ndarray (M, K+1) directly
 

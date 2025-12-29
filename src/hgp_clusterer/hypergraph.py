@@ -235,7 +235,8 @@ def _build_graph_KSimplexes(
         faces_Simplexes = []
         
         # Reconstruct iterator over simplices from arrays
-        for i in range(n_simplexes):
+        n_simplexes_total = simplex_indices_arr.shape[0]
+        for i in range(n_simplexes_total):
             simplex = list(simplex_indices_arr[i])
             weight = float(simplex_weights_arr[i])
             
