@@ -9,4 +9,4 @@ dist/
 .eggs/
 *.log
 .DS_Store
-*.cpp
+src/hgp_clusterer/_cython.cpp
