@@ -54,6 +54,7 @@ class HGPClusterer(BaseEstimator, ClusterMixin):
                  threshold_variance=0.999,
                  subsample=1.0,
                  epsilon_fusion=0.0,
+                 return_multi_clusters=False,
                  verbose=False,
                  cgal_root="/content/HGP-clusterer/CGALDelaunay"):
         
@@ -72,12 +73,14 @@ class HGPClusterer(BaseEstimator, ClusterMixin):
         self.threshold_variance = threshold_variance
         self.subsample = subsample
         self.epsilon_fusion = epsilon_fusion
+        self.return_multi_clusters = return_multi_clusters
         self.verbose = verbose
         self.cgal_root = cgal_root
         
         # State
         self.tree_ = None
         self.forest_ = None
+        self.multi_clusters_ = None
 
     def fit(self, X, y=None):
         """
@@ -89,6 +92,8 @@ class HGPClusterer(BaseEstimator, ClusterMixin):
 
     def fit_predict(self, X, y=None):
         self.fit(X)
+        if self.return_multi_clusters:
+            return self.labels_, self.multi_clusters_
         return self.labels_
 
     def refine_clusters(self, method='eom', splitting=None):
@@ -222,7 +227,7 @@ class HGPClusterer(BaseEstimator, ClusterMixin):
         
         # Store for extraction
         self.S_faces_ = S_faces
-        # self.T_points_ = T_points # Not needed strictly if we use fast extraction
+        self.T_points_ = T_points # Needed for soft voting / multi-clusters
         
         # 5. MST & Tree
         u = inv[np.asarray(e_u, dtype=np.int64)]
@@ -343,6 +348,29 @@ class HGPClusterer(BaseEstimator, ClusterMixin):
         
         final_labels = np.full(self.n_core_, -1, dtype=np.int64)
         final_labels[has_votes] = best_clusters[has_votes]
+        
+        # Compute multi_clusters if requested
+        if self.return_multi_clusters:
+            # We need normalized weights: S_faces / T_points
+            # Recompute data with normalization
+            # Expand T_points to match flattened structure
+            if self.T_points_ is not None:
+                T_points_expanded = self.T_points_[flat_faces]
+                with np.errstate(divide='ignore', invalid='ignore'):
+                    norm_weights = S_faces_expanded / T_points_expanded
+                    norm_weights[~np.isfinite(norm_weights)] = 0.0
+                
+                data_norm = norm_weights[mask]
+                mat_norm = coo_matrix((data_norm, (rows, cols)), shape=(self.n_core_, current_cluster_id)).tocsr()
+                
+                self.multi_clusters_ = [[] for _ in range(self.n_core_)]
+                for i in range(self.n_core_):
+                    row = mat_norm[i]
+                    if row.nnz > 0:
+                        pairs = list(zip(row.indices, row.data))
+                        self.multi_clusters_[i] = sorted(pairs, key=lambda x: x[1], reverse=True)
+            else:
+                self.multi_clusters_ = [] # Should not happen if T_points_ saved
         
         # Propagate to full if subsampled
         if self.X_full_ is not None and len(self.X_full_) > len(self.X_core_):
