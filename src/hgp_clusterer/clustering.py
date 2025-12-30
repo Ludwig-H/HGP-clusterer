@@ -92,11 +92,11 @@ def condense_tree(
 
     Parameters
     ----------
-    W_nodes : (N,) float
+    W_nodes : (N,) float32
         Node weights.
-    U_mst, V_mst : (M,) int
+    U_mst, V_mst : (M,) int32
         Endpoints of MST edges.
-    W_mst : (M,) float
+    W_mst : (M,) float32
         Edge weights, sorted in non-decreasing order (ascending).
     min_cluster_size : int
         Minimum sum of W_nodes required for a component to become an eligible cluster.
@@ -111,8 +111,15 @@ def condense_tree(
         Condensed tree structure as described in the module docstring.
     """
     # Delegate to the optimized Cython implementation
+    # Explicit cast to 32-bit types
     return condense_tree_cython(
-        W_nodes, U_mst, V_mst, W_mst, min_cluster_size, check_sorted, epsilon
+        W_nodes.astype(np.float32), 
+        U_mst.astype(np.int32), 
+        V_mst.astype(np.int32), 
+        W_mst.astype(np.float32), 
+        min_cluster_size, 
+        check_sorted, 
+        epsilon
     )
 
 # The original pure Python implementation is preserved below for reference.
@@ -174,7 +181,7 @@ def _eom_select(Z: Dict[str, Any]) -> List[int]:
     # Let's verify: "cid_new = len(children)". Yes, parents always have higher index than children.
     # So reverse iteration is a valid topological sort.
     
-    max_stab = np.array(stab, dtype=np.float64) # Initialize with self stability
+    max_stab = np.array(stab, dtype=np.float32) # Initialize with self stability (float32)
     # We also need to track WHICH choice we made (Self vs Children)
     # let's use a boolean array: keep_self[i] = True if stab[i] >= V[children]
     keep_self = np.ones(n_clusters, dtype=bool)
@@ -232,9 +239,9 @@ def _build_dfs_structure(Z: Dict[str, Any]) -> Tuple[np.ndarray, np.ndarray, np.
 
     n_clusters = len(children)
     
-    dfs_rank = np.full(n_clusters, -1, dtype=np.int64)
-    min_dfs = np.full(n_clusters, -1, dtype=np.int64)
-    max_dfs = np.full(n_clusters, -1, dtype=np.int64)
+    dfs_rank = np.full(n_clusters, -1, dtype=np.int32)
+    min_dfs = np.full(n_clusters, -1, dtype=np.int32)
+    max_dfs = np.full(n_clusters, -1, dtype=np.int32)
     
     # Iterative Post-Order
     visit_stack = list(_roots_of_Z(Z))
@@ -283,7 +290,7 @@ def _build_dfs_structure(Z: Dict[str, Any]) -> Tuple[np.ndarray, np.ndarray, np.
     # if n_invalid_ranks > 0:
     #    print(f"DEBUG: FOUND {n_invalid_ranks} points pointing to unvisited clusters!")
     
-    full_ranks = np.full(len(initial_membership), -1, dtype=np.int64)
+    full_ranks = np.full(len(initial_membership), -1, dtype=np.int32)
     full_ranks[~mask_noise] = valid_ranks
     
     order = np.argsort(full_ranks)
@@ -298,7 +305,7 @@ def _build_dfs_structure(Z: Dict[str, Any]) -> Tuple[np.ndarray, np.ndarray, np.
     if n_ranks > 0:
         counts = np.bincount(sorted_ranks[start_valid_idx:], minlength=n_ranks)
         
-        offsets = np.zeros(n_ranks + 1, dtype=np.int64)
+        offsets = np.zeros(n_ranks + 1, dtype=np.int32)
         offsets[0] = start_valid_idx
         np.cumsum(counts, out=offsets[1:])
         
@@ -313,10 +320,10 @@ def _build_dfs_structure(Z: Dict[str, Any]) -> Tuple[np.ndarray, np.ndarray, np.
         cluster_start[mask_unvisited] = 0
         cluster_end[mask_unvisited] = 0
         
-        return order, cluster_start, cluster_end
+        return order.astype(np.int32), cluster_start, cluster_end
         
     else:
-        return np.arange(len(initial_membership)), np.zeros(n_clusters, dtype=int), np.zeros(n_clusters, dtype=int)
+        return np.arange(len(initial_membership), dtype=np.int32), np.zeros(n_clusters, dtype=np.int32), np.zeros(n_clusters, dtype=np.int32)
 
 
 def GetClusters(Z: Dict[str, Any], method, splitting=None, points=None, Face_to_points=None, verbose: bool = False) -> Dict[str, Any]:
@@ -336,7 +343,7 @@ def GetClusters(Z: Dict[str, Any], method, splitting=None, points=None, Face_to_
     Returns
     -------
     dict with keys:
-      - 'clusters': List[np.ndarray] of node indices
+      - 'clusters': List[np.ndarray] of node indices (int32)
       - 'cids': List[Optional[int]] cluster ids in Z
       - 'method': echoed method
     """
@@ -367,7 +374,7 @@ def GetClusters(Z: Dict[str, Any], method, splitting=None, points=None, Face_to_
         lambda_cut = 1.0 / (r_cut + EPS) if r_cut > 0 else 1e20
         
         n_clusters = len(children)
-        parent_map = np.full(n_clusters, -1, dtype=np.int64)
+        parent_map = np.full(n_clusters, -1, dtype=np.int32)
         for p, ch in enumerate(children):
             for c in ch:
                 parent_map[c] = p
@@ -452,7 +459,7 @@ def GetClusters(Z: Dict[str, Any], method, splitting=None, points=None, Face_to_
             if pts.size > 0 and pts[0] < 0: # Remove padding/noise -1 if present
                  pts = pts[pts >= 0]
                  
-            leaf_points_map[lbl] = pts
+            leaf_points_map[lbl] = pts.astype(np.int32)
 
         @lru_cache(maxsize=None)
         def _get_points_idx(cid: int) -> np.ndarray:
@@ -468,7 +475,7 @@ def GetClusters(Z: Dict[str, Any], method, splitting=None, points=None, Face_to_
             # If it is a leaf in the tree:
             ch = children[cid]
             if not ch:
-                return leaf_points_map.get(cid, np.array([], dtype=np.int64))
+                return leaf_points_map.get(cid, np.array([], dtype=np.int32))
             
             # Internal node: Union of children
             child_point_arrays = [_get_points_idx(c) for c in ch]
@@ -478,7 +485,7 @@ def GetClusters(Z: Dict[str, Any], method, splitting=None, points=None, Face_to_
             # recursive reduce or concatenating all then unique.
             # Concatenate + Unique is usually faster than N unions
             if not child_point_arrays:
-                return np.array([], dtype=np.int64)
+                return np.array([], dtype=np.int32)
                 
             merged = np.concatenate(child_point_arrays)
             return np.unique(merged)

@@ -9,13 +9,19 @@ cimport numpy as np
 from libcpp.vector cimport vector
 from libc.math cimport NAN, isnan, fabs
 
+# -----------------------------------------------------------------------------
+# 1. Type Definitions (32-bit Optimization)
+# -----------------------------------------------------------------------------
+ctypedef np.float32_t DTYPE_t
+ctypedef np.int32_t ITYPE_t
+
 cdef class UnionFind:
-    cdef np.intp_t[:] parent
-    cdef np.intp_t[:] _size
+    cdef ITYPE_t[:] parent
+    cdef ITYPE_t[:] _size
 
     def __init__(self, int n):
-        self.parent = np.arange(n, dtype=np.intp)
-        self._size = np.ones(n, dtype=np.intp)
+        self.parent = np.arange(n, dtype=np.int32)
+        self._size = np.ones(n, dtype=np.int32)
 
     cpdef int find(self, int x):
         cdef int r = x
@@ -46,48 +52,43 @@ cdef class UnionFind:
         return self._size[self.find(x)]
 
 
-ctypedef np.double_t DTYPE_t
-ctypedef np.int64_t ITYPE_t
-
-
 def kruskal(U, V, W, int N):
     """
     Kruskal sans tri (W déjà trié par ordre croissant).
 
     Entrée:
-      - U, V: arrays d'entiers (0..N-1), U[i] < V[i]
-      - W:    array de flottants (poids), déjà trié croissant
+      - U, V: arrays d'entiers (0..N-1), U[i] < V[i] (int32)
+      - W:    array de flottants (poids), déjà trié croissant (float32)
       - N:    nombre de sommets
 
     Sortie:
-      - Une liste de ndarrays d'indices d'arêtes (dtype=np.intp), un par composante.
-        Les nœuds isolés donnent un tableau vide. Si le graphe est connexe: liste de taille 1.
+      - Une liste de ndarrays d'indices d'arêtes (dtype=np.int32), un par composante.
     """
     cdef Py_ssize_t M
     cdef Py_ssize_t i, e
     cdef int a, b
     cdef int components = N
     cdef int r
-    cdef np.intp_t C, c
+    cdef int C, c
 
-    # Contiguïté + dtypes internes
-    U = np.ascontiguousarray(U, dtype=np.intp)
-    V = np.ascontiguousarray(V, dtype=np.intp)
-    W = np.ascontiguousarray(W, dtype=np.float64)
+    # Contiguïté + dtypes internes (Force 32-bit)
+    U = np.ascontiguousarray(U, dtype=np.int32)
+    V = np.ascontiguousarray(V, dtype=np.int32)
+    W = np.ascontiguousarray(W, dtype=np.float32)
 
     M = (<np.ndarray> U).shape[0]
     if (<np.ndarray> V).shape[0] != M or (<np.ndarray> W).shape[0] != M:
         raise ValueError("U, V et W doivent avoir la même longueur")
 
-    cdef np.intp_t[:] Uv = U
-    cdef np.intp_t[:] Vv = V
+    cdef ITYPE_t[:] Uv = U
+    cdef ITYPE_t[:] Vv = V
     # On ne touche pas à W ici, les arêtes sont déjà triées
 
     cdef UnionFind uf = UnionFind(N)
 
     # Indices des arêtes retenues (buffer max M)
-    cdef np.ndarray[np.intp_t, ndim=1] idx_mst = np.empty(M, dtype=np.intp)
-    cdef np.intp_t[:] idx_mstv = idx_mst
+    cdef np.ndarray[ITYPE_t, ndim=1] idx_mst = np.empty(M, dtype=np.int32)
+    cdef ITYPE_t[:] idx_mstv = idx_mst
     cdef Py_ssize_t k = 0
 
     # Boucle principale de Kruskal
@@ -95,7 +96,7 @@ def kruskal(U, V, W, int N):
         a = <int> Uv[i]
         b = <int> Vv[i]
         if uf.union(a, b):
-            idx_mstv[k] = <np.intp_t> i
+            idx_mstv[k] = <ITYPE_t> i
             k += 1
             components -= 1
             if components == 1:  # arrêt anticipé si connexe
@@ -104,14 +105,14 @@ def kruskal(U, V, W, int N):
     # --- Regroupement par composante: schéma 2 passes, sans dict ---
 
     # 1) Racine de chaque sommet
-    cdef np.ndarray[np.intp_t, ndim=1] roots_arr = np.empty(N, dtype=np.intp)
-    cdef np.intp_t[:] roots = roots_arr
+    cdef np.ndarray[ITYPE_t, ndim=1] roots_arr = np.empty(N, dtype=np.int32)
+    cdef ITYPE_t[:] roots = roots_arr
     for i in range(N):
         roots[i] = uf.find(<int> i)
 
     # 2) Compactage racine -> id de composante 0..C-1 (root_to_cc), init à -1
-    cdef np.ndarray[np.intp_t, ndim=1] root_to_cc = np.empty(N, dtype=np.intp)
-    cdef np.intp_t[:] r2c = root_to_cc
+    cdef np.ndarray[ITYPE_t, ndim=1] root_to_cc = np.empty(N, dtype=np.int32)
+    cdef ITYPE_t[:] r2c = root_to_cc
     for i in range(N):
         r2c[i] = -1
 
@@ -123,8 +124,8 @@ def kruskal(U, V, W, int N):
             C += 1
 
     # 3) Compter le nb d'arêtes MST par composante
-    cdef np.ndarray[np.intp_t, ndim=1] counts = np.zeros(C, dtype=np.intp)
-    cdef np.intp_t[:] cnt = counts
+    cdef np.ndarray[ITYPE_t, ndim=1] counts = np.zeros(C, dtype=np.int32)
+    cdef ITYPE_t[:] cnt = counts
     for i in range(k):
         e = idx_mstv[i]
         r = <int> roots[ Uv[e] ]  # U[e] et V[e] ont la même racine dans le MST
@@ -132,26 +133,26 @@ def kruskal(U, V, W, int N):
 
     # 4) Allouer les sorties et offsets
     cdef list out = [None] * C
-    cdef np.ndarray[np.intp_t, ndim=1] offsets = np.zeros(C, dtype=np.intp)
-    cdef np.intp_t[:] off = offsets
+    cdef np.ndarray[ITYPE_t, ndim=1] offsets = np.zeros(C, dtype=np.int32)
+    cdef ITYPE_t[:] off = offsets
 
-    cdef np.ndarray[np.intp_t, ndim=1] arr
-    cdef np.intp_t[:] arr_view
+    cdef np.ndarray[ITYPE_t, ndim=1] arr
+    cdef ITYPE_t[:] arr_view
 
     for i in range(C):
         if cnt[i] == 0:
-            out[i] = np.empty(0, dtype=np.intp)
+            out[i] = np.empty(0, dtype=np.int32)
         else:
-            out[i] = np.empty(cnt[i], dtype=np.intp)
+            out[i] = np.empty(cnt[i], dtype=np.int32)
 
     # 5) Remplissage des indices par composante
     for i in range(k):
         e = idx_mstv[i]
         r = <int> roots[ Uv[e] ]
         c = r2c[r]
-        arr = <np.ndarray[np.intp_t, ndim=1]> out[c]
+        arr = <np.ndarray[ITYPE_t, ndim=1]> out[c]
         arr_view = arr  # <- conversion propre en memoryview
-        arr_view[ off[c] ] = <np.intp_t> e
+        arr_view[ off[c] ] = <ITYPE_t> e
         off[c] += 1
 
     return out
@@ -264,11 +265,11 @@ cpdef int union_if_adjacent_int(
     return 1 if u == k + 1 else 0
 
 
-cdef inline np.int64_t _min_i64(np.int64_t a, np.int64_t b) nogil:
+cdef inline ITYPE_t _min_i32(ITYPE_t a, ITYPE_t b) nogil:
     return a if a <= b else b
 
 
-cdef inline np.int64_t _max_i64(np.int64_t a, np.int64_t b) nogil:
+cdef inline ITYPE_t _max_i32(ITYPE_t a, ITYPE_t b) nogil:
     return a if a >= b else b
 
 
@@ -283,6 +284,7 @@ def condense_tree_cython(
 ):
     """
     Cython optimized version of condense_tree with N-ary support via epsilon.
+    Uses float32 and int32 for memory efficiency.
     """
     cdef Py_ssize_t N = W_nodes.shape[0]
     cdef Py_ssize_t M = W_mst.shape[0]
@@ -290,30 +292,29 @@ def condense_tree_cython(
     
     # Output structures
     cdef vector[vector[ITYPE_t]] children
-    cdef vector[double] birth_r
-    cdef vector[double] death_r
-    cdef vector[double] stability
-    cdef vector[double] size_at_birth
-    cdef vector[double] n_in_cluster
-    cdef vector[double] sum_join_lambda
+    cdef vector[float] birth_r
+    cdef vector[float] death_r
+    cdef vector[float] stability
+    cdef vector[float] size_at_birth
+    cdef vector[float] n_in_cluster
+    cdef vector[float] sum_join_lambda
     
     # Internal state
     cdef vector[ITYPE_t] parent = vector[ITYPE_t](N)
-    cdef vector[double] comp_weight = vector[double](N)
+    cdef vector[float] comp_weight = vector[float](N)
     cdef vector[ITYPE_t] comp_cid = vector[ITYPE_t](N)
     cdef vector[vector[ITYPE_t]] comp_nodes = vector[vector[ITYPE_t]](N)
     
     # To track which clusters are merging into a component during a batch
-    # tracked_cids[root] contains the list of cluster IDs (cids) currently inside this component
     cdef vector[vector[ITYPE_t]] tracked_cids = vector[vector[ITYPE_t]](N)
 
     # Map each point to the FIRST cluster (leaf) it enters.
-    cdef np.ndarray[np.int64_t, ndim=1] initial_membership = np.full(N, -1, dtype=np.int64)
+    cdef np.ndarray[ITYPE_t, ndim=1] initial_membership = np.full(N, -1, dtype=np.int32)
 
     cdef double EPS = 1e-12
     cdef ITYPE_t u, v, ru, rv, cid, node_idx
-    cdef double r, lam, n_in, w_start, w_current
-    cdef Py_ssize_t j_node, c_idx
+    cdef float r, lam, n_in, w_start, w_current, added_weight, n_parent
+    cdef Py_ssize_t j_node, c_idx, cid_new
     cdef vector[ITYPE_t] new_ch
     cdef bint has_clusters
 
@@ -497,8 +498,8 @@ def condense_tree_cython(
 
     # Finalize stability
     cdef Py_ssize_t n_clusters = children.size()
-    cdef np.ndarray[np.float64_t, ndim=1] lambda_birth_arr = np.empty(n_clusters, dtype=np.float64)
-    cdef np.ndarray[np.float64_t, ndim=1] lambda_death_arr = np.empty(n_clusters, dtype=np.float64)
+    cdef np.ndarray[np.float32_t, ndim=1] lambda_birth_arr = np.empty(n_clusters, dtype=np.float32)
+    cdef np.ndarray[np.float32_t, ndim=1] lambda_death_arr = np.empty(n_clusters, dtype=np.float32)
     
     for i in range(n_clusters):
         lambda_birth_arr[i] = 1.0 / (birth_r[i] + EPS)
@@ -515,23 +516,23 @@ def condense_tree_cython(
         
     return {
         'children': py_children,
-        'r': np.asarray(birth_r, dtype=np.float64),
-        'stability': np.asarray(stability, dtype=np.float64),
+        'r': np.asarray(birth_r, dtype=np.float32),
+        'stability': np.asarray(stability, dtype=np.float32),
         'initial_membership': initial_membership,
-        'size': np.asarray(size_at_birth, dtype=np.float64),
+        'size': np.asarray(size_at_birth, dtype=np.float32),
         'lambda_birth': lambda_birth_arr,
         'lambda_death': lambda_death_arr,
-        'U': np.asarray(U_mst),
-        'V': np.asarray(V_mst),
-        'W': np.asarray(W_mst),
+        'U': np.asarray(U_mst, dtype=np.int32),
+        'V': np.asarray(V_mst, dtype=np.int32),
+        'W': np.asarray(W_mst, dtype=np.float32),
         'N': int(N),
         'M': int(M),
     }
 
 
 cpdef tuple build_leaf_dfs_intervals(
-    np.ndarray[np.int64_t, ndim=1] left,
-    np.ndarray[np.int64_t, ndim=1] right,
+    np.ndarray[np.int32_t, ndim=1] left,
+    np.ndarray[np.int32_t, ndim=1] right,
 ):
     cdef Py_ssize_t t = left.shape[0]
     if right.shape[0] != t:
@@ -539,37 +540,38 @@ cpdef tuple build_leaf_dfs_intervals(
     cdef Py_ssize_t m = t + 1
     cdef Py_ssize_t n_nodes = m + t
 
-    cdef np.int64_t[:] L = left
-    cdef np.int64_t[:] R = right
+    cdef ITYPE_t[:] L = left
+    cdef ITYPE_t[:] R = right
 
-    cdef np.ndarray[np.int64_t, ndim=1] first = np.empty(n_nodes, dtype=np.int64)
-    cdef np.ndarray[np.int64_t, ndim=1] last = np.empty(n_nodes, dtype=np.int64)
-    cdef np.ndarray[np.int64_t, ndim=1] leaf_order = np.empty(m, dtype=np.int64)
-    cdef np.ndarray[np.int64_t, ndim=1] pos = np.empty(m, dtype=np.int64)
+    cdef np.ndarray[ITYPE_t, ndim=1] first = np.empty(n_nodes, dtype=np.int32)
+    cdef np.ndarray[ITYPE_t, ndim=1] last = np.empty(n_nodes, dtype=np.int32)
+    cdef np.ndarray[ITYPE_t, ndim=1] leaf_order = np.empty(m, dtype=np.int32)
+    cdef np.ndarray[ITYPE_t, ndim=1] pos = np.empty(m, dtype=np.int32)
 
-    cdef np.int64_t[:] first_v = first
-    cdef np.int64_t[:] last_v = last
-    cdef np.int64_t[:] lo_v = leaf_order
-    cdef np.int64_t[:] pos_v = pos
+    cdef ITYPE_t[:] first_v = first
+    cdef ITYPE_t[:] last_v = last
+    cdef ITYPE_t[:] lo_v = leaf_order
+    cdef ITYPE_t[:] pos_v = pos
 
     cdef Py_ssize_t i
     for i in range(n_nodes):
         first_v[i] = -1
         last_v[i] = -1
 
-    cdef np.ndarray[np.int64_t, ndim=1] stack_node = np.empty(n_nodes, dtype=np.int64)
+    cdef np.ndarray[ITYPE_t, ndim=1] stack_node = np.empty(n_nodes, dtype=np.int32)
     cdef np.ndarray[np.int8_t, ndim=1] stack_st = np.empty(n_nodes, dtype=np.int8)
-    cdef np.int64_t[:] st_node = stack_node
+    cdef ITYPE_t[:] st_node = stack_node
     cdef np.int8_t[:] st_st = stack_st
 
     cdef Py_ssize_t sp = 0
-    cdef np.int64_t root = m + t - 1
+    cdef int root = m + t - 1
     st_node[sp] = root
     st_st[sp] = 0
     sp += 1
 
     cdef Py_ssize_t k = 0
-    cdef np.int64_t x, state, child_idx, a, b, fa, fb, la, lb
+    cdef int x, child_idx, a, b, fa, fb, la, lb
+    cdef int state
 
     while sp > 0:
         sp -= 1
@@ -610,8 +612,8 @@ cpdef tuple build_leaf_dfs_intervals(
             lb = last_v[b]
             if fa == -1 or fb == -1:
                 raise ValueError("Invalid tree: child interval not computed")
-            first_v[x] = _min_i64(fa, fb)
-            last_v[x] = _max_i64(la, lb)
+            first_v[x] = _min_i32(fa, fb)
+            last_v[x] = _max_i32(la, lb)
 
     if k != m:
         raise ValueError("Leaf DFS did not visit all leaves")
@@ -636,20 +638,12 @@ def build_dual_graph_cython(
     cdef Py_ssize_t n_simplexes = simplex_indices.shape[0]
     # Check dimensions
     if simplex_indices.shape[1] != K + 1:
-         # Fallback or error? The Python code should guarantee this.
-         # But technically we might receive simplices of varying lengths if not careful.
-         # The optimization assumes fixed K+1 size for all simplices in the array.
-         # If existing code supports varying sizes, we might need a ragged array or flat array + offsets.
-         # However, _build_graph_KSimplexes logic usually builds uniform K-simplices for the dual graph construction.
-         # Actually, looking at hypergraph.py logic:
-         # "for simplex, filt in st.get_skeleton(K): if len(simplex) != K + 1: continue"
-         # So yes, we only have K-simplices (which have K+1 vertices).
          pass
 
     cdef Py_ssize_t i, j, idx, t, n_verts, base
     cdef int drop
     cdef vector[ITYPE_t] simplex
-    cdef double weight
+    cdef float weight
     
     # Outputs using NumPy arrays to save memory (Zero-Copy return)
     # We estimate sizes:
@@ -659,18 +653,13 @@ def build_dual_graph_cython(
     cdef Py_ssize_t total_faces = n_simplexes * (K + 1)
     cdef Py_ssize_t total_edges = n_simplexes * K
     
-    # Allocate numpy arrays
-    cdef np.ndarray[ITYPE_t, ndim=2] faces_raw_arr = np.empty((total_faces, K), dtype=np.int64)
-    cdef np.ndarray[ITYPE_t, ndim=1] e_u_arr = np.empty(total_edges, dtype=np.int64)
-    cdef np.ndarray[ITYPE_t, ndim=1] e_v_arr = np.empty(total_edges, dtype=np.int64)
-    cdef np.ndarray[DTYPE_t, ndim=1] e_w_arr = np.empty(total_edges, dtype=np.float64)
+    # Allocate numpy arrays (32-bit optimization)
+    cdef np.ndarray[ITYPE_t, ndim=2] faces_raw_arr = np.empty((total_faces, K), dtype=np.int32)
+    cdef np.ndarray[ITYPE_t, ndim=1] e_u_arr = np.empty(total_edges, dtype=np.int32)
+    cdef np.ndarray[ITYPE_t, ndim=1] e_v_arr = np.empty(total_edges, dtype=np.int32)
+    cdef np.ndarray[DTYPE_t, ndim=1] e_w_arr = np.empty(total_edges, dtype=np.float32)
     
-    # We also need faces_Simplexes which maps face_index -> (weight)
-    # The original return signature was complex: faces_Simplexes list of tuples (idx, face, weight).
-    # But idx is just 0..total_faces-1. Face is in faces_raw_arr.
-    # So we only need to return weights for each face?
-    # Yes. Let's return face_weights array.
-    cdef np.ndarray[DTYPE_t, ndim=1] face_weights_arr = np.empty(total_faces, dtype=np.float64)
+    cdef np.ndarray[DTYPE_t, ndim=1] face_weights_arr = np.empty(total_faces, dtype=np.float32)
     
     cdef Py_ssize_t cursor_face = 0
     cdef Py_ssize_t cursor_edge = 0
@@ -704,11 +693,6 @@ def build_dual_graph_cython(
                 e_w_arr[cursor_edge] = weight
                 cursor_edge += 1
                 
-    # Compatibility Return
-    # Original: faces_raw (list of lists), e_u (list), e_v (list), e_w (list), faces_Simplexes (list of tuples), nS
-    # New Optimized: faces_raw_arr, e_u_arr, e_v_arr, e_w_arr, face_weights_arr, nS
-    # We need to adapt the caller (hypergraph.py) to accept this.
-    
     return faces_raw_arr, e_u_arr, e_v_arr, e_w_arr, face_weights_arr, nS
 
 

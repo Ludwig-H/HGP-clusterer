@@ -28,23 +28,23 @@ def orderk_delaunay3(
             "Please ensure the package is installed correctly with compiled extensions."
         )
 
-    M = np.ascontiguousarray(M, dtype=np.float64)
+    M = np.ascontiguousarray(M, dtype=np.float32)
     if M.ndim != 2:
         raise ValueError("M must be 2D")
     if K < 1:
         raise ValueError("K must be >= 1")
     n, d = M.shape
     if n < 2:
-        return np.empty((0, K + 1), dtype=np.int64)
+        return np.empty((0, K + 1), dtype=np.int32)
 
     # Call the C++ function directly
-    # returns (M, K+1) array of int64
+    # returns (M, K+1) array of int32
     try:
         result = compute_delaunay(M, K, precision, verbose)
     except Exception as e:
         raise RuntimeError(f"C++ Execution failed: {e}")
 
     if result.size == 0:
-        return np.empty((0, K + 1), dtype=np.int64)
+        return np.empty((0, K + 1), dtype=np.int32)
         
     return result

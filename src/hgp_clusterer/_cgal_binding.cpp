@@ -72,7 +72,7 @@ struct PointCloud {
 // Main Computation Function
 // ==============================================================================================
 
-py::array_t<int64_t> compute_delaunay(
+py::array_t<int32_t> compute_delaunay(
     py::array_t<double, py::array::c_style | py::array::forcecast> input_points,
     int K_max,
     std::string precision = "safe",
@@ -85,8 +85,8 @@ py::array_t<int64_t> compute_delaunay(
     size_t N = buf.shape[0];
     size_t dim = buf.shape[1];
     
-    if (N < 2) return py::array_t<int64_t>(); // Empty
-    if (K_max < 1) return py::array_t<int64_t>();
+    if (N < 2) return py::array_t<int32_t>(); // Empty
+    if (K_max < 1) return py::array_t<int32_t>();
 
     // Copy to std::vector because kernels.hpp expects it
     // TODO: Optimize this copy out by modifying kernels.hpp to use spans
@@ -141,7 +141,7 @@ py::array_t<int64_t> compute_delaunay(
     if (K_max == 1) {
         // Return result
         // Shape (M, 2)
-        auto result = py::array_t<int64_t>({(long)prev_simplices.size(), (long)2});
+        auto result = py::array_t<int32_t>({(long)prev_simplices.size(), (long)2});
         auto r_ptr = result.mutable_unchecked<2>();
         for(size_t i=0; i<prev_simplices.size(); ++i) {
             r_ptr(i, 0) = prev_simplices[i][0];
@@ -261,10 +261,10 @@ py::array_t<int64_t> compute_delaunay(
     }
 
     // 4. Return Result
-    if (prev_simplices.empty()) return py::array_t<int64_t>();
+    if (prev_simplices.empty()) return py::array_t<int32_t>();
     
     size_t final_k = prev_simplices[0].size();
-    auto result = py::array_t<int64_t>({(long)prev_simplices.size(), (long)final_k});
+    auto result = py::array_t<int32_t>({(long)prev_simplices.size(), (long)final_k});
     auto r_ptr = result.mutable_unchecked<2>();
     
     for(size_t i=0; i<prev_simplices.size(); ++i) {

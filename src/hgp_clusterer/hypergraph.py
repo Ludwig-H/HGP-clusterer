@@ -28,7 +28,7 @@ def _build_graph_KSimplexes(
 ) -> tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray, np.ndarray, int]:
     is_sparse_metric = metric == "sparse"
     if is_sparse_metric:
-        M = np.asarray(M, dtype=np.float64)
+        M = np.asarray(M, dtype=np.float32)
         if M.ndim != 2 or M.shape[1] != 3:
             raise ValueError("For metric='sparse', M must be a list/array of (i, j, distance) triplets.")
         if M.size:
@@ -37,7 +37,7 @@ def _build_graph_KSimplexes(
             n_points = 0
         d = 0
     else:
-        M = np.ascontiguousarray(M, dtype=np.float64)
+        M = np.ascontiguousarray(M, dtype=np.float32)
         n_points, d = M.shape
     if min_samples is None or min_samples <= K:
         min_samples = K + 1
@@ -67,8 +67,10 @@ def _build_graph_KSimplexes(
     
     if complex_chosen.lower() == "orderk_delaunay":
         try:
-            # Returns (N_simplices, K+1) int64 array
+            # Returns (N_simplices, K+1) int64 array. Cast to int32 immediately.
             simplex_indices_arr = orderk_delaunay3(M, min_samples - 1, precision=precision, verbose=verbose, root=root_path)
+            if simplex_indices_arr.dtype != np.int32:
+                 simplex_indices_arr = simplex_indices_arr.astype(np.int32)
         except FileNotFoundError as exc:
             if verbose:
                 print(f"CGAL non disponible ({exc}). Repli sur la filtration Rips.")
@@ -94,9 +96,11 @@ def _build_graph_KSimplexes(
                     # Accessing M (global) in 'processes' mode usually relies on memory mapping or fork copy-on-write
                     # which is efficient for reading.
                     
-                    res = np.empty(indices_batch.shape[0], dtype=np.float64)
+                    res = np.empty(indices_batch.shape[0], dtype=np.float32)
                     for i in range(indices_batch.shape[0]):
                         pts = M[indices_batch[i]]
+                        # minimum_enclosing_ball is geometry.py. It uses float64 internally usually.
+                        # We cast result to float32.
                         _, r_sq = minimum_enclosing_ball(pts)
                         res[i] = r_sq
                     return res
@@ -120,7 +124,7 @@ def _build_graph_KSimplexes(
                 if expZ != 2:
                     radii_arr = radii_arr ** (expZ / 2)
                 
-                simplex_weights_arr = radii_arr
+                simplex_weights_arr = radii_arr.astype(np.float32)
                 
                 # Check dimensions match (logic check)
                 if simplex_indices_arr.shape[1] != K + 1:
@@ -131,8 +135,8 @@ def _build_graph_KSimplexes(
                      pass
                      
             else:
-                 simplex_indices_arr = np.empty((0, K + 1), dtype=np.int64)
-                 simplex_weights_arr = np.empty(0, dtype=np.float64)
+                 simplex_indices_arr = np.empty((0, K + 1), dtype=np.int32)
+                 simplex_weights_arr = np.empty(0, dtype=np.float32)
 
     if complex_chosen.lower() != "orderk_delaunay":
         # ... (Legacy Gudhi Path) ...
@@ -144,7 +148,7 @@ def _build_graph_KSimplexes(
 
         if is_sparse_metric:
             expZ_local = expZ * 2
-            r2 = np.zeros(n, dtype=np.float64)
+            r2 = np.zeros(n, dtype=np.float32)
             st = gudhi.SimplexTree()
             for v in range(n):
                 st.insert([int(v)], filtration=0.0)
@@ -205,11 +209,11 @@ def _build_graph_KSimplexes(
     if complex_chosen.lower() != "orderk_delaunay":
         n_simplexes_list = len(weights)
         if n_simplexes_list > 0:
-            simplex_indices_arr = np.array(flat_indices, dtype=np.int64).reshape(n_simplexes_list, K + 1)
-            simplex_weights_arr = np.array(weights, dtype=np.float64)
+            simplex_indices_arr = np.array(flat_indices, dtype=np.int32).reshape(n_simplexes_list, K + 1)
+            simplex_weights_arr = np.array(weights, dtype=np.float32)
         else:
-            simplex_indices_arr = np.empty((0, K + 1), dtype=np.int64)
-            simplex_weights_arr = np.empty(0, dtype=np.float64)
+            simplex_indices_arr = np.empty((0, K + 1), dtype=np.int32)
+            simplex_weights_arr = np.empty(0, dtype=np.float32)
 
     # Convert to typed numpy arrays (ensure C-contiguity if needed, though Cython handles it)
     # The arrays are now ready for build_dual_graph_cython
@@ -223,44 +227,7 @@ def _build_graph_KSimplexes(
             simplex_indices_arr, simplex_weights_arr, K
         )
         
-        # Adapt for legacy compatibility if needed
-        # Old faces_Simplexes was list of tuples (i, face_list, weight)
-        # New is implicit indices + face_weights_arr
-        
-        # But wait, does core.py use faces_Simplexes explicitly?
-        # Let's check usage in core.py.
-        # core.py iterates faces_Simplexes to get (oidx, _, r). 
-        # Since we optimized core.py recently too (see Class HGPClusterer),
-        # we can pass the arrays directly if we update core.py logic!
-        
-        # However, to avoid breaking legacy code in this file, we return compatible types
-        # OR better: update the return signature of this function.
-        
-        # The function signature says: 
-        # -> tuple[list[list[int]], list[int], list[int], list[float], int]
-        # But we want to return arrays.
-        
-        # Let's return arrays and let Python handle duck typing (lists vs arrays)
-        # Exception: faces_Simplexes.
-        # The new Cython returns `face_weights_arr` instead of `faces_Simplexes`.
-        # We need to reconstruct faces_Simplexes ONLY if strictly needed by legacy callers.
-        # But constructing it defeats the memory saving purpose!
-        
-        # SOLUTION: We return a special object or arrays, and update core.py to handle it.
-        # Actually, let's construct a "Virtual" faces_Simplexes generator or just return the weights array
-        # and expect the caller to use it.
-        
-        # Let's verify what core.py expects.
-        # fit_core calls _build_graph_KSimplexes.
-        # Then:
-        # n_simplexes = len(faces_Simplexes)
-        # for i, (oidx, _, r) in enumerate(faces_Simplexes): ...
-        
-        # If we return `face_weights_arr` as `faces_Simplexes`, the loop will fail (float is not tuple).
-        
-        # We MUST update core.py to handle the new optimized return.
-        # Let's assume we will update core.py next.
-        # Return the raw arrays.
+        # Note: Cython now returns np.int32/np.float32 arrays.
         
         return faces_raw_arr, e_u_arr, e_v_arr, e_w_arr, face_weights_arr, nS
         
@@ -274,7 +241,7 @@ def _build_graph_KSimplexes(
         e_v = []
         e_w = []
         nS = 0
-        faces_Simplexes = []
+        face_weights_list = []
         
         # Reconstruct iterator over simplices from arrays
         n_simplexes_total = simplex_indices_arr.shape[0]
@@ -293,10 +260,17 @@ def _build_graph_KSimplexes(
             for drop in range(K + 1):
                 face = [simplex[t] for t in range(K + 1) if t != drop]
                 faces_raw.append(face)
-                faces_Simplexes.append((base + drop, face, weight))
+                face_weights_list.append(weight)
             for idx in range(K):
                 e_u.append(base + idx)
                 e_v.append(base + idx + 1)
                 e_w.append(weight)
-                    
-    return faces_raw, e_u, e_v, e_w, faces_Simplexes, nS
+        
+        # Convert fallback lists to arrays for consistency with new API
+        faces_raw_arr = np.array(faces_raw, dtype=np.int32)
+        e_u_arr = np.array(e_u, dtype=np.int32)
+        e_v_arr = np.array(e_v, dtype=np.int32)
+        e_w_arr = np.array(e_w, dtype=np.float32)
+        face_weights_arr = np.array(face_weights_list, dtype=np.float32)
+        
+        return faces_raw_arr, e_u_arr, e_v_arr, e_w_arr, face_weights_arr, nS

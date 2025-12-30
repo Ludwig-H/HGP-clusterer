@@ -109,16 +109,16 @@ class HGPClusterer(BaseEstimator, ClusterMixin):
         self.is_sparse_metric_ = (self.metric == "sparse")
         
         if self.is_sparse_metric_:
-            M = np.asarray(M, dtype=np.float64)
+            M = np.asarray(M, dtype=np.float32)
             n_full = int(np.max(M[:, :2])) + 1 if M.size else 0
             # No subsampling support for sparse yet
             self.X_core_ = M
-            self.idx_core_ = np.arange(n_full)
+            self.idx_core_ = np.arange(n_full, dtype=np.int32)
             self.X_full_ = None # Sparse matrix structure not stored fully here
             n_core = n_full
             d_core = 0
         else:
-            M_full = np.ascontiguousarray(M, dtype=np.float64)
+            M_full = np.ascontiguousarray(M, dtype=np.float32)
             self.X_full_ = M_full
             n_full, d_full = M_full.shape
             
@@ -127,10 +127,10 @@ class HGPClusterer(BaseEstimator, ClusterMixin):
                 if self.verbose:
                     print(f"Subsampling: {n_core}/{n_full}")
                 rng = np.random.default_rng(42)
-                self.idx_core_ = rng.choice(n_full, size=n_core, replace=False)
+                self.idx_core_ = rng.choice(n_full, size=n_core, replace=False).astype(np.int32)
                 self.X_core_ = M_full[self.idx_core_]
             else:
-                self.idx_core_ = np.arange(n_full)
+                self.idx_core_ = np.arange(n_full, dtype=np.int32)
                 self.X_core_ = M_full
             n_core, d_core = self.X_core_.shape
 
@@ -158,16 +158,14 @@ class HGPClusterer(BaseEstimator, ClusterMixin):
                 pca = PCA(n_components=self.threshold_variance, svd_solver="full", whiten=False)
                 X2 = pca.fit_transform(X_processed)
                 if pca.n_components_ < d_core:
-                    X_processed = X2
+                    X_processed = X2.astype(np.float32)
                     if self.verbose: print(f"PCA reduced to {pca.n_components_} dims")
             elif str(self.dim_reducer).lower() == "umap":
                  from umap import UMAP
-                 reducer = UMAP(n_components=pca.n_components_, # Bug in original code? Assuming pca logic or just r?
-                                # Let's assume user wants efficient reduction.
-                                # Original code logic was complex.
+                 reducer = UMAP(n_components=pca.n_components_, 
                                 n_neighbors=max(2 * 2 * (self.K + 1), self.min_samples_), 
                                 metric=self.metric)
-                 X_processed = reducer.fit_transform(X_processed)
+                 X_processed = reducer.fit_transform(X_processed).astype(np.float32)
 
         # 3. Build Hypergraph
         faces_raw, e_u, e_v, e_w, faces_weights, nS = _build_graph_KSimplexes(
@@ -187,31 +185,17 @@ class HGPClusterer(BaseEstimator, ClusterMixin):
             return
 
         # Store for splitting (Faces -> Points map)
-        # faces_raw is now a (N, K) int64 array.
-        # np.unique with axis=0 works on arrays.
-        # faces_raw might contain duplicates if multiple simplices share a face?
-        # In a dual graph construction, yes?
-        # No, faces_raw comes from decomposing simplices. Two simplices can share a face.
-        # So we need unique faces.
-        
         self.faces_unique_, inv = np.unique(faces_raw, axis=0, return_inverse=True)
+        # Ensure faces_unique is int32 (should be from Cython, but just in case)
+        if self.faces_unique_.dtype != np.int32:
+             self.faces_unique_ = self.faces_unique_.astype(np.int32)
+        if inv.dtype != np.int32:
+             inv = inv.astype(np.int32)
+
         N = self.faces_unique_.shape[0]
         
         # 4. Weight Calculation
-        # Vectorized logic: we now have faces_weights (array of floats) aligned with faces_raw
-        
-        # faces_weights contains the 'r' (radius) or 'weight' of the originating simplex
-        # for each raw face.
-        
-        # We need to map these weights to the unique faces.
-        # But multiple raw faces map to the same unique face (shared face).
-        # We need to combine their weights?
-        # Original logic:
-        # S_faces = np.bincount(sim_unique_indices, weights=sim_weights, minlength=N)
-        # where sim_unique_indices was `inv`.
-        # And sim_weights was 1/r.
-        
-        sim_radii = faces_weights # These are 'r' or 'weight' from Cython
+        sim_radii = faces_weights.astype(np.float32) 
         
         # Calculate weights to accumulate
         if self.weight_face == "lambda":
@@ -219,53 +203,44 @@ class HGPClusterer(BaseEstimator, ClusterMixin):
                 sim_weights = 1.0 / sim_radii
             sim_weights[~np.isfinite(sim_weights)] = 1e12 
         elif self.weight_face == "uniform":
-            sim_weights = np.ones(len(sim_radii), dtype=np.float64)
+            sim_weights = np.ones(len(sim_radii), dtype=np.float32)
         else:
-             sim_weights = np.ones(len(sim_radii), dtype=np.float64)
+             sim_weights = np.ones(len(sim_radii), dtype=np.float32)
 
         # Accumulate weights on Unique Faces
-        # inv maps faces_raw[i] -> unique_face_index
-        S_faces = np.bincount(inv, weights=sim_weights, minlength=N)
+        S_faces = np.bincount(inv, weights=sim_weights, minlength=N).astype(np.float32)
         
         n_vertices_per_face = self.faces_unique_.shape[1]
         flat_faces = self.faces_unique_.flatten()
         S_faces_expanded = np.repeat(S_faces, n_vertices_per_face)
-        T_points = np.bincount(flat_faces, weights=S_faces_expanded, minlength=n_core)
+        T_points = np.bincount(flat_faces, weights=S_faces_expanded, minlength=n_core).astype(np.float32)
         
         with np.errstate(divide='ignore', invalid='ignore'):
             inv_T_points = 1.0 / T_points
             inv_T_points[~np.isfinite(inv_T_points)] = 0.0
             
         sum_inv_Tp_face = np.sum(inv_T_points[self.faces_unique_], axis=1)
-        self.W_nodes_ = S_faces * sum_inv_Tp_face
+        self.W_nodes_ = (S_faces * sum_inv_Tp_face).astype(np.float32)
         
         # Store for extraction
         self.S_faces_ = S_faces
         self.T_points_ = T_points 
         
         # 5. MST & Tree
-        # e_u, e_v are indices into faces_raw (0..TotalFaces)
-        # We need indices into faces_unique (0..N)
-        # inv maps 0..TotalFaces -> 0..N
         
-        u = inv[np.asarray(e_u, dtype=np.int64)]
-        v = inv[np.asarray(e_v, dtype=np.int64)]
-        w = np.asarray(e_w, dtype=np.float64)
+        u = inv[np.asarray(e_u, dtype=np.int32)]
+        v = inv[np.asarray(e_v, dtype=np.int32)]
+        w = np.asarray(e_w, dtype=np.float32)
         
         U = np.minimum(u, v)
         V = np.maximum(u, v)
         order = np.argsort(w)
         U, V, w = U[order], V[order], w[order]
         
-        liste_composantes = kruskal(U, V, w, N)
-        
-        # We handle multiple components by building a forest or running condense on each
-        # For the Class API, we store a list of trees?
-        # Or we map everything to a single namespace?
-        # core.py loops. 
+        liste_composantes = kruskal(U, V, w, int(N))
         
         self.forest_ = []
-        self.component_indices_ = [] # Map local CC indices to global unique face indices
+        self.component_indices_ = [] 
         
         idx_cluster_offset = 0
         
@@ -276,6 +251,8 @@ class HGPClusterer(BaseEstimator, ClusterMixin):
             
             all_nodes = np.concatenate((U_mst.ravel(), V_mst.ravel()))
             uniques, inverse = np.unique(all_nodes, return_inverse=True)
+            uniques = uniques.astype(np.int32)
+            inverse = inverse.astype(np.int32)
             
             M_edges = U_mst.size
             U_new = inverse[:M_edges]
@@ -287,35 +264,26 @@ class HGPClusterer(BaseEstimator, ClusterMixin):
                 U_new, 
                 V_new, 
                 W_mst, 
-                min_cluster_size=self.min_cluster_size_, 
+                min_cluster_size=int(self.min_cluster_size_), 
                 check_sorted=False, 
-                epsilon=self.epsilon_fusion
+                epsilon=float(self.epsilon_fusion)
             )
             
-            # Store info needed for GetClusters
-            # We need the subset of faces corresponding to 'uniques'
             faces_cc = self.faces_unique_[uniques]
             
             self.forest_.append({
                 'Z': Z_cc,
                 'faces_cc': faces_cc,
-                'uniques_map': uniques, # Map local 0..k to global face IDs
+                'uniques_map': uniques, 
                 'cluster_offset': idx_cluster_offset
             })
             
-            # Estimate how many clusters in this tree to update offset?
-            # GetClusters returns arbitrary number. We'll handle offsets during extraction.
-            # But we need consistent IDs if we run extract multiple times.
-            # The condensed tree has fixed nodes.
-            # Let's count potential clusters? 
-            # Actually, `GetClusters` generates list of indices. 
-            # We can just append labels sequentially.
 
     def _extract_labels(self, method, splitting):
         if self.tree_ is None and (self.forest_ is None or len(self.forest_) == 0):
-            return np.full(self.n_core_, -1, dtype=np.int64)
+            return np.full(self.n_core_, -1, dtype=np.int32)
             
-        labels_faces = -np.ones(self.faces_unique_.shape[0], dtype=np.int64)
+        labels_faces = -np.ones(self.faces_unique_.shape[0], dtype=np.int32)
         current_cluster_id = 0
         
         for comp in self.forest_:
@@ -327,7 +295,6 @@ class HGPClusterer(BaseEstimator, ClusterMixin):
             res = GetClusters(Z, method, splitting=splitting, Face_to_points=faces_cc, verbose=self.verbose)
             
             # Assign labels to faces
-            # res['clusters'] contains lists of local node indices (0..len(uniques))
             for i, nodes in enumerate(res['clusters']):
                 global_face_indices = uniques[nodes]
                 labels_faces[global_face_indices] = current_cluster_id + i
@@ -335,16 +302,10 @@ class HGPClusterer(BaseEstimator, ClusterMixin):
             current_cluster_id += len(res['clusters'])
 
         # Propagate Faces -> Points
-        # Vectorized ArgMax (Soft Vote)
-        # See core.py optimization
-        
-        # Construct Sparse Matrix
-        # Rows: Points (n_core), Cols: Clusters
-        # Data: S_faces
         
         mask_valid = labels_faces != -1
         if not mask_valid.any():
-            return np.full(self.n_core_, -1, dtype=np.int64)
+            return np.full(self.n_core_, -1, dtype=np.int32)
             
         # Expand
         n_vertices_per_face = self.faces_unique_.shape[1]
@@ -359,19 +320,16 @@ class HGPClusterer(BaseEstimator, ClusterMixin):
         
         # Scipy Sparse
         from scipy.sparse import coo_matrix
-        mat = coo_matrix((data, (rows, cols)), shape=(self.n_core_, current_cluster_id)).tocsr()
+        mat = coo_matrix((data, (rows, cols)), shape=(self.n_core_, current_cluster_id), dtype=np.float32).tocsr()
         
         best_clusters = np.asarray(mat.argmax(axis=1)).flatten()
         has_votes = mat.getnnz(axis=1) > 0
         
-        final_labels = np.full(self.n_core_, -1, dtype=np.int64)
+        final_labels = np.full(self.n_core_, -1, dtype=np.int32)
         final_labels[has_votes] = best_clusters[has_votes]
         
         # Compute multi_clusters if requested
         if self.return_multi_clusters:
-            # We need normalized weights: S_faces / T_points
-            # Recompute data with normalization
-            # Expand T_points to match flattened structure
             if self.T_points_ is not None:
                 T_points_expanded = self.T_points_[flat_faces]
                 with np.errstate(divide='ignore', invalid='ignore'):
@@ -379,7 +337,7 @@ class HGPClusterer(BaseEstimator, ClusterMixin):
                     norm_weights[~np.isfinite(norm_weights)] = 0.0
                 
                 data_norm = norm_weights[mask]
-                mat_norm = coo_matrix((data_norm, (rows, cols)), shape=(self.n_core_, current_cluster_id)).tocsr()
+                mat_norm = coo_matrix((data_norm, (rows, cols)), shape=(self.n_core_, current_cluster_id), dtype=np.float32).tocsr()
                 
                 self.multi_clusters_ = [[] for _ in range(self.n_core_)]
                 for i in range(self.n_core_):
@@ -388,18 +346,14 @@ class HGPClusterer(BaseEstimator, ClusterMixin):
                         pairs = list(zip(row.indices, row.data))
                         self.multi_clusters_[i] = sorted(pairs, key=lambda x: x[1], reverse=True)
             else:
-                self.multi_clusters_ = [] # Should not happen if T_points_ saved
+                self.multi_clusters_ = []
         
         # Propagate to full if subsampled
         if self.X_full_ is not None and len(self.X_full_) > len(self.X_core_):
-             # Propagate KNN
-             # ... (Similar to core.py) ...
-             # Create full label array
              n_full = len(self.X_full_)
-             labels_full = np.full(n_full, -1, dtype=np.int64)
+             labels_full = np.full(n_full, -1, dtype=np.int32)
              labels_full[self.idx_core_] = final_labels
              
-             # Propagate to non-core points using FAISS/KDTree
              mask_core = np.zeros(n_full, dtype=bool)
              mask_core[self.idx_core_] = True
              X_query = self.X_full_[~mask_core]
@@ -408,20 +362,15 @@ class HGPClusterer(BaseEstimator, ClusterMixin):
                  if self.verbose:
                      print(f"Propagating labels to {X_query.shape[0]} non-core points (k=5)...")
                  
-                 # Use k=5 weighted vote or simple majority?
-                 # Geometry module's propagate_labels_knn uses majority vote on k neighbors.
-                 # Core points are self.X_core_, their labels are final_labels
                  y_pred = propagate_labels_knn(self.X_core_, final_labels, X_query, k=5, metric=self.metric)
-                 labels_full[~mask_core] = y_pred
+                 labels_full[~mask_core] = y_pred.astype(np.int32)
                  
              final_labels = labels_full
              
         # Denoising (label_all_points)
         if self.label_all_points and not self.is_sparse_metric_:
-             # Which dataset to use?
              X_target = self.X_full_ if self.X_full_ is not None else self.X_core_
              
-             # Check for noise
              mask_noise = (final_labels == -1)
              if np.any(mask_noise):
                  mask_valid = ~mask_noise
@@ -433,9 +382,8 @@ class HGPClusterer(BaseEstimator, ClusterMixin):
                      y_train = final_labels[mask_valid]
                      X_query = X_target[mask_noise]
                      
-                     # 1-NN propagation for denoising
                      y_filled = propagate_labels_knn(X_train, y_train, X_query, k=1, metric=self.metric)
-                     final_labels[mask_noise] = y_filled
+                     final_labels[mask_noise] = y_filled.astype(np.int32)
              
         return final_labels
 
