@@ -168,7 +168,8 @@ class HGPClusterer(BaseEstimator, ClusterMixin):
                  X_processed = reducer.fit_transform(X_processed).astype(np.float32)
 
         # 3. Build Hypergraph
-        faces_raw, e_u, e_v, e_w, faces_weights, nS = _build_graph_KSimplexes(
+        # Optim: Returns unique faces and pre-calculated S_faces
+        faces_unique, e_u, e_v, e_w, S_faces, nS = _build_graph_KSimplexes(
             X_processed,
             self.K,
             self.min_samples_,
@@ -180,35 +181,18 @@ class HGPClusterer(BaseEstimator, ClusterMixin):
             cgal_root=self.cgal_root,
         )
         
-        if len(faces_raw) == 0:
+        if len(faces_unique) == 0:
             self.tree_ = None
             return
 
         # Store for splitting (Faces -> Points map)
-        self.faces_unique_, inv = np.unique(faces_raw, axis=0, return_inverse=True)
-        # Ensure faces_unique is int32 (should be from Cython, but just in case)
-        if self.faces_unique_.dtype != np.int32:
-             self.faces_unique_ = self.faces_unique_.astype(np.int32)
-        if inv.dtype != np.int32:
-             inv = inv.astype(np.int32)
-
+        self.faces_unique_ = faces_unique
+        # Note: 'inv' is no longer needed or available as we deduplicated on the fly.
+        
         N = self.faces_unique_.shape[0]
         
         # 4. Weight Calculation
-        sim_radii = faces_weights.astype(np.float32) 
-        
-        # Calculate weights to accumulate
-        if self.weight_face == "lambda":
-            with np.errstate(divide='ignore'):
-                sim_weights = 1.0 / sim_radii
-            sim_weights[~np.isfinite(sim_weights)] = 1e12 
-        elif self.weight_face == "uniform":
-            sim_weights = np.ones(len(sim_radii), dtype=np.float32)
-        else:
-             sim_weights = np.ones(len(sim_radii), dtype=np.float32)
-
-        # Accumulate weights on Unique Faces
-        S_faces = np.bincount(inv, weights=sim_weights, minlength=N).astype(np.float32)
+        # S_faces is already computed (Accumulated 1/r)
         
         n_vertices_per_face = self.faces_unique_.shape[1]
         flat_faces = self.faces_unique_.flatten()
@@ -228,8 +212,9 @@ class HGPClusterer(BaseEstimator, ClusterMixin):
         
         # 5. MST & Tree
         
-        u = inv[np.asarray(e_u, dtype=np.int32)]
-        v = inv[np.asarray(e_v, dtype=np.int32)]
+        # Edges now refer to unique face IDs directly
+        u = np.asarray(e_u, dtype=np.int32)
+        v = np.asarray(e_v, dtype=np.int32)
         w = np.asarray(e_w, dtype=np.float32)
         
         U = np.minimum(u, v)

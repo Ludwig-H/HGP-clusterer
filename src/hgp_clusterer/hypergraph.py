@@ -222,55 +222,68 @@ def _build_graph_KSimplexes(
     try:
         from ._cython import build_dual_graph_cython
         
-        # Pass memory views
-        faces_raw_arr, e_u_arr, e_v_arr, e_w_arr, face_weights_arr, nS = build_dual_graph_cython(
+        # New optimized return:
+        # faces_unique_arr, e_u_arr, e_v_arr, e_w_arr, s_faces_arr, n_unique
+        faces_unique, e_u, e_v, e_w, S_faces, n_unique = build_dual_graph_cython(
             simplex_indices_arr, simplex_weights_arr, K
         )
         
-        # Note: Cython now returns np.int32/np.float32 arrays.
-        
-        return faces_raw_arr, e_u_arr, e_v_arr, e_w_arr, face_weights_arr, nS
+        return faces_unique, e_u, e_v, e_w, S_faces, n_unique
         
     except ImportError:
 
         # Fallback if Cython compilation failed or function missing
         if verbose:
              print("Warning: Cython build_dual_graph_cython not found. Using slow Python loop.")
-        faces_raw = []
-        e_u = []
-        e_v = []
-        e_w = []
-        nS = 0
-        face_weights_list = []
         
-        # Reconstruct iterator over simplices from arrays
+        # Python Fallback with Deduplication
+        # Map: tuple(sorted(face)) -> index
+        face_map = {}
+        unique_faces = []
+        S_faces_list = []
+        
+        edges_u = []
+        edges_v = []
+        edges_w = []
+        
         n_simplexes_total = simplex_indices_arr.shape[0]
+        
+        # Pre-allocate simplex_face_ids for current simplex
+        simplex_face_ids = [0] * (K + 1)
+        
         for i in range(n_simplexes_total):
             simplex = list(simplex_indices_arr[i])
             weight = float(simplex_weights_arr[i])
             
-            # Simplex is guaranteed size K+1 here
-            # Original fallback logic assumed inputs could be > K+1
-            # But we normalized everything to K+1 in flat_indices/weights
+            # 1/r accumulation
+            inv_w = 1.0 / weight if weight > 1e-12 else 1e12
             
-            # So the fallback logic simplifies: we don't need combinations loop anymore
-            # just the inner face generation loop.
-            nS += 1
-            base = len(faces_raw)
+            # 1. Identify/Create Faces
             for drop in range(K + 1):
-                face = [simplex[t] for t in range(K + 1) if t != drop]
-                faces_raw.append(face)
-                face_weights_list.append(weight)
+                face = tuple(sorted([simplex[t] for t in range(K + 1) if t != drop]))
+                
+                if face in face_map:
+                    fid = face_map[face]
+                    S_faces_list[fid] += inv_w
+                else:
+                    fid = len(unique_faces)
+                    face_map[face] = fid
+                    unique_faces.append(face)
+                    S_faces_list.append(inv_w)
+                
+                simplex_face_ids[drop] = fid
+            
+            # 2. Create Edges
             for idx in range(K):
-                e_u.append(base + idx)
-                e_v.append(base + idx + 1)
-                e_w.append(weight)
+                edges_u.append(simplex_face_ids[idx])
+                edges_v.append(simplex_face_ids[idx+1])
+                edges_w.append(weight)
         
-        # Convert fallback lists to arrays for consistency with new API
-        faces_raw_arr = np.array(faces_raw, dtype=np.int32)
-        e_u_arr = np.array(e_u, dtype=np.int32)
-        e_v_arr = np.array(e_v, dtype=np.int32)
-        e_w_arr = np.array(e_w, dtype=np.float32)
-        face_weights_arr = np.array(face_weights_list, dtype=np.float32)
+        faces_unique = np.array(unique_faces, dtype=np.int32)
+        e_u = np.array(edges_u, dtype=np.int32)
+        e_v = np.array(edges_v, dtype=np.int32)
+        e_w = np.array(edges_w, dtype=np.float32)
+        S_faces = np.array(S_faces_list, dtype=np.float32)
+        n_unique = len(unique_faces)
         
-        return faces_raw_arr, e_u_arr, e_v_arr, e_w_arr, face_weights_arr, nS
+        return faces_unique, e_u, e_v, e_w, S_faces, n_unique
