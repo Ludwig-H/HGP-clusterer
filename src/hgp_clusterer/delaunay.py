@@ -1,10 +1,15 @@
-import os
-import subprocess
-import tempfile
-from pathlib import Path
+from __future__ import annotations
 
 import numpy as np
-from joblib import cpu_count
+from pathlib import Path
+import warnings
+
+# Try to import the binary extension
+try:
+    from hgp_clusterer.cgal_binding import compute_delaunay
+except ImportError:
+    # Fallback or error message if not compiled
+    compute_delaunay = None
 
 def orderk_delaunay3(
     M: np.ndarray,
@@ -15,8 +20,14 @@ def orderk_delaunay3(
     root: Path | None = None,
 ) -> np.ndarray:
     """
-    Compute Order-K Delaunay triangulation using the optimized C++ implementation.
+    Compute Order-K Delaunay triangulation using the optimized C++ binding.
     """
+    if compute_delaunay is None:
+        raise ImportError(
+            "The 'cgal_binding' extension is not loaded. "
+            "Please ensure the package is installed correctly with compiled extensions."
+        )
+
     M = np.ascontiguousarray(M, dtype=np.float64)
     if M.ndim != 2:
         raise ValueError("M must be 2D")
@@ -24,58 +35,16 @@ def orderk_delaunay3(
         raise ValueError("K must be >= 1")
     n, d = M.shape
     if n < 2:
-        return []
+        return np.empty((0, K + 1), dtype=np.int64)
 
-    # Locate binary
-    root_dir = root or os.environ.get("CGALDELAUNAY_ROOT")
-    if root_dir is None:
-        # Assuming we are in src/hgp_clusterer/, go up 2 levels
-        root_dir = Path(__file__).resolve().parents[2] / "CGALDelaunay"
-    else:
-        root_dir = Path(root_dir)
-    
-    binary = root_dir / "orderk_delaunay_cpp" / "build" / "orderk_delaunay_cpp"
-    if not binary.exists():
-        raise FileNotFoundError(f"CGAL binary not found: {binary}. Please build it.")
+    # Call the C++ function directly
+    # returns (M, K+1) array of int64
+    try:
+        result = compute_delaunay(M, K, precision, verbose)
+    except Exception as e:
+        raise RuntimeError(f"C++ Execution failed: {e}")
 
-    with tempfile.TemporaryDirectory() as tmp:
-        tmp_path = Path(tmp)
-        input_file = tmp_path / "input.npy"
-        output_file = tmp_path / "output.npy"
-        
-        np.save(input_file, M)
-        
-        # Binary Usage: input.npy K output.npy [precision] [verbose]
-        cmd = [
-            str(binary),
-            str(input_file),
-            str(K),
-            str(output_file),
-            precision,
-            "1" if verbose else "0"
-        ]
-        
-        env = os.environ.copy()
-        if "CGAL_NTHREADS" not in env:
-             env["CGAL_NTHREADS"] = str(max(1, cpu_count()))
-        
-        subprocess.run(cmd, check=True, env=env)
-        
-        if not output_file.exists():
-            return []
-            
-        try:
-            result = np.load(output_file)
-        except (ValueError, EOFError):
-            return []
-        
     if result.size == 0:
         return np.empty((0, K + 1), dtype=np.int64)
-    
-    # Ensure int64 for Cython compatibility
-    if result.dtype != np.int64:
-        result = result.astype(np.int64)
         
-    return result # Returns np.ndarray (M, K+1) directly
-
-
+    return result
