@@ -32,12 +32,24 @@
 
 // Interface for weighted Delaunay edge extraction
 struct WeightedDelaunayTraits {
+    // Pure virtual for raw pointers (Zero-Copy)
     virtual std::vector<std::pair<int, int>> get_finite_edges(
-        const std::vector<double>& flat_points, 
+        const double* flat_points, 
         const std::vector<double>& weights,
         size_t n_points,
         size_t dim
     ) = 0;
+
+    // Helper for std::vector compatibility (Backwards compat)
+    std::vector<std::pair<int, int>> get_finite_edges(
+        const std::vector<double>& flat_points, 
+        const std::vector<double>& weights,
+        size_t n_points,
+        size_t dim
+    ) {
+        return get_finite_edges(flat_points.data(), weights, n_points, dim);
+    }
+
     virtual ~WeightedDelaunayTraits() {}
 };
 
@@ -53,7 +65,7 @@ struct WeightedDelaunay2D : public WeightedDelaunayTraits {
     using Point_2 = typename Kernel::Point_2;
 
     std::vector<std::pair<int, int>> get_finite_edges(
-        const std::vector<double>& flat_points, 
+        const double* flat_points, 
         const std::vector<double>& weights,
         size_t n_points,
         size_t /*dim*/
@@ -98,7 +110,7 @@ struct WeightedDelaunay3D : public WeightedDelaunayTraits {
     using Point_3 = typename Kernel::Point_3;
 
     std::vector<std::pair<int, int>> get_finite_edges(
-        const std::vector<double>& flat_points, 
+        const double* flat_points, 
         const std::vector<double>& weights,
         size_t n_points,
         size_t /*dim*/
@@ -136,7 +148,7 @@ struct WeightedDelaunay3D : public WeightedDelaunayTraits {
 template <typename Kernel>
 struct WeightedDelaunayDD : public WeightedDelaunayTraits {
     std::vector<std::pair<int, int>> get_finite_edges(
-        const std::vector<double>&, 
+        const double*, 
         const std::vector<double>&,
         size_t,
         size_t

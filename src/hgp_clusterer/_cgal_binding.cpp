@@ -91,9 +91,8 @@ py::array_t<int32_t> compute_delaunay(
     // Copy to std::vector because kernels.hpp expects it
     // TODO: Optimize this copy out by modifying kernels.hpp to use spans
     const double* ptr = static_cast<double*>(buf.ptr);
-    std::vector<double> raw_points(ptr, ptr + N * dim);
     
-    PointCloud cloud(raw_points.data(), N, dim); // Recalculate sq_norms
+    PointCloud cloud(ptr, N, dim); // Recalculate sq_norms
 
     // Setup TBB
     #ifdef CGAL_LINKED_WITH_TBB
@@ -115,7 +114,7 @@ py::array_t<int32_t> compute_delaunay(
     
     {
         std::vector<double> zero_weights(N, 0.0);
-        auto edges = kernel->get_finite_edges(raw_points, zero_weights, N, dim);
+        auto edges = kernel->get_finite_edges(ptr, zero_weights, N, dim);
         
         // Sort and Unique
         #ifdef CGAL_LINKED_WITH_TBB
@@ -175,7 +174,7 @@ py::array_t<int32_t> compute_delaunay(
                 for(int idx : simp) {
                     sum_sq_norms += cloud.sq_norms[idx];
                     for(size_t d=0; d<dim; ++d) {
-                        center[d] += raw_points[idx * dim + d];
+                        center[d] += ptr[idx * dim + d];
                     }
                 }
 
