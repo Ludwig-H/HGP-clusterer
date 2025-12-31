@@ -7,13 +7,10 @@ from pathlib import Path
 from typing import Sequence
 
 import numpy as np
-from joblib import Parallel, delayed, cpu_count
 from sklearn.metrics import pairwise_distances
 
 from .delaunay import orderk_delaunay3
-from .geometry import kth_radius, minimum_enclosing_ball
-
-N_CPU_dispo = max(1, cpu_count())
+from .geometry import kth_radius
 
 def _build_graph_KSimplexes(
     M: np.ndarray,
@@ -84,27 +81,10 @@ def _build_graph_KSimplexes(
             
             if n_simplices > 0:
                 # If weights were computed by C++, use them.
-                # Otherwise (e.g. older binary version fallback), compute them here.
                 if radii_arr is None or radii_arr.size == 0:
-                     if verbose: print("[Info] Computing weights in Python (fallback)...")
-                     def _sqr_radius_batch(indices_batch: np.ndarray) -> np.ndarray:
-                        res = np.empty(indices_batch.shape[0], dtype=np.float32)
-                        for i in range(indices_batch.shape[0]):
-                            pts = M[indices_batch[i]]
-                            _, r_sq = minimum_enclosing_ball(pts)
-                            res[i] = r_sq
-                        return res
-
-                     batch_size = 2048
-                     slices = [
-                        simplex_indices_arr[i : i + batch_size] 
-                        for i in range(0, n_simplices, batch_size)
-                     ]
-
-                     radii_batches = Parallel(n_jobs=N_CPU_dispo, prefer="processes")(
-                        delayed(_sqr_radius_batch)(s) for s in slices
-                     )
-                     radii_arr = np.concatenate(radii_batches)
+                     # Should not happen if CGAL works as expected
+                     if verbose: print("Warning: CGAL returned no radii. Weights set to 1.0.")
+                     radii_arr = np.ones(n_simplices, dtype=np.float32)
                 
                 # Apply Exponent if needed (radii_arr is squared radius)
                 # target is radius^expZ.

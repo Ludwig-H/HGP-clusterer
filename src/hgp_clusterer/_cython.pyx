@@ -651,123 +651,205 @@ cpdef tuple build_leaf_dfs_intervals(
 
 
 # =============================================================================
-# OPTIMIZATION: Hypergraph Construction with On-the-fly Deduplication
+# OPTIMIZATION: Zero-Copy "Generate-Sort-Reduce" for Dual Graph Construction
 # =============================================================================
 
 from cython.operator cimport dereference as deref, preincrement as inc
 
+# Internal C++ Structs for Reference Sorting
+cdef extern from *:
+    """
+    #include <vector>
+    #include <algorithm>
+    
+    struct FaceRef {
+        int simplex_idx;
+        int drop_idx;
+    };
+
+    struct FaceRefComparator {
+        const int* simplex_indices; // Pointer to the flat simplex array (N * (K+1))
+        int K_plus_1;               // Stride (K+1)
+
+        FaceRefComparator(const int* indices, int k_plus_1) 
+            : simplex_indices(indices), K_plus_1(k_plus_1) {}
+
+        bool operator()(const FaceRef& a, const FaceRef& b) const {
+            const int* sim_a = simplex_indices + (size_t)a.simplex_idx * K_plus_1;
+            const int* sim_b = simplex_indices + (size_t)b.simplex_idx * K_plus_1;
+
+            int ia = 0; 
+            int ib = 0; 
+            
+            // Lexicographical comparison of the K vertices (skipping drop_idx)
+            for (int k = 0; k < K_plus_1 - 1; ++k) {
+                if (ia == a.drop_idx) ia++;
+                if (ib == b.drop_idx) ib++;
+                
+                int val_a = sim_a[ia];
+                int val_b = sim_b[ib];
+                
+                if (val_a != val_b) {
+                    return val_a < val_b;
+                }
+                ia++;
+                ib++;
+            }
+            return false; 
+        }
+    };
+    """
+    cdef struct FaceRef:
+        int simplex_idx
+        int drop_idx
+    
+    cdef cppclass FaceRefComparator:
+        FaceRefComparator(const int* indices, int k_plus_1)
+    
+    void std_sort_custom "std::sort" [Iter, Compare](Iter first, Iter last, Compare comp) nogil
+
+
 def build_dual_graph_cython(
-    ITYPE_t[:, ::1] simplex_indices,
-    DTYPE_t[::1] simplex_weights,
+    const int[:, ::1] simplex_indices, # (N, K+1) int32
+    const float[::1] simplex_weights,  # (N,) float32
     int K
 ):
+    """
+    Builds the dual graph (adjacency between simplices sharing a face) using
+    an implicit sort-based approach to minimize memory usage.
+    
+    Strategy: "Generate -> Sort -> Reduce"
+    1. Generate references to all faces (FaceRef).
+    2. Sort references using a custom comparator that looks up vertex indices (Zero-Copy).
+    3. Reduce sorted list to find unique faces and build the graph.
+    
+    Complexity: O(N * K * log(NK)) Time, O(NK) Memory.
+    """
     cdef Py_ssize_t n_simplexes = simplex_indices.shape[0]
-    # Check dimensions
-    if simplex_indices.shape[1] != K + 1:
-         pass
+    cdef int K_plus_1 = K + 1
+    
+    if simplex_indices.shape[1] != K_plus_1:
+         pass # Let numpy handle potential mismatches or assume correct from caller
 
-    cdef Py_ssize_t i, j, idx, t, n_verts, base
-    cdef int drop, local_id
-    cdef float weight, inv_weight_safe
-    cdef vector[int] face_vec # Temporary storage for current face
+    # 1. Generate References (All K-faces of all Simplices)
+    cdef vector[FaceRef] all_faces
+    cdef Py_ssize_t total_faces = n_simplexes * K_plus_1
+    all_faces.resize(total_faces)
     
-    # Map for deduplication
-    # Key: sorted vector of ints, Value: unique ID
-    cdef unordered_map[vector[int], int, VectorHash] face_map
+    cdef Py_ssize_t i, j
+    cdef Py_ssize_t idx = 0
     
-    # Buffers for unique faces and edges
-    # We flatten faces for easy numpy conversion later
-    cdef vector[int] unique_faces_flat 
-    cdef vector[float] unique_faces_weights # S_faces accumulation buffer
+    # Access raw pointer for C++ comparator
+    cdef const int* indices_ptr = &simplex_indices[0, 0]
+    
+    # Fill references
+    with nogil:
+        for i in range(n_simplexes):
+            for j in range(K_plus_1):
+                all_faces[idx].simplex_idx = <int>i
+                all_faces[idx].drop_idx = <int>j
+                idx += 1
+            
+    # 2. Sort References
+    cdef FaceRefComparator comp = FaceRefComparator(indices_ptr, K_plus_1)
+    
+    with nogil:
+        std_sort_custom(all_faces.begin(), all_faces.end(), comp)
+
+    # 3. Reduce (Identify unique faces and build edges)
+    cdef vector[int] unique_faces_flat
+    cdef vector[float] unique_faces_weights # S_faces
     
     cdef vector[int] edges_u
     cdef vector[int] edges_v
     cdef vector[float] edges_w
     
-    # Pre-allocate temporary vector size
-    face_vec.resize(K)
+    # Buffer to store FaceID for each (Simplex, Drop) to build edges later
+    # Mapped by: mapped_face_ids[simplex_idx * (K+1) + drop_idx]
+    cdef vector[int] mapped_face_ids
+    mapped_face_ids.resize(total_faces)
     
-    cdef vector[int] simplex_face_ids # Store IDs of the K+1 faces of current simplex
-    simplex_face_ids.resize(K + 1)
-    
-    cdef unordered_map[vector[int], int, VectorHash].iterator it
+    cdef Py_ssize_t current_idx = 0
+    cdef Py_ssize_t current_group_start = 0
+    cdef int face_id = 0
+    cdef float w_sum, w_simp, inv_w_safe
+    cdef int s_idx, d_idx, k_idx, p_idx
+    cdef int u_val, v_val
+    cdef float w_val
     
     with nogil:
-        for i in range(n_simplexes):
-            weight = simplex_weights[i]
+        while current_idx < total_faces:
+            current_group_start = current_idx
+            w_sum = 0.0
             
-            # S_faces accumulation logic:
-            # We want to accumulate 1/r (weight) into the unique face.
-            # Avoid division by zero
-            if weight > 1e-12:
-                inv_weight_safe = 1.0 / weight
-            else:
-                inv_weight_safe = 1e12 # Cap for r=0
-            
-            # 1. Identify/Create Faces
-            for drop in range(K + 1):
-                # Construct face (all indices except 'drop')
-                idx = 0
-                for t in range(K + 1):
-                    if t == drop: continue
-                    face_vec[idx] = simplex_indices[i, t]
-                    idx += 1
+            # Find group of identical faces
+            while True:
+                # Accumulate weight
+                s_idx = all_faces[current_idx].simplex_idx
+                w_simp = simplex_weights[s_idx]
                 
-                # Sort for canonical form (required for map key)
-                std_sort(face_vec.begin(), face_vec.end())
-                
-                # Deduplicate
-                it = face_map.find(face_vec)
-                if it == face_map.end():
-                    # New Face
-                    local_id = face_map.size()
-                    face_map[face_vec] = local_id
-                    simplex_face_ids[drop] = local_id
-                    
-                    # Store data
-                    # Flattened append
-                    for t in range(K):
-                        unique_faces_flat.push_back(face_vec[t])
-                    
-                    # Initialize accumulator
-                    unique_faces_weights.push_back(inv_weight_safe)
+                if w_simp > 1e-12:
+                    inv_w_safe = 1.0 / w_simp
                 else:
-                    # Existing Face
-                    local_id = deref(it).second
-                    simplex_face_ids[drop] = local_id
-                    
-                    # Accumulate weight
-                    unique_faces_weights[local_id] += inv_weight_safe
-            
-            # 2. Create Edges
-            # Link faces linearly as before: 0-1, 1-2, 2-3...
-            # The original code linked faces generated by `drop` indices.
-            # faces_raw was ordered by `drop`.
-            # So edge i connects face `drop=i` and `drop=i+1`.
-            for idx in range(K):
-                edges_u.push_back(simplex_face_ids[idx])
-                edges_v.push_back(simplex_face_ids[idx+1])
-                edges_w.push_back(weight)
+                    inv_w_safe = 1e12
+                w_sum += inv_w_safe
                 
-    # Convert buffers to Numpy Arrays
+                current_idx += 1
+                if current_idx >= total_faces:
+                    break
+                
+                # Check if next face is different
+                if comp.operator()(all_faces[current_group_start], all_faces[current_idx]):
+                    break
+            
+            # End of Group
+            
+            # 1. Store Unique Face Data (Vertices from first ref)
+            s_idx = all_faces[current_group_start].simplex_idx
+            d_idx = all_faces[current_group_start].drop_idx
+            
+            # Extract K vertices (skipping d_idx)
+            for k_idx in range(K_plus_1):
+                if k_idx == d_idx: continue
+                unique_faces_flat.push_back(simplex_indices[s_idx, k_idx])
+            
+            # 2. Store Weight
+            unique_faces_weights.push_back(w_sum)
+            
+            # 3. Map Face ID back to (Simplex, Drop)
+            for k_idx in range(current_group_start, current_idx):
+                s_idx = all_faces[k_idx].simplex_idx
+                d_idx = all_faces[k_idx].drop_idx
+                mapped_face_ids[s_idx * K_plus_1 + d_idx] = face_id
+                
+            face_id += 1
+
+        # 4. Build Edges (Simplex-wise)
+        # Connect faces 0-1, 1-2, ... for each simplex
+        for i in range(n_simplexes):
+            w_val = simplex_weights[i]
+            idx = i * K_plus_1
+            for j in range(K):
+                u_val = mapped_face_ids[idx + j]
+                v_val = mapped_face_ids[idx + j + 1]
+                edges_u.push_back(u_val)
+                edges_v.push_back(v_val)
+                edges_w.push_back(w_val)
+                
+    # --- Convert to Numpy ---
     cdef Py_ssize_t n_unique = unique_faces_weights.size()
     cdef Py_ssize_t n_edges = edges_w.size()
     
     # 1. Faces Unique
     cdef np.ndarray[ITYPE_t, ndim=2] faces_unique_arr = np.zeros((n_unique, K), dtype=np.int32)
-    # We can copy directly if layout is C-contiguous
-    # flat vector -> (N, K) array
-    # It's faster to iterate or use memcpy if possible.
-    # With numpy from buffer:
-    # Need to be careful with types. vector<int> is int32 (on typical systems) but let's be safe.
-    # We will do a manual copy for safety and simplicity in Cython
-    cdef Py_ssize_t flat_idx = 0
+    cdef Py_ssize_t flat_ptr = 0
+    # Copy manually or using memcpy (loop is safe)
     for i in range(n_unique):
         for j in range(K):
-            faces_unique_arr[i, j] = unique_faces_flat[flat_idx]
-            flat_idx += 1
+            faces_unique_arr[i, j] = unique_faces_flat[flat_ptr]
+            flat_ptr += 1
             
-    # 2. S_faces (Accumulated Weights)
+    # 2. S_faces
     cdef np.ndarray[DTYPE_t, ndim=1] s_faces_arr = np.zeros(n_unique, dtype=np.float32)
     for i in range(n_unique):
         s_faces_arr[i] = unique_faces_weights[i]
