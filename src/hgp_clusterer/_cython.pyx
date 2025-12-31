@@ -742,13 +742,15 @@ def build_dual_graph_cython(
     # Access raw pointer for C++ comparator
     cdef const int* indices_ptr = &simplex_indices[0, 0]
     
-    # Fill references
+    # Fill references (Parallel)
+    # Each i (simplex) writes K+1 entries to all_faces at known positions.
     with nogil:
-        for i in range(n_simplexes):
+        for i in prange(n_simplexes, schedule='static'):
             for j in range(K_plus_1):
+                # Calculate flat index explicitly for parallel safety
+                idx = i * K_plus_1 + j
                 all_faces[idx].simplex_idx = <int>i
                 all_faces[idx].drop_idx = <int>j
-                idx += 1
             
     # 2. Sort References
     cdef FaceRefComparator comp = FaceRefComparator(indices_ptr, K_plus_1)
@@ -760,9 +762,14 @@ def build_dual_graph_cython(
     cdef vector[int] unique_faces_flat
     cdef vector[float] unique_faces_weights # S_faces
     
+    # Pre-allocate Edges Vectors (Exact size known: N * K)
     cdef vector[int] edges_u
     cdef vector[int] edges_v
     cdef vector[float] edges_w
+    cdef Py_ssize_t n_total_edges = n_simplexes * K
+    edges_u.resize(n_total_edges)
+    edges_v.resize(n_total_edges)
+    edges_w.resize(n_total_edges)
     
     # Buffer to store FaceID for each (Simplex, Drop) to build edges later
     # Mapped by: mapped_face_ids[simplex_idx * (K+1) + drop_idx]
@@ -776,6 +783,7 @@ def build_dual_graph_cython(
     cdef int s_idx, d_idx, k_idx, p_idx
     cdef int u_val, v_val
     cdef float w_val
+    cdef int base_off_edge
     
     with nogil:
         while current_idx < total_faces:
@@ -824,17 +832,21 @@ def build_dual_graph_cython(
                 
             face_id += 1
 
-        # 4. Build Edges (Simplex-wise)
+        # 4. Build Edges (Simplex-wise) - Parallel
         # Connect faces 0-1, 1-2, ... for each simplex
-        for i in range(n_simplexes):
+        for i in prange(n_simplexes, schedule='static'):
             w_val = simplex_weights[i]
+            # Offset in mapped_face_ids
             idx = i * K_plus_1
+            # Offset in edges arrays
+            base_off_edge = i * K
+            
             for j in range(K):
                 u_val = mapped_face_ids[idx + j]
                 v_val = mapped_face_ids[idx + j + 1]
-                edges_u.push_back(u_val)
-                edges_v.push_back(v_val)
-                edges_w.push_back(w_val)
+                edges_u[base_off_edge + j] = u_val
+                edges_v[base_off_edge + j] = v_val
+                edges_w[base_off_edge + j] = w_val
                 
     # --- Convert to Numpy ---
     cdef Py_ssize_t n_unique = unique_faces_weights.size()

@@ -75,6 +75,8 @@ cython_ext = Extension(
     include_dirs=[np.get_include()],
     define_macros=[("NPY_NO_DEPRECATED_API", "NPY_1_7_API_VERSION")],
     language="c++",
+    extra_compile_args=["-fopenmp"],
+    extra_link_args=["-fopenmp"],
 )
 
 # 2. CMake Extension (CGAL Binding)
