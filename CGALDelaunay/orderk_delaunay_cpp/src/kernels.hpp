@@ -35,6 +35,10 @@
 #include <CGAL/Regular_triangulation.h>
 #include <CGAL/Triangulation_vertex.h>
 #include <CGAL/Triangulation_data_structure.h>
+#include <CGAL/Min_sphere_d.h>
+#include <CGAL/Min_sphere_annulus_d_traits_d.h>
+#include <CGAL/Min_sphere_annulus_d_traits_2.h>
+#include <CGAL/Min_sphere_annulus_d_traits_3.h>
 
 // TBB
 #ifdef CGAL_LINKED_WITH_TBB
@@ -68,6 +72,13 @@ struct WeightedDelaunayTraits {
         size_t dim
     ) = 0;
 
+    // 3. Radius computation (Welzl's algorithm)
+    virtual double compute_simplex_squared_radius(
+        const double* flat_points,
+        const std::vector<int>& indices,
+        size_t dim
+    ) = 0;
+
     virtual ~WeightedDelaunayTraits() {}
 };
 
@@ -82,6 +93,10 @@ struct WeightedDelaunay2D : public WeightedDelaunayTraits {
     using Rt    = CGAL::Regular_triangulation_2<Kernel, Tds_R>;
     using Weighted_point = typename Kernel::Weighted_point_2;
     using Point_2 = typename Kernel::Point_2;
+
+    // --- Min Sphere Types ---
+    using Min_sphere_traits = CGAL::Min_sphere_annulus_d_traits_2<Kernel>;
+    using Min_sphere = CGAL::Min_sphere_d<Min_sphere_traits>;
 
     // --- Standard Types ---
     using Vb0_S = CGAL::Triangulation_vertex_base_2<Kernel>;
@@ -148,6 +163,20 @@ struct WeightedDelaunay2D : public WeightedDelaunayTraits {
         }
         return edges;
     }
+
+    double compute_simplex_squared_radius(
+        const double* flat_points,
+        const std::vector<int>& indices,
+        size_t /*dim*/
+    ) override {
+        std::vector<Point_2> pts;
+        pts.reserve(indices.size());
+        for(int idx : indices) {
+            pts.emplace_back(flat_points[2*idx], flat_points[2*idx+1]);
+        }
+        Min_sphere ms(pts.begin(), pts.end());
+        return CGAL::to_double(ms.squared_radius());
+    }
 };
 
 // 3D Implementation
@@ -166,6 +195,10 @@ struct WeightedDelaunay3D : public WeightedDelaunayTraits {
     using Tds_R = CGAL::Triangulation_data_structure_3<Vb_R, Cb_R>;
     #endif
     using Rt    = CGAL::Regular_triangulation_3<Kernel, Tds_R>;
+
+    // --- Min Sphere Types ---
+    using Min_sphere_traits = CGAL::Min_sphere_annulus_d_traits_3<Kernel>;
+    using Min_sphere = CGAL::Min_sphere_d<Min_sphere_traits>;
 
     // --- Standard Types ---
     using Vb0_S = CGAL::Triangulation_vertex_base_3<Kernel>;
@@ -245,6 +278,20 @@ struct WeightedDelaunay3D : public WeightedDelaunayTraits {
         }
         return edges;
     }
+
+    double compute_simplex_squared_radius(
+        const double* flat_points,
+        const std::vector<int>& indices,
+        size_t /*dim*/
+    ) override {
+        std::vector<Point_3> pts;
+        pts.reserve(indices.size());
+        for(int idx : indices) {
+            pts.emplace_back(flat_points[3*idx], flat_points[3*idx+1], flat_points[3*idx+2]);
+        }
+        Min_sphere ms(pts.begin(), pts.end());
+        return CGAL::to_double(ms.squared_radius());
+    }
 };
 
 // dD Implementation
@@ -256,6 +303,10 @@ struct WeightedDelaunayDD : public WeightedDelaunayTraits {
     // Use default types provided by CGAL for dD to avoid TDS configuration errors
     using Rt = CGAL::Regular_triangulation<Kernel>;
     using Dt = CGAL::Delaunay_triangulation<Kernel>;
+    
+    // Min Sphere Types for dD
+    using Min_sphere_traits = CGAL::Min_sphere_annulus_d_traits_d<Kernel>;
+    using Min_sphere = CGAL::Min_sphere_d<Min_sphere_traits>;
 
     std::vector<std::pair<int, int>> get_finite_edges(
         const double* flat_points, 
@@ -368,6 +419,16 @@ struct WeightedDelaunayDD : public WeightedDelaunayTraits {
         edges.erase(last, edges.end());
         
         return edges;
+    }
+
+    double compute_simplex_squared_radius(
+        const double* /*flat_points*/,
+        const std::vector<int>& /*indices*/,
+        size_t /*dim*/
+    ) override {
+        // dD Min_sphere compilation issues with Epick_d/Epeck_d traits.
+        // Fallback to Python calculation for dD > 3.
+        return -1.0; 
     }
 };
 

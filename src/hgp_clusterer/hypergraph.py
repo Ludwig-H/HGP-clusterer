@@ -65,10 +65,12 @@ def _build_graph_KSimplexes(
     
     root_path = Path(cgal_root) if cgal_root is not None else None
     
+    
     if complex_chosen.lower() == "orderk_delaunay":
         try:
-            # Returns (N_simplices, K+1) int64 array. Cast to int32 immediately.
-            simplex_indices_arr = orderk_delaunay3(M, min_samples - 1, precision=precision, verbose=verbose, root=root_path)
+            # Returns tuple (N_simplices, K+1), (N_simplices,)
+            simplex_indices_arr, radii_arr = orderk_delaunay3(M, min_samples - 1, precision=precision, verbose=verbose, root=root_path)
+            
             if simplex_indices_arr.dtype != np.int32:
                  simplex_indices_arr = simplex_indices_arr.astype(np.int32)
         except FileNotFoundError as exc:
@@ -81,58 +83,39 @@ def _build_graph_KSimplexes(
                 print(f"Simplexes sans filtration : {n_simplices}")
             
             if n_simplices > 0:
-                # OPTIMIZATION: Process in batches to reduce Joblib overhead
-                # or use vectorized approaches if possible.
-                # Since M is large, we keep _sqr_radius logic but batch it.
-                
-                # We need the weights.
-                # Radii calculation is the bottleneck.
-                # Batch size tuning: 1000 to 10000 usually optimal for small tasks.
-                
-                def _sqr_radius_batch(indices_batch: np.ndarray) -> np.ndarray:
-                    # indices_batch: (B, K+1)
-                    # We compute radius for each simplex in the batch
-                    # This runs in a worker process
-                    # Accessing M (global) in 'processes' mode usually relies on memory mapping or fork copy-on-write
-                    # which is efficient for reading.
-                    
-                    res = np.empty(indices_batch.shape[0], dtype=np.float32)
-                    for i in range(indices_batch.shape[0]):
-                        pts = M[indices_batch[i]]
-                        # minimum_enclosing_ball is geometry.py. It uses float64 internally usually.
-                        # We cast result to float32.
-                        _, r_sq = minimum_enclosing_ball(pts)
-                        res[i] = r_sq
-                    return res
+                # If weights were computed by C++, use them.
+                # Otherwise (e.g. older binary version fallback), compute them here.
+                if radii_arr is None or radii_arr.size == 0:
+                     if verbose: print("[Info] Computing weights in Python (fallback)...")
+                     def _sqr_radius_batch(indices_batch: np.ndarray) -> np.ndarray:
+                        res = np.empty(indices_batch.shape[0], dtype=np.float32)
+                        for i in range(indices_batch.shape[0]):
+                            pts = M[indices_batch[i]]
+                            _, r_sq = minimum_enclosing_ball(pts)
+                            res[i] = r_sq
+                        return res
 
-                # Calculate batch slices
-                batch_size = 2048
-                slices = [
-                    simplex_indices_arr[i : i + batch_size] 
-                    for i in range(0, n_simplices, batch_size)
-                ]
+                     batch_size = 2048
+                     slices = [
+                        simplex_indices_arr[i : i + batch_size] 
+                        for i in range(0, n_simplices, batch_size)
+                     ]
 
-                radii_batches = Parallel(n_jobs=N_CPU_dispo, prefer="processes")(
-                    delayed(_sqr_radius_batch)(s) for s in slices
-                )
+                     radii_batches = Parallel(n_jobs=N_CPU_dispo, prefer="processes")(
+                        delayed(_sqr_radius_batch)(s) for s in slices
+                     )
+                     radii_arr = np.concatenate(radii_batches)
                 
-                if verbose:
-                    print("N_CPU_dispo utilisés : ", N_CPU_dispo)
-                
-                radii_arr = np.concatenate(radii_batches)
-                
+                # Apply Exponent if needed (radii_arr is squared radius)
+                # target is radius^expZ.
+                # r_sq = radius^2
+                # radius^expZ = (r_sq)^(expZ/2)
                 if expZ != 2:
-                    radii_arr = radii_arr ** (expZ / 2)
+                    # Avoid negative values if any numerical noise (should be positive)
+                    radii_arr = np.maximum(radii_arr, 0)
+                    radii_arr = radii_arr ** (expZ / 2.0)
                 
                 simplex_weights_arr = radii_arr.astype(np.float32)
-                
-                # Check dimensions match (logic check)
-                if simplex_indices_arr.shape[1] != K + 1:
-                     # This should theoretically not happen with orderk_delaunay3 output
-                     # unless K param was inconsistent.
-                     # Handle fallback if necessary or just reshape/filter?
-                     # We assume correctness from C++ tool.
-                     pass
                      
             else:
                  simplex_indices_arr = np.empty((0, K + 1), dtype=np.int32)

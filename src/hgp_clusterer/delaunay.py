@@ -18,9 +18,10 @@ def orderk_delaunay3(
     precision: str = "safe",
     verbose: bool = False,
     root: Path | None = None,
-) -> np.ndarray:
+) -> tuple[np.ndarray, np.ndarray]:
     """
     Compute Order-K Delaunay triangulation using the optimized C++ binding.
+    Returns (simplices, squared_radii).
     """
     if compute_delaunay is None:
         raise ImportError(
@@ -28,23 +29,32 @@ def orderk_delaunay3(
             "Please ensure the package is installed correctly with compiled extensions."
         )
 
-    M = np.ascontiguousarray(M, dtype=np.float32)
+    M = np.ascontiguousarray(M, dtype=np.float64) # Ensure float64 for C++ double* compatibility
     if M.ndim != 2:
         raise ValueError("M must be 2D")
     if K < 1:
         raise ValueError("K must be >= 1")
     n, d = M.shape
     if n < 2:
-        return np.empty((0, K + 1), dtype=np.int32)
+        return np.empty((0, K + 1), dtype=np.int32), np.empty(0, dtype=np.float64)
 
     # Call the C++ function directly
-    # returns (M, K+1) array of int32
+    # returns tuple(simplices, weights)
     try:
         result = compute_delaunay(M, K, precision, verbose)
     except Exception as e:
         raise RuntimeError(f"C++ Execution failed: {e}")
 
-    if result.size == 0:
-        return np.empty((0, K + 1), dtype=np.int32)
+    # Check if result is a tuple (new version) or array (old version compatibility?)
+    # We assume new version since we modified the C++ code.
+    if isinstance(result, tuple):
+        simplices, weights = result
+    else:
+        # Should not happen if C++ is updated
+        simplices = result
+        weights = np.zeros(simplices.shape[0], dtype=np.float64) 
+
+    if simplices.size == 0:
+        return np.empty((0, K + 1), dtype=np.int32), np.empty(0, dtype=np.float64)
         
-    return result
+    return simplices, weights

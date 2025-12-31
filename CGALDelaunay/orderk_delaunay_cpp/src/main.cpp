@@ -292,5 +292,38 @@ int main(int argc, char** argv) {
     size_t final_k = (prev_simplices.empty()) ? 0 : prev_simplices[0].size();
     NpyIO::save_npy_integers(output_path.c_str(), prev_simplices, final_k);
 
+    // Compute and Save Weights if we have results
+    if (!prev_simplices.empty()) {
+        if(verbose) std::cerr << "[Info] Computing weights (squared radii) for " << prev_simplices.size() << " simplices...\n";
+        
+        std::vector<double> simplex_weights(prev_simplices.size());
+        
+        #ifdef CGAL_LINKED_WITH_TBB
+        tbb::parallel_for(tbb::blocked_range<size_t>(0, prev_simplices.size()), [&](const tbb::blocked_range<size_t>& r) {
+            for(size_t i=r.begin(); i!=r.end(); ++i) {
+        #else
+        for(size_t i=0; i<prev_simplices.size(); ++i) {
+        #endif
+                simplex_weights[i] = kernel->compute_simplex_squared_radius(
+                    cloud.data.data(), prev_simplices[i], cloud.dim
+                );
+        #ifdef CGAL_LINKED_WITH_TBB
+            }
+        });
+        #endif
+
+        // Construct weights filename: output.npy -> output_weights.npy
+        std::string weight_path = output_path;
+        size_t dot_pos = weight_path.find_last_of('.');
+        if (dot_pos != std::string::npos) {
+            weight_path.insert(dot_pos, "_weights");
+        } else {
+            weight_path += "_weights";
+        }
+        
+        if(verbose) std::cerr << "[Info] Saving weights to " << weight_path << "\n";
+        NpyIO::save_npy_float(weight_path.c_str(), simplex_weights);
+    }
+
     return 0;
 }

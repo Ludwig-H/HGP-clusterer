@@ -206,7 +206,7 @@ def _minimum_enclosing_ball_fallback(points_sub: np.ndarray) -> tuple[np.ndarray
         base = arr[0]
         A = 2.0 * (arr[1:] - base)
         b = np.einsum("ij,ij->i", arr[1:], arr[1:]) - float(np.dot(base, base))
-        center = base if not A.size else base + np.linalg.lstsq(A, b, rcond=None)[0]
+        center = np.linalg.lstsq(A, b, rcond=None)[0] if A.size else base
         radius_sq = float(np.max(np.sum((arr - center) ** 2, axis=1)))
         return center, radius_sq
 

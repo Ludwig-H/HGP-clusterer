@@ -72,7 +72,7 @@ struct PointCloud {
 // Main Computation Function
 // ==============================================================================================
 
-py::array_t<int32_t> compute_delaunay(
+py::tuple compute_delaunay(
     py::array_t<double, py::array::c_style | py::array::forcecast> input_points,
     int K_max,
     std::string precision = "safe",
@@ -85,8 +85,8 @@ py::array_t<int32_t> compute_delaunay(
     size_t N = buf.shape[0];
     size_t dim = buf.shape[1];
     
-    if (N < 2) return py::array_t<int32_t>(); // Empty
-    if (K_max < 1) return py::array_t<int32_t>();
+    if (N < 2) return py::make_tuple(py::array_t<int32_t>(), py::array_t<double>()); // Empty
+    if (K_max < 1) return py::make_tuple(py::array_t<int32_t>(), py::array_t<double>());
 
     // Copy to std::vector because kernels.hpp expects it
     // TODO: Optimize this copy out by modifying kernels.hpp to use spans
@@ -138,7 +138,7 @@ py::array_t<int32_t> compute_delaunay(
     }
 
     if (K_max == 1) {
-        // Return result
+        // Return result (Edges)
         // Shape (M, 2)
         auto result = py::array_t<int32_t>({(long)prev_simplices.size(), (long)2});
         auto r_ptr = result.mutable_unchecked<2>();
@@ -146,7 +146,34 @@ py::array_t<int32_t> compute_delaunay(
             r_ptr(i, 0) = prev_simplices[i][0];
             r_ptr(i, 1) = prev_simplices[i][1];
         }
-        return result;
+
+        // Compute weights for edges (squared distance / 4 usually for MEB of 2 points, aka diametral ball)
+        // MEB of 2 points is the ball with segment as diameter.
+        // Squared radius = ||p1-p2||^2 / 4.
+        auto weights = py::array_t<double>(prev_simplices.size());
+        auto w_ptr = weights.mutable_unchecked<1>();
+        
+        #ifdef CGAL_LINKED_WITH_TBB
+        tbb::parallel_for(tbb::blocked_range<size_t>(0, prev_simplices.size()), [&](const tbb::blocked_range<size_t>& r) {
+            for(size_t i=r.begin(); i!=r.end(); ++i) {
+        #else
+        for(size_t i=0; i<prev_simplices.size(); ++i) {
+        #endif
+                // Manual calculation for edges is faster than calling kernel MEB
+                int idx1 = prev_simplices[i][0];
+                int idx2 = prev_simplices[i][1];
+                double dist_sq = 0.0;
+                for(size_t d=0; d<dim; ++d) {
+                    double diff = ptr[idx1*dim + d] - ptr[idx2*dim + d];
+                    dist_sq += diff * diff;
+                }
+                w_ptr(i) = dist_sq * 0.25;
+        #ifdef CGAL_LINKED_WITH_TBB
+            }
+        });
+        #endif
+
+        return py::make_tuple(result, weights);
     }
 
     // 3. Iterative Loop (k=2 to K)
@@ -259,20 +286,43 @@ py::array_t<int32_t> compute_delaunay(
         if(verbose) std::cout << "[Step " << k << "] Generated " << prev_simplices.size() << " simplices\n";
     }
 
-    // 4. Return Result
-    if (prev_simplices.empty()) return py::array_t<int32_t>();
-    
-    size_t final_k = prev_simplices[0].size();
-    auto result = py::array_t<int32_t>({(long)prev_simplices.size(), (long)final_k});
-    auto r_ptr = result.mutable_unchecked<2>();
-    
-    for(size_t i=0; i<prev_simplices.size(); ++i) {
-        for(size_t j=0; j<final_k; ++j) {
-            r_ptr(i, j) = prev_simplices[i][j];
-        }
+    // 4. Return Result (Simplices, Weights)
+    if (prev_simplices.empty()) {
+        return py::make_tuple(py::array_t<int32_t>(), py::array_t<double>());
     }
     
-    return result;
+    size_t final_k = prev_simplices[0].size();
+    auto simplices_array = py::array_t<int32_t>({(long)prev_simplices.size(), (long)final_k});
+    auto s_ptr = simplices_array.mutable_unchecked<2>();
+    
+    // Fill simplices
+    for(size_t i=0; i<prev_simplices.size(); ++i) {
+        for(size_t j=0; j<final_k; ++j) {
+            s_ptr(i, j) = prev_simplices[i][j];
+        }
+    }
+
+    // Compute weights (Squared Radii)
+    if(verbose) std::cout << "[Info] Computing squared radii for " << prev_simplices.size() << " simplices...\n";
+    
+    auto weights_array = py::array_t<double>(prev_simplices.size());
+    auto w_ptr = weights_array.mutable_unchecked<1>();
+    
+    #ifdef CGAL_LINKED_WITH_TBB
+    tbb::parallel_for(tbb::blocked_range<size_t>(0, prev_simplices.size()), [&](const tbb::blocked_range<size_t>& r) {
+        for(size_t i=r.begin(); i!=r.end(); ++i) {
+    #else
+    for(size_t i=0; i<prev_simplices.size(); ++i) {
+    #endif
+            w_ptr(i) = kernel->compute_simplex_squared_radius(
+                ptr, prev_simplices[i], dim
+            );
+    #ifdef CGAL_LINKED_WITH_TBB
+        }
+    });
+    #endif
+    
+    return py::make_tuple(simplices_array, weights_array);
 }
 
 PYBIND11_MODULE(cgal_binding, m) {

@@ -168,4 +168,34 @@ static bool save_npy_integers(const char* path, const std::vector<std::vector<T>
     return true;
 }
 
+static bool save_npy_float(const char* path, const std::vector<double>& data) {
+    size_t rows = data.size();
+    
+    std::FILE* f = std::fopen(path, "wb");
+    if (!f) { std::perror("fopen"); return false; }
+    
+    unsigned char magic[6] = {0x93,'N','U','M','P','Y'};
+    unsigned char ver[2] = {1,0};
+    
+    std::string type_code = "<f8"; // double
+    
+    // 1D array shape
+    std::string header = "{'descr': '" + type_code + "', 'fortran_order': False, 'shape': (" + 
+        std::to_string(rows) + ",), }";
+        
+    // Pad header to 16 bytes
+    while ((10 + header.size()) % 16 != 0) header.push_back(' ');
+    header.back() = '\n';
+    
+    uint16_t hlen = (uint16_t)header.size();
+    std::fwrite(magic, 1, 6, f);
+    std::fwrite(ver, 1, 2, f);
+    std::fwrite(&hlen, 2, 1, f);
+    std::fwrite(header.data(), 1, header.size(), f);
+    
+    std::fwrite(data.data(), sizeof(double), data.size(), f);
+    std::fclose(f);
+    return true;
+}
+
 } // namespace
