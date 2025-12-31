@@ -118,23 +118,15 @@ int main(int argc, char** argv) {
         return 1;
     }
 
-    // 2. Initial Step (k=1) -> Standard Delaunay (Weighted with weights=0 OR Standard)
-    // Prompt says: "Initialisation (k=1): Call edges_from_weighted_delaunay... standard Delaunay".
-    // Standard Delaunay is Weighted Delaunay with all weights = 0 (or equal).
-    // Let's use weights = 0.
+    // 2. Initial Step (k=1) -> Standard Delaunay
+    // Optimized: Use standard unweighted Delaunay triangulation instead of weighted with 0 weights.
     std::vector<std::vector<int>> prev_simplices; // List of simplices (each is vector<int>)
     
     {
-        std::vector<double> zero_weights(cloud.N, 0.0);
-        auto edges = kernel->get_finite_edges(cloud.data, zero_weights, cloud.N, cloud.dim);
+        // New Optimized Call
+        auto edges = kernel->get_standard_delaunay_edges(cloud.data.data(), cloud.N, cloud.dim);
         
         // Convert edges to simplices (k=1, so simplices are pairs of indices)
-        // Wait. "k=1" usually means edges?
-        // Prompt says: "If K=1, return simply these edges."
-        // So for K=1, the "simplices" are indeed the edges of the Delaunay triangulation.
-        // Let's standardize: simplex of order k has size k+1.
-        // k=1 -> size 2 (edges).
-        
         // We need to sort and unique them just in case kernel returned dupes
         #ifdef CGAL_LINKED_WITH_TBB
         tbb::parallel_sort(edges.begin(), edges.end(), [](const auto& a, const auto& b){
