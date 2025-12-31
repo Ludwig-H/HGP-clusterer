@@ -250,8 +250,14 @@ def minimum_enclosing_ball(points_sub: np.ndarray) -> tuple[np.ndarray, float]:
         radius_sq = float(ball.squared_radius())
         return center, radius_sq
 
-    print("Warning: cyminiball unavailable, using numpy fallback for minimum_enclosing_ball.")
+    global _WARNED_CYMINIBALL
+    if not _WARNED_CYMINIBALL:
+        print("Warning: cyminiball unavailable, using numpy fallback for minimum_enclosing_ball.")
+        _WARNED_CYMINIBALL = True
     return _minimum_enclosing_ball_fallback(points_sub)
+
+
+_WARNED_CYMINIBALL = False
 
 
 def kth_radius(M: np.ndarray, k: int, metric: str, precomputed: bool) -> np.ndarray:
