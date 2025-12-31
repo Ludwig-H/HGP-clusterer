@@ -7,9 +7,9 @@
 import numpy as np
 cimport numpy as np
 from libcpp.vector cimport vector
-from libcpp.unordered_map cimport unordered_map
-from libcpp.algorithm cimport sort as std_sort
+from libcpp cimport bool
 from libc.math cimport NAN, isnan, fabs
+from cython.parallel import prange
 
 # -----------------------------------------------------------------------------
 # 1. Type Definitions (32-bit Optimization)
@@ -18,28 +18,61 @@ ctypedef np.float32_t DTYPE_t
 ctypedef np.int32_t ITYPE_t
 
 # -----------------------------------------------------------------------------
-# 2. C++ External Definitions (Hashing)
+# 2. C++ External Definitions
 # -----------------------------------------------------------------------------
 cdef extern from *:
     """
     #include <vector>
-    #include <functional>
-    #include <cstddef>
+    #include <algorithm>
+    
+    struct FaceRef {
+        int simplex_idx;
+        int drop_idx;
+    };
 
-    // Custom Hash for std::vector<int>
-    struct VectorHash {
-        std::size_t operator()(const std::vector<int>& v) const {
-            std::size_t seed = 0;
-            for (int i : v) {
-                // Boost hash_combine-like logic
-                seed ^= std::hash<int>{}(i) + 0x9e3779b9 + (seed << 6) + (seed >> 2);
+    struct FaceRefComparator {
+        const int* simplex_indices; // Pointer to the flat simplex array (N * (K+1))
+        int K_plus_1;               // Stride (K+1)
+
+        FaceRefComparator() : simplex_indices(nullptr), K_plus_1(0) {}
+        FaceRefComparator(const int* indices, int k_plus_1) 
+            : simplex_indices(indices), K_plus_1(k_plus_1) {}
+
+        bool operator()(const FaceRef& a, const FaceRef& b) const {
+            const int* sim_a = simplex_indices + (size_t)a.simplex_idx * K_plus_1;
+            const int* sim_b = simplex_indices + (size_t)b.simplex_idx * K_plus_1;
+
+            int ia = 0; 
+            int ib = 0; 
+            
+            // Lexicographical comparison of the K vertices (skipping drop_idx)
+            for (int k = 0; k < K_plus_1 - 1; ++k) {
+                if (ia == a.drop_idx) ia++;
+                if (ib == b.drop_idx) ib++;
+                
+                int val_a = sim_a[ia];
+                int val_b = sim_b[ib];
+                
+                if (val_a != val_b) {
+                    return val_a < val_b;
+                }
+                ia++;
+                ib++;
             }
-            return seed;
+            return false; 
         }
     };
     """
-    cdef struct VectorHash:
-        pass
+    cdef struct FaceRef:
+        int simplex_idx
+        int drop_idx
+    
+    cdef cppclass FaceRefComparator:
+        FaceRefComparator()
+        FaceRefComparator(const int* indices, int k_plus_1)
+        bool operator()(const FaceRef& a, const FaceRef& b) nogil
+    
+    void std_sort_custom "std::sort" [Iter, Compare](Iter first, Iter last, Compare comp) nogil
 
 cdef class UnionFind:
     cdef ITYPE_t[:] parent
@@ -650,64 +683,6 @@ cpdef tuple build_leaf_dfs_intervals(
     return pos, first, last, leaf_order
 
 
-# =============================================================================
-# OPTIMIZATION: Zero-Copy "Generate-Sort-Reduce" for Dual Graph Construction
-# =============================================================================
-
-from cython.operator cimport dereference as deref, preincrement as inc
-
-# Internal C++ Structs for Reference Sorting
-cdef extern from *:
-    """
-    #include <vector>
-    #include <algorithm>
-    
-    struct FaceRef {
-        int simplex_idx;
-        int drop_idx;
-    };
-
-    struct FaceRefComparator {
-        const int* simplex_indices; // Pointer to the flat simplex array (N * (K+1))
-        int K_plus_1;               // Stride (K+1)
-
-        FaceRefComparator(const int* indices, int k_plus_1) 
-            : simplex_indices(indices), K_plus_1(k_plus_1) {}
-
-        bool operator()(const FaceRef& a, const FaceRef& b) const {
-            const int* sim_a = simplex_indices + (size_t)a.simplex_idx * K_plus_1;
-            const int* sim_b = simplex_indices + (size_t)b.simplex_idx * K_plus_1;
-
-            int ia = 0; 
-            int ib = 0; 
-            
-            // Lexicographical comparison of the K vertices (skipping drop_idx)
-            for (int k = 0; k < K_plus_1 - 1; ++k) {
-                if (ia == a.drop_idx) ia++;
-                if (ib == b.drop_idx) ib++;
-                
-                int val_a = sim_a[ia];
-                int val_b = sim_b[ib];
-                
-                if (val_a != val_b) {
-                    return val_a < val_b;
-                }
-                ia++;
-                ib++;
-            }
-            return false; 
-        }
-    };
-    """
-    cdef struct FaceRef:
-        int simplex_idx
-        int drop_idx
-    
-    cdef cppclass FaceRefComparator:
-        FaceRefComparator(const int* indices, int k_plus_1)
-    
-    void std_sort_custom "std::sort" [Iter, Compare](Iter first, Iter last, Compare comp) nogil
-
 
 def build_dual_graph_cython(
     const int[:, ::1] simplex_indices, # (N, K+1) int32
@@ -807,7 +782,7 @@ def build_dual_graph_cython(
                     break
                 
                 # Check if next face is different
-                if comp.operator()(all_faces[current_group_start], all_faces[current_idx]):
+                if comp(all_faces[current_group_start], all_faces[current_idx]):
                     break
             
             # End of Group
