@@ -5,11 +5,28 @@ project(hgp_clusterer_extensions LANGUAGES CXX)
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
+# Find Python explicitly (Fixes Python.h missing in some envs)
+find_package(Python3 3.8 COMPONENTS Interpreter Development REQUIRED)
+
+message(STATUS "Python3 Found: ${Python3_FOUND}")
+message(STATUS "Python3 Include Dirs: ${Python3_INCLUDE_DIRS}")
+
+# Force global include (Safety net)
+include_directories(${Python3_INCLUDE_DIRS})
+message(STATUS "DEBUG: Forcing include directories: ${Python3_INCLUDE_DIRS}")
+
 # Find Pybind11 (Always Required)
+set(PYBIND11_FINDPYTHON ON)
 find_package(pybind11 REQUIRED)
 
 # Define the extension module
 pybind11_add_module(cgal_binding src/hgp_clusterer/_cgal_binding.cpp)
+
+# Ensure Python headers are found (Critical fix)
+if(Python3_FOUND)
+    target_link_libraries(cgal_binding PRIVATE Python3::Module)
+    target_include_directories(cgal_binding PRIVATE ${Python3_INCLUDE_DIRS})
+endif()
 
 # Include directories
 target_include_directories(cgal_binding PRIVATE 

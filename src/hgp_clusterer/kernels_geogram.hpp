@@ -214,6 +214,168 @@ private:
         std::vector<std::pair<int, int>> edges;
         
         if (n_points < 2) return edges;
+
+        // =========================================================
+        // CASE A: Weighted Delaunay (via Lifting to dim+1)
+        // =========================================================
+        if (weights_ptr && !weights_ptr->empty()) {
+            size_t lifted_dim = dim + 1;
+            std::vector<double> lifted_points(n_points * lifted_dim);
+            
+            // 1. Lift points: (x, ..., ||x||^2 - w)
+            for(size_t i=0; i<n_points; ++i) {
+                double sq_norm = 0.0;
+                for(size_t d=0; d<dim; ++d) {
+                    double val = flat_points[i*dim + d];
+                    lifted_points[i*lifted_dim + d] = val;
+                    sq_norm += val*val;
+                }
+                lifted_points[i*lifted_dim + dim] = sq_norm - (*weights_ptr)[i];
+            }
+
+            // 2. Compute Delaunay in dim+1
+            GEO::Delaunay_var delaunay = GEO::Delaunay::create(lifted_dim, "default");
+            delaunay->set_vertices(n_points, lifted_points.data());
+
+            GEO::index_t n_cells = delaunay->nb_cells();
+            GEO::index_t n_facets_per_cell = delaunay->cell_size(); // = dim + 2
+
+            // 3. Extract Lower Convex Hull Edges
+            
+            // --- OPTIMIZED PATH FOR 2D INPUT (3D LIFTED) ---
+            if (dim == 2) {
+                for (GEO::index_t c = 0; c < n_cells; ++c) {
+                    for (GEO::index_t f = 0; f < n_facets_per_cell; ++f) {
+                        if (delaunay->cell_neighbor(c, f) == GEO::index_t(-1)) {
+                            // Boundary Facet (Triangle in 3D)
+                            // Vertices of the facet are all cell vertices EXCEPT local index f
+                            // Cell has 4 vertices (0,1,2,3).
+                            
+                            GEO::index_t v_idx[3];
+                            int k = 0;
+                            for(int i=0; i<4; ++i) {
+                                if(i != (int)f) v_idx[k++] = delaunay->cell_vertex(c, i);
+                            }
+                            
+                            // Get coordinates
+                            const double* p0 = &lifted_points[v_idx[0] * 3];
+                            const double* p1 = &lifted_points[v_idx[1] * 3];
+                            const double* p2 = &lifted_points[v_idx[2] * 3];
+
+                            // Compute Normal (p1-p0) x (p2-p0)
+                            double u[3] = {p1[0]-p0[0], p1[1]-p0[1], p1[2]-p0[2]};
+                            double v[3] = {p2[0]-p0[0], p2[1]-p0[1], p2[2]-p0[2]};
+
+                            double nx = u[1]*v[2] - u[2]*v[1];
+                            double ny = u[2]*v[0] - u[0]*v[2];
+                            double nz = u[0]*v[1] - u[1]*v[0];
+
+                            // Check Orientation vs Inner Point
+                            // Inner point is the one at local index f
+                            GEO::index_t v_in = delaunay->cell_vertex(c, f);
+                            const double* p_in = &lifted_points[v_in * 3];
+                            
+                            // Vector from Surface to Inside
+                            double dx = p_in[0] - p0[0];
+                            double dy = p_in[1] - p0[1];
+                            double dz = p_in[2] - p0[2];
+
+                            // Dot product Normal . (Inside - Surface)
+                            // If > 0, Normal points INSIDE. We want OUTSIDE.
+                            if (nx*dx + ny*dy + nz*dz > 0) {
+                                // Flip normal to point outward
+                                nz = -nz;
+                            }
+
+                            // Lower Hull Test: Outward Normal has negative Z
+                            if (nz < 0) {
+                                // Add edges (v0,v1), (v1,v2), (v0,v2)
+                                // We check index order for uniqueness immediately
+                                auto add_edge = [&](GEO::index_t a, GEO::index_t b) {
+                                    if (a < n_points && b < n_points) {
+                                        if (a < b) edges.push_back({(int)a, (int)b});
+                                        else edges.push_back({(int)b, (int)a});
+                                    }
+                                };
+                                add_edge(v_idx[0], v_idx[1]);
+                                add_edge(v_idx[1], v_idx[2]);
+                                add_edge(v_idx[0], v_idx[2]);
+                            }
+                        }
+                    }
+                }
+            } 
+            // --- GENERIC PATH FOR N-D INPUT ---
+            else {
+                // Pre-allocate temporaries to avoid heap trashing
+                std::vector<double> cell_centroid(lifted_dim);
+                std::vector<double> facet_centroid(lifted_dim);
+                std::vector<GEO::index_t> facet_verts;
+                facet_verts.reserve(n_facets_per_cell);
+
+                for (GEO::index_t c = 0; c < n_cells; ++c) {
+                    // 1. Compute Cell Centroid
+                    std::fill(cell_centroid.begin(), cell_centroid.end(), 0.0);
+                    for (GEO::index_t i = 0; i < n_facets_per_cell; ++i) {
+                        GEO::index_t v_idx = delaunay->cell_vertex(c, i);
+                        const double* p = &lifted_points[v_idx * lifted_dim];
+                        for (size_t d = 0; d < lifted_dim; ++d) cell_centroid[d] += p[d];
+                    }
+                    double inv_cell_size = 1.0 / double(n_facets_per_cell);
+                    for (size_t d = 0; d < lifted_dim; ++d) cell_centroid[d] *= inv_cell_size;
+
+                    // 2. Check Facets
+                    for (GEO::index_t f = 0; f < n_facets_per_cell; ++f) {
+                        if (delaunay->cell_neighbor(c, f) == GEO::index_t(-1)) {
+                            // Boundary Facet
+                            facet_verts.clear();
+                            std::fill(facet_centroid.begin(), facet_centroid.end(), 0.0);
+                            
+                            for(GEO::index_t i = 0; i < n_facets_per_cell; ++i) {
+                                if (i != f) {
+                                    GEO::index_t v_idx = delaunay->cell_vertex(c, i);
+                                    facet_verts.push_back(v_idx);
+                                    const double* p = &lifted_points[v_idx * lifted_dim];
+                                    for (size_t d = 0; d < lifted_dim; ++d) facet_centroid[d] += p[d];
+                                }
+                            }
+                            
+                            double inv_facet_size = 1.0 / double(facet_verts.size());
+                            for (size_t d = 0; d < lifted_dim; ++d) facet_centroid[d] *= inv_facet_size;
+
+                            // Orientation Check: Outward Vector Z component
+                            // Outward = Facet - Cell
+                            double vec_z = facet_centroid[dim] - cell_centroid[dim];
+
+                            if (vec_z < 0) { // Lower Hull
+                                // Add all edges of this facet simplex
+                                for(size_t a=0; a<facet_verts.size(); ++a) {
+                                    for(size_t b=a+1; b<facet_verts.size(); ++b) {
+                                        GEO::index_t v1 = facet_verts[a];
+                                        GEO::index_t v2 = facet_verts[b];
+                                        if(v1 < n_points && v2 < n_points) {
+                                            if (v1 < v2) edges.push_back({(int)v1, (int)v2});
+                                            else edges.push_back({(int)v2, (int)v1});
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+
+            // Deduplicate
+            std::sort(edges.begin(), edges.end());
+            auto last = std::unique(edges.begin(), edges.end());
+            edges.erase(last, edges.end());
+            
+            return edges;
+        }
+
+        // =========================================================
+        // CASE B: Standard Delaunay (No weights)
+        // =========================================================
         
         // 1. Create Delaunay
         // Use "default" to let Geogram pick best impl (e.g. parallel BPOW3 in 3D)
@@ -222,17 +384,7 @@ private:
         // 2. Setup vertices (triggers computation usually)
         delaunay->set_vertices(n_points, flat_points);
 
-        // 3. Setup weights (Warning: Standard Geogram Delaunay interface might not support set_weights)
-        if (weights_ptr && !weights_ptr->empty()) {
-            // Weights ignored for now to prevent compilation errors.
-            // set_weights() is not a member of GEO::Delaunay in standard API.
-            // Power diagrams require specific factory parameters or lifted points.
-        }
-
-        // 4. Compute (Removed: implicit in set_vertices or create)
-        // delaunay->compute();
-
-        // 5. Extract Edges (Parallel-friendly traversal structure)
+        // 3. Extract Edges (Parallel-friendly traversal structure)
         GEO::index_t n_cells = delaunay->nb_cells();
         GEO::index_t n_vertices_per_cell = delaunay->cell_size();
 
