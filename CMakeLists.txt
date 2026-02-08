@@ -68,19 +68,49 @@ if(DEFINED ENV{GEOGRAM_INSTALL_PREFIX})
     message(STATUS "Added Geogram search path from env: $ENV{GEOGRAM_INSTALL_PREFIX}")
 endif()
 
-find_package(Geogram REQUIRED)
-# Standardize Geogram detection (Config mode vs Module mode)
-if (Geogram_FOUND OR TARGET geogram OR TARGET geogram::geogram)
+find_package(Geogram QUIET)
+
+if (NOT Geogram_FOUND AND NOT TARGET geogram::geogram)
+    # Manual Fallback
+    message(STATUS "Geogram config not found. Attempting manual search...")
+    
+    find_path(GEOGRAM_INCLUDE_DIR NAMES geogram/basic/common.h
+        PATHS 
+        $ENV{GEOGRAM_INSTALL_PREFIX}/include
+        /usr/local/include
+        /usr/include
+        /opt/local/include
+    )
+    
+    find_library(GEOGRAM_LIBRARY NAMES geogram
+        PATHS
+        $ENV{GEOGRAM_INSTALL_PREFIX}/lib
+        /usr/local/lib
+        /usr/lib
+        /opt/local/lib
+    )
+
+    if (GEOGRAM_INCLUDE_DIR AND GEOGRAM_LIBRARY)
+        message(STATUS "Geogram found manually at: ${GEOGRAM_INCLUDE_DIR}")
+        set(Geogram_FOUND TRUE)
+        add_library(geogram_imported UNKNOWN IMPORTED)
+        set_target_properties(geogram_imported PROPERTIES
+            IMPORTED_LOCATION "${GEOGRAM_LIBRARY}"
+            INTERFACE_INCLUDE_DIRECTORIES "${GEOGRAM_INCLUDE_DIR}"
+        )
+        add_library(geogram::geogram ALIAS geogram_imported)
+    endif()
+endif()
+
+# Standardize Geogram usage
+if (TARGET geogram::geogram OR TARGET geogram)
     message(STATUS "Geogram found! Enabled HGP_WITH_GEOGRAM")
     target_compile_definitions(cgal_binding PRIVATE HGP_WITH_GEOGRAM)
     
-    if (TARGET geogram)
-        target_link_libraries(cgal_binding PRIVATE geogram)
-    elseif(TARGET geogram::geogram)
+    if(TARGET geogram::geogram)
         target_link_libraries(cgal_binding PRIVATE geogram::geogram)
     else()
-        target_include_directories(cgal_binding PRIVATE ${GEOGRAM_INCLUDE_DIR})
-        target_link_libraries(cgal_binding PRIVATE ${GEOGRAM_LIBRARIES})
+        target_link_libraries(cgal_binding PRIVATE geogram)
     endif()
 else()
     message(STATUS "Geogram not found. Geogram backend will be disabled.")
