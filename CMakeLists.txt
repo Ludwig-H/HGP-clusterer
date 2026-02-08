@@ -20,16 +20,24 @@ target_include_directories(cgal_binding PRIVATE
 
 # 1. Eigen3 (Required for both CGAL and Geogram backends logic often depends on it, certainly our Welzl implementation)
 find_package(Eigen3 QUIET)
+
 if(TARGET Eigen3::Eigen)
     target_link_libraries(cgal_binding PRIVATE Eigen3::Eigen)
 else()
     # Try finding via include dir variable if target missing
+    message(STATUS "Eigen3 config not found. Searching for headers...")
+    find_path(EIGEN3_INCLUDE_DIR NAMES Eigen/Core
+        PATHS
+        /usr/include/eigen3
+        /usr/local/include/eigen3
+        /opt/homebrew/include/eigen3
+    )
+    
     if(EIGEN3_INCLUDE_DIR)
+        message(STATUS "Eigen3 found at ${EIGEN3_INCLUDE_DIR}")
         target_include_directories(cgal_binding PRIVATE ${EIGEN3_INCLUDE_DIR})
     else()
-        message(STATUS "Eigen3 target not found standardly. Attempting forced search.")
-        find_package(Eigen3 REQUIRED)
-        target_link_libraries(cgal_binding PRIVATE Eigen3::Eigen)
+        message(FATAL_ERROR "Eigen3 not found. Please install libeigen3-dev or set EIGEN3_INCLUDE_DIR.")
     endif()
 endif()
 
