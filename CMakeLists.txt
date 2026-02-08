@@ -80,6 +80,7 @@ if (NOT Geogram_FOUND AND NOT TARGET geogram::geogram)
         /usr/local/include
         /usr/include
         /opt/local/include
+        PATH_SUFFIXES geogram1
     )
     
     find_library(GEOGRAM_LIBRARY NAMES geogram
