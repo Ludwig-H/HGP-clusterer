@@ -18,6 +18,12 @@
 #include <geogram/basic/command_line.h>
 #include <geogram/basic/file_system.h>
 
+#ifdef CGAL_LINKED_WITH_TBB
+#include <tbb/parallel_for.h>
+#include <tbb/parallel_sort.h>
+#include <tbb/blocked_range.h>
+#endif
+
 // ==============================================================================
 // Fast, Thread-Safe Welzl's Algorithm (using Eigen for Basis solving)
 // ==============================================================================
@@ -259,27 +265,44 @@ private:
                     }
                 };
 
-                std::vector<Face3> all_faces;
-                all_faces.reserve(n_cells * 4); // 4 faces per tet
+                std::vector<Face3> all_faces(n_cells * 4); // Pre-allocate with default ctor
 
+                #ifdef CGAL_LINKED_WITH_TBB
+                tbb::parallel_for(tbb::blocked_range<GEO::index_t>(0, n_cells), [&](const tbb::blocked_range<GEO::index_t>& r) {
+                    for(GEO::index_t c = r.begin(); c != r.end(); ++c) {
+                        for (GEO::index_t f = 0; f < 4; ++f) {
+                            Face3& face = all_faces[c * 4 + f];
+                            face.c = c;
+                            face.f = f;
+                            int k = 0;
+                            for(int i=0; i<4; ++i) {
+                                if(i != (int)f) face.v[k++] = delaunay->cell_vertex(c, i);
+                            }
+                            std::sort(std::begin(face.v), std::end(face.v));
+                        }
+                    }
+                });
+                #else
                 for (GEO::index_t c = 0; c < n_cells; ++c) {
                     for (GEO::index_t f = 0; f < 4; ++f) {
-                        Face3 face;
+                        Face3& face = all_faces[c * 4 + f];
                         face.c = c;
                         face.f = f;
-                        // Collect vertices excluding f
                         int k = 0;
                         for(int i=0; i<4; ++i) {
                             if(i != (int)f) face.v[k++] = delaunay->cell_vertex(c, i);
                         }
-                        // Sort vertices for canonical representation
                         std::sort(std::begin(face.v), std::end(face.v));
-                        all_faces.push_back(face);
                     }
                 }
+                #endif
 
                 // Sort to group identical faces
+                #ifdef CGAL_LINKED_WITH_TBB
+                tbb::parallel_sort(all_faces.begin(), all_faces.end());
+                #else
                 std::sort(all_faces.begin(), all_faces.end());
+                #endif
 
                 // Iterate and find unique faces (boundary)
                 for (size_t i = 0; i < all_faces.size(); ++i) {
@@ -354,12 +377,27 @@ private:
                     }
                 };
 
-                std::vector<Face4> all_faces;
-                all_faces.reserve(n_cells * 5); // 5 faces per pentatope
+                std::vector<Face4> all_faces(n_cells * 5); // 5 faces per pentatope
 
+                #ifdef CGAL_LINKED_WITH_TBB
+                tbb::parallel_for(tbb::blocked_range<GEO::index_t>(0, n_cells), [&](const tbb::blocked_range<GEO::index_t>& r) {
+                    for(GEO::index_t c = r.begin(); c != r.end(); ++c) {
+                        for (GEO::index_t f = 0; f < 5; ++f) {
+                            Face4& face = all_faces[c * 5 + f];
+                            face.c = c;
+                            face.f = f;
+                            int k = 0;
+                            for(int i=0; i<5; ++i) {
+                                if(i != (int)f) face.v[k++] = delaunay->cell_vertex(c, i);
+                            }
+                            std::sort(std::begin(face.v), std::end(face.v));
+                        }
+                    }
+                });
+                #else
                 for (GEO::index_t c = 0; c < n_cells; ++c) {
                     for (GEO::index_t f = 0; f < 5; ++f) {
-                        Face4 face;
+                        Face4& face = all_faces[c * 5 + f];
                         face.c = c;
                         face.f = f;
                         int k = 0;
@@ -367,11 +405,15 @@ private:
                             if(i != (int)f) face.v[k++] = delaunay->cell_vertex(c, i);
                         }
                         std::sort(std::begin(face.v), std::end(face.v));
-                        all_faces.push_back(face);
                     }
                 }
+                #endif
 
+                #ifdef CGAL_LINKED_WITH_TBB
+                tbb::parallel_sort(all_faces.begin(), all_faces.end());
+                #else
                 std::sort(all_faces.begin(), all_faces.end());
+                #endif
 
                 for (size_t i = 0; i < all_faces.size(); ++i) {
                     bool is_duplicate = false;
