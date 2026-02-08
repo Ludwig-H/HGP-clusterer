@@ -68,7 +68,7 @@ if(DEFINED ENV{GEOGRAM_INSTALL_PREFIX})
     message(STATUS "Added Geogram search path from env: $ENV{GEOGRAM_INSTALL_PREFIX}")
 endif()
 
-find_package(Geogram QUIET)
+find_package(Geogram REQUIRED)
 # Standardize Geogram detection (Config mode vs Module mode)
 if (Geogram_FOUND OR TARGET geogram OR TARGET geogram::geogram)
     message(STATUS "Geogram found! Enabled HGP_WITH_GEOGRAM")
