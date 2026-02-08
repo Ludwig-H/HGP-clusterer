@@ -180,6 +180,8 @@ public:
         static bool initialized = false;
         if (!initialized) {
             GEO::initialize();
+            GEO::CmdLine::import_arg_group("global");
+            GEO::CmdLine::import_arg_group("algo");
             GEO::CmdLine::import_arg_group("standard");
             // GEO::Logger::instance()->set_quiet(true); // Removed: caused API issues on some versions
             initialized = true;
