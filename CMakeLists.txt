@@ -63,6 +63,11 @@ else()
 endif()
 
 # 4. Geogram Support (Optional)
+if(DEFINED ENV{GEOGRAM_INSTALL_PREFIX})
+    list(APPEND CMAKE_PREFIX_PATH $ENV{GEOGRAM_INSTALL_PREFIX})
+    message(STATUS "Added Geogram search path from env: $ENV{GEOGRAM_INSTALL_PREFIX}")
+endif()
+
 find_package(Geogram QUIET)
 # Standardize Geogram detection (Config mode vs Module mode)
 if (Geogram_FOUND OR TARGET geogram OR TARGET geogram::geogram)
