@@ -305,6 +305,80 @@ private:
                     }
                 }
             } 
+            // --- OPTIMIZED PATH FOR 3D INPUT (4D LIFTED) ---
+            else if (dim == 3) {
+                // Lifted dim = 4
+                // Cell (Pentatope) has 5 vertices.
+                // Facet (Tetrahedron) has 4 vertices.
+                
+                for (GEO::index_t c = 0; c < n_cells; ++c) {
+                    // 1. Compute Cell Centroid (Unrolled)
+                    // Stores sums initially, then divides
+                    double cell_c[4] = {0, 0, 0, 0};
+                    GEO::index_t c_verts[5]; // Store indices for later reuse
+                    
+                    for(int i=0; i<5; ++i) {
+                        GEO::index_t v = delaunay->cell_vertex(c, i);
+                        c_verts[i] = v;
+                        const double* p = &lifted_points[v * 4];
+                        cell_c[0] += p[0];
+                        cell_c[1] += p[1];
+                        cell_c[2] += p[2];
+                        cell_c[3] += p[3];
+                    }
+                    // Average
+                    const double inv5 = 1.0/5.0;
+                    cell_c[0] *= inv5; cell_c[1] *= inv5; cell_c[2] *= inv5; cell_c[3] *= inv5;
+
+                    for (GEO::index_t f = 0; f < n_facets_per_cell; ++f) { // f from 0 to 4
+                        if (delaunay->cell_neighbor(c, f) == GEO::index_t(-1)) {
+                            // Boundary Facet
+                            // Vertices are all c_verts EXCEPT index f
+                            
+                            // Compute Facet Centroid directly
+                            double facet_c[4] = {0, 0, 0, 0};
+                            GEO::index_t f_verts[4];
+                            int k = 0;
+                            
+                            for(int i=0; i<5; ++i) {
+                                if (i != (int)f) {
+                                    f_verts[k++] = c_verts[i];
+                                    const double* p = &lifted_points[c_verts[i] * 4];
+                                    facet_c[0] += p[0];
+                                    facet_c[1] += p[1];
+                                    facet_c[2] += p[2];
+                                    facet_c[3] += p[3];
+                                }
+                            }
+                            
+                            // Average
+                            const double inv4 = 0.25;
+                            // We only strictly need the last component (Z/Height) for the check
+                            facet_c[3] *= inv4; 
+                            
+                            // Lower Hull Check: Outward Normal Z < 0
+                            // Heuristic: FacetCentroid.z - CellCentroid.z < 0
+                            if (facet_c[3] < cell_c[3]) {
+                                // Extract 6 edges from the 4 vertices of the tetrahedron
+                                // Pairs: (0,1), (0,2), (0,3), (1,2), (1,3), (2,3)
+                                auto add_edge = [&](GEO::index_t a, GEO::index_t b) {
+                                    if (a < n_points && b < n_points) {
+                                        if (a < b) edges.push_back({(int)a, (int)b});
+                                        else edges.push_back({(int)b, (int)a});
+                                    }
+                                };
+                                
+                                add_edge(f_verts[0], f_verts[1]);
+                                add_edge(f_verts[0], f_verts[2]);
+                                add_edge(f_verts[0], f_verts[3]);
+                                add_edge(f_verts[1], f_verts[2]);
+                                add_edge(f_verts[1], f_verts[3]);
+                                add_edge(f_verts[2], f_verts[3]);
+                            }
+                        }
+                    }
+                }
+            }
             // --- GENERIC PATH FOR N-D INPUT ---
             else {
                 // Pre-allocate temporaries to avoid heap trashing
