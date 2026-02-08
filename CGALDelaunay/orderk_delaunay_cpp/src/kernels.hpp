@@ -4,6 +4,47 @@
 #include <utility>
 #include <iostream>
 #include <map>
+#include <memory>
+
+// Interface for weighted Delaunay edge extraction
+// This interface is agnostic of the backend (CGAL, Geogram, etc.)
+struct WeightedDelaunayTraits {
+    // 1. Weighted (Regular) Triangulation for k > 1
+    virtual std::vector<std::pair<int, int>> get_finite_edges(
+        const double* flat_points, 
+        const std::vector<double>& weights,
+        size_t n_points,
+        size_t dim
+    ) = 0;
+
+    // Helper for std::vector compatibility
+    std::vector<std::pair<int, int>> get_finite_edges(
+        const std::vector<double>& flat_points, 
+        const std::vector<double>& weights,
+        size_t n_points,
+        size_t dim
+    ) {
+        return get_finite_edges(flat_points.data(), weights, n_points, dim);
+    }
+
+    // 2. Standard (Unweighted) Delaunay for k = 1 (Optimization)
+    virtual std::vector<std::pair<int, int>> get_standard_delaunay_edges(
+        const double* flat_points,
+        size_t n_points,
+        size_t dim
+    ) = 0;
+
+    // 3. Radius computation (Welzl's algorithm)
+    virtual double compute_simplex_squared_radius(
+        const double* flat_points,
+        const std::vector<int>& indices,
+        size_t dim
+    ) = 0;
+
+    virtual ~WeightedDelaunayTraits() {}
+};
+
+#ifdef HGP_WITH_CGAL
 
 // CGAL Headers
 #include <CGAL/Exact_predicates_inexact_constructions_kernel.h>
@@ -44,43 +85,6 @@
 #ifdef CGAL_LINKED_WITH_TBB
 #include <CGAL/Triangulation_data_structure_3.h>
 #endif
-
-// Interface for weighted Delaunay edge extraction
-struct WeightedDelaunayTraits {
-    // 1. Weighted (Regular) Triangulation for k > 1
-    virtual std::vector<std::pair<int, int>> get_finite_edges(
-        const double* flat_points, 
-        const std::vector<double>& weights,
-        size_t n_points,
-        size_t dim
-    ) = 0;
-
-    // Helper for std::vector compatibility
-    std::vector<std::pair<int, int>> get_finite_edges(
-        const std::vector<double>& flat_points, 
-        const std::vector<double>& weights,
-        size_t n_points,
-        size_t dim
-    ) {
-        return get_finite_edges(flat_points.data(), weights, n_points, dim);
-    }
-
-    // 2. Standard (Unweighted) Delaunay for k = 1 (Optimization)
-    virtual std::vector<std::pair<int, int>> get_standard_delaunay_edges(
-        const double* flat_points,
-        size_t n_points,
-        size_t dim
-    ) = 0;
-
-    // 3. Radius computation (Welzl's algorithm)
-    virtual double compute_simplex_squared_radius(
-        const double* flat_points,
-        const std::vector<int>& indices,
-        size_t dim
-    ) = 0;
-
-    virtual ~WeightedDelaunayTraits() {}
-};
 
 // 2D Implementation
 template <typename Kernel>
@@ -432,7 +436,7 @@ struct WeightedDelaunayDD : public WeightedDelaunayTraits {
     }
 };
 
-std::unique_ptr<WeightedDelaunayTraits> create_kernel(int dim, bool exact) {
+inline std::unique_ptr<WeightedDelaunayTraits> create_cgal_kernel(int dim, bool exact) {
     if (exact) {
         using K = CGAL::Exact_predicates_exact_constructions_kernel;
         if (dim == 2) return std::make_unique<WeightedDelaunay2D<K>>();
@@ -445,3 +449,5 @@ std::unique_ptr<WeightedDelaunayTraits> create_kernel(int dim, bool exact) {
         return std::make_unique<WeightedDelaunayDD<CGAL::Epick_d<CGAL::Dynamic_dimension_tag>>>();
     }
 }
+
+#endif // HGP_WITH_CGAL

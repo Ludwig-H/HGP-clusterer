@@ -17,6 +17,7 @@ def orderk_delaunay3(
     *,
     precision: str = "safe",
     verbose: bool = False,
+    backend: str = "geogram",
     root: Path | None = None,
 ) -> tuple[np.ndarray, np.ndarray]:
     """
@@ -41,7 +42,8 @@ def orderk_delaunay3(
     # Call the C++ function directly
     # returns tuple(simplices, weights)
     try:
-        result = compute_delaunay(M, K, precision, verbose)
+        # Note: We update C++ signature to accept backend string
+        result = compute_delaunay(M, K, precision, verbose, backend)
     except Exception as e:
         raise RuntimeError(f"C++ Execution failed: {e}")
 

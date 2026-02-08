@@ -56,6 +56,7 @@ class HGPClusterer(BaseEstimator, ClusterMixin):
                  epsilon_fusion=0.0,
                  return_multi_clusters=False,
                  verbose=False,
+                 backend='geogram',
                  cgal_root="/content/HGP-clusterer/CGALDelaunay"):
         
         self.min_cluster_size = min_cluster_size
@@ -75,6 +76,7 @@ class HGPClusterer(BaseEstimator, ClusterMixin):
         self.epsilon_fusion = epsilon_fusion
         self.return_multi_clusters = return_multi_clusters
         self.verbose = verbose
+        self.backend = backend
         self.cgal_root = cgal_root
         
         # State
@@ -178,6 +180,7 @@ class HGPClusterer(BaseEstimator, ClusterMixin):
             self.expZ,
             precision=self.precision,
             verbose=self.verbose,
+            backend=self.backend,
             cgal_root=self.cgal_root,
         )
         

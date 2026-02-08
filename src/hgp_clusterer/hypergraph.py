@@ -21,6 +21,7 @@ def _build_graph_KSimplexes(
     expZ: float,
     precision: str = "safe",
     verbose: bool = False,
+    backend: str = "geogram",
     cgal_root: str | os.PathLike[str] | None = "../../CGALDelaunay",
 ) -> tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray, np.ndarray, int]:
     is_sparse_metric = metric == "sparse"
@@ -66,7 +67,14 @@ def _build_graph_KSimplexes(
     if complex_chosen.lower() == "orderk_delaunay":
         try:
             # Returns tuple (N_simplices, K+1), (N_simplices,)
-            simplex_indices_arr, radii_arr = orderk_delaunay3(M, min_samples - 1, precision=precision, verbose=verbose, root=root_path)
+            simplex_indices_arr, radii_arr = orderk_delaunay3(
+                M, 
+                min_samples - 1, 
+                precision=precision, 
+                verbose=verbose, 
+                backend=backend,
+                root=root_path
+            )
             
             if simplex_indices_arr.dtype != np.int32:
                  simplex_indices_arr = simplex_indices_arr.astype(np.int32)

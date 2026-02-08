@@ -14,6 +14,7 @@
 // Include the existing kernels logic
 // We assume kernels.hpp is in the include path
 #include "kernels.hpp"
+#include "kernels_geogram.hpp"
 
 // TBB for parallelism
 #ifdef CGAL_LINKED_WITH_TBB
@@ -58,14 +59,6 @@ struct PointCloud {
         for(size_t i=0; i<N; ++i) sq_norms[i] = norm_sq(&data_ptr[i*dim], dim);
         #endif
     }
-    
-    // Helper to get data vector for CGAL kernels which expect std::vector
-    // This is a slight inefficiency: existing kernels.hpp expects std::vector<double>
-    // We might need to copy if we can't adapt kernels.hpp easily.
-    // Looking at kernels.hpp: get_finite_edges takes const std::vector<double>& flat_points.
-    // So we MUST copy the input numpy array to a vector if we don't change kernels.hpp.
-    // For now, to be safe and fast on dev time, we will copy.
-    // OPTIMIZATION LATER: Adapt kernels.hpp to take pointers/spans.
 };
 
 // ==============================================================================================
@@ -76,7 +69,8 @@ py::tuple compute_delaunay(
     py::array_t<double, py::array::c_style | py::array::forcecast> input_points,
     int K_max,
     std::string precision = "safe",
-    bool verbose = false
+    bool verbose = false,
+    std::string backend = "cgal"
 ) {
     // 1. Parse Input
     py::buffer_info buf = input_points.request();
@@ -89,7 +83,6 @@ py::tuple compute_delaunay(
     if (K_max < 1) return py::make_tuple(py::array_t<int32_t>(), py::array_t<double>());
 
     // Copy to std::vector because kernels.hpp expects it
-    // TODO: Optimize this copy out by modifying kernels.hpp to use spans
     const double* ptr = static_cast<double*>(buf.ptr);
     
     PointCloud cloud(ptr, N, dim); // Recalculate sq_norms
@@ -103,20 +96,42 @@ py::tuple compute_delaunay(
     #endif
 
     // Setup Kernel
-    bool exact_mode = (precision == "exact");
-    auto kernel = create_kernel(dim, exact_mode);
+    std::unique_ptr<WeightedDelaunayTraits> kernel;
+
+    if (backend == "geogram") {
+        #ifdef HGP_WITH_GEOGRAM
+        kernel = std::make_unique<GeogramDelaunayImpl>();
+        if (verbose) std::cout << "[Backend] Using Geogram" << std::endl;
+        #else
+        throw std::runtime_error("Geogram backend not compiled (HGP_WITH_GEOGRAM not defined).");
+        #endif
+    } else {
+        // Default to CGAL if backend="cgal" or unknown
+        if (backend != "cgal" && verbose) {
+             std::cout << "[Warning] Unknown backend '" << backend << "', defaulting to CGAL." << std::endl;
+        }
+        
+        #ifdef HGP_WITH_CGAL
+        bool exact_mode = (precision == "exact");
+        kernel = create_cgal_kernel(dim, exact_mode);
+        if (verbose) std::cout << "[Backend] Using CGAL (" << (exact_mode ? "Exact" : "Safe") << ")" << std::endl;
+        #else
+        throw std::runtime_error("CGAL backend not compiled (HGP_WITH_CGAL not defined).");
+        #endif
+    }
+
     if (!kernel) {
-        throw std::runtime_error("Unsupported dimension/kernel combination");
+        throw std::runtime_error("Failed to initialize kernel (Unsupported dimension/kernel combination)");
     }
 
     // 2. Initial Step (k=1) -> Standard Delaunay (Weighted with weights=0)
     std::vector<std::vector<int>> prev_simplices; 
     
     {
-        std::vector<double> zero_weights(N, 0.0);
-        auto edges = kernel->get_finite_edges(ptr, zero_weights, N, dim);
+        // For k=1, we can use the specialized standard Delaunay call which might be faster
+        auto edges = kernel->get_standard_delaunay_edges(ptr, N, dim);
         
-        // Sort and Unique
+        // Sort and Unique (Standard procedure)
         #ifdef CGAL_LINKED_WITH_TBB
         tbb::parallel_sort(edges.begin(), edges.end(), [](const auto& a, const auto& b){
             if (a.first != b.first) return a.first < b.first;
@@ -147,9 +162,7 @@ py::tuple compute_delaunay(
             r_ptr(i, 1) = prev_simplices[i][1];
         }
 
-        // Compute weights for edges (squared distance / 4 usually for MEB of 2 points, aka diametral ball)
-        // MEB of 2 points is the ball with segment as diameter.
-        // Squared radius = ||p1-p2||^2 / 4.
+        // Compute weights for edges (squared distance / 4)
         auto weights = py::array_t<double>(prev_simplices.size());
         auto w_ptr = weights.mutable_unchecked<1>();
         
@@ -159,7 +172,6 @@ py::tuple compute_delaunay(
         #else
         for(size_t i=0; i<prev_simplices.size(); ++i) {
         #endif
-                // Manual calculation for edges is faster than calling kernel MEB
                 int idx1 = prev_simplices[i][0];
                 int idx2 = prev_simplices[i][1];
                 double dist_sq = 0.0;
@@ -211,6 +223,8 @@ py::tuple compute_delaunay(
                     center_sq_norm += center[d] * center[d];
                 }
 
+                // Radius^2 - Distance^2
+                // Order-k definition logic (Lifted weight)
                 bary_weights[i] = center_sq_norm - (sum_sq_norms * inv_k);
         #ifdef CGAL_LINKED_WITH_TBB
             }
@@ -303,7 +317,7 @@ py::tuple compute_delaunay(
     }
 
     // Compute weights (Squared Radii)
-    if(verbose) std::cout << "[Info] Computing squared radii for " << prev_simplices.size() << " simplices...\n";
+    if(verbose) std::cout << "[Info] Computing squared radii for " << prev_simplices.size() << " simplices..." << std::endl;
     
     auto weights_array = py::array_t<double>(prev_simplices.size());
     auto w_ptr = weights_array.mutable_unchecked<1>();
@@ -326,7 +340,7 @@ py::tuple compute_delaunay(
 }
 
 PYBIND11_MODULE(cgal_binding, m) {
-    m.doc() = "CGAL-based Order-K Delaunay Triangulation Binding";
+    m.doc() = "CGAL/Geogram-based Order-K Delaunay Triangulation Binding";
     m.def("compute_delaunay", &compute_delaunay, "Compute Order-K Delaunay",
-          py::arg("points"), py::arg("K_max"), py::arg("precision")="safe", py::arg("verbose")=false);
+          py::arg("points"), py::arg("K_max"), py::arg("precision")="safe", py::arg("verbose")=false, py::arg("backend")="geogram");
 }
