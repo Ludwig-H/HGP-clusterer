@@ -16,6 +16,7 @@
 #include <geogram/delaunay/delaunay.h>
 #include <geogram/basic/common.h>
 #include <geogram/basic/command_line.h>
+#include <geogram/basic/command_line_args.h>
 #include <geogram/basic/file_system.h>
 
 #ifdef CGAL_LINKED_WITH_TBB
@@ -179,6 +180,7 @@ public:
         static bool initialized = false;
         if (!initialized) {
             GEO::initialize();
+            GEO::CmdLine::import_arg_group("standard");
             // GEO::Logger::instance()->set_quiet(true); // Removed: caused API issues on some versions
             initialized = true;
         }
@@ -229,6 +231,19 @@ private:
             std::vector<double> lifted_points(n_points * lifted_dim);
             
             // 1. Lift points: (x, ..., ||x||^2 - w)
+            #ifdef CGAL_LINKED_WITH_TBB
+            tbb::parallel_for(tbb::blocked_range<size_t>(0, n_points), [&](const tbb::blocked_range<size_t>& r) {
+                for(size_t i=r.begin(); i!=r.end(); ++i) {
+                    double sq_norm = 0.0;
+                    for(size_t d=0; d<dim; ++d) {
+                        double val = flat_points[i*dim + d];
+                        lifted_points[i*lifted_dim + d] = val;
+                        sq_norm += val*val;
+                    }
+                    lifted_points[i*lifted_dim + dim] = sq_norm - (*weights_ptr)[i];
+                }
+            });
+            #else
             for(size_t i=0; i<n_points; ++i) {
                 double sq_norm = 0.0;
                 for(size_t d=0; d<dim; ++d) {
@@ -238,6 +253,7 @@ private:
                 }
                 lifted_points[i*lifted_dim + dim] = sq_norm - (*weights_ptr)[i];
             }
+            #endif
 
             // 2. Compute Delaunay in dim+1
             GEO::Delaunay_var delaunay = GEO::Delaunay::create(lifted_dim, "default");
