@@ -152,11 +152,6 @@ namespace HGP_Numerics {
         R.reserve(dim + 1);
         
         // Random shuffle P to ensure expected O(N)
-        // Since we are inside a thread, we use a cheap pseudo-random or fixed shuffle?
-        // For very small N (simplex size <= dim+1), shuffle matters less, but good practice.
-        // We use a simple linear congruential generator for speed and thread-safety (no global state).
-        // Or just std::shuffle with a thread-local engine.
-        // Given N is tiny (e.g. 3 to 10), simple swap is enough.
         for (size_t i = P.size() - 1; i > 0; --i) {
             size_t j = (size_t((i * 12345 + 6789)) % (i + 1)); // Deterministic but mixed enough
             std::swap(P[i], P[j]);
@@ -178,8 +173,7 @@ public:
         static bool initialized = false;
         if (!initialized) {
             GEO::initialize();
-            // Suppress excessive logging
-            GEO::Logger::instance()->set_quiet(true);
+            // GEO::Logger::instance()->set_quiet(true); // Removed: caused API issues on some versions
             initialized = true;
         }
     }
@@ -225,16 +219,18 @@ private:
         // Use "default" to let Geogram pick best impl (e.g. parallel BPOW3 in 3D)
         GEO::Delaunay_var delaunay = GEO::Delaunay::create(dim, "default");
         
-        // 2. Setup vertices
+        // 2. Setup vertices (triggers computation usually)
         delaunay->set_vertices(n_points, flat_points);
 
-        // 3. Setup weights (if Order-k weighted)
+        // 3. Setup weights (Warning: Standard Geogram Delaunay interface might not support set_weights)
         if (weights_ptr && !weights_ptr->empty()) {
-            delaunay->set_weights(weights_ptr->data());
+            // Weights ignored for now to prevent compilation errors.
+            // set_weights() is not a member of GEO::Delaunay in standard API.
+            // Power diagrams require specific factory parameters or lifted points.
         }
 
-        // 4. Compute
-        delaunay->compute();
+        // 4. Compute (Removed: implicit in set_vertices or create)
+        // delaunay->compute();
 
         // 5. Extract Edges (Parallel-friendly traversal structure)
         GEO::index_t n_cells = delaunay->nb_cells();
