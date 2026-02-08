@@ -183,6 +183,8 @@ py::tuple compute_delaunay(
         #ifdef CGAL_LINKED_WITH_TBB
             }
         });
+        #else
+        }
         #endif
 
         return py::make_tuple(result, weights);
@@ -229,6 +231,8 @@ py::tuple compute_delaunay(
         #ifdef CGAL_LINKED_WITH_TBB
             }
         });
+        #else
+        }
         #endif
 
         // B. Weighted Delaunay on Barycenters
@@ -275,6 +279,8 @@ py::tuple compute_delaunay(
         #ifdef CGAL_LINKED_WITH_TBB
             }
         });
+        #else
+        }
         #endif
 
         if (candidates.empty()) {
@@ -334,6 +340,8 @@ py::tuple compute_delaunay(
     #ifdef CGAL_LINKED_WITH_TBB
         }
     });
+    #else
+    }
     #endif
     
     return py::make_tuple(simplices_array, weights_array);
