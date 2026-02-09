@@ -449,7 +449,7 @@ private:
                     for(int d=0; d<4; ++d) facet_c[d] *= 0.25;
 
                     // Lower hull check: Facet centroid is "below" cell centroid in lifted dim (index 3)
-                    if (facet_centroid[3] < cell_c[3]) {
+                    if (facet_c[3] < cell_c[3]) {
                         // Edges of the tetrahedron (facet)
                         size_t f_dim = 4; // 4 vertices
                         for(size_t a=0; a<f_dim; ++a) {
