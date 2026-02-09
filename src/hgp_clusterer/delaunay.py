@@ -7,7 +7,7 @@ import warnings
 # Try to import the binary extension
 _import_error = None
 try:
-    from hgp_clusterer.cgal_binding import compute_delaunay
+    from hgp_clusterer.geometry_binding import compute_delaunay
 except ImportError as e:
     # Fallback or error message if not compiled
     compute_delaunay = None
@@ -28,7 +28,7 @@ def orderk_delaunay3(
     """
     if compute_delaunay is None:
         raise ImportError(
-            f"The 'cgal_binding' extension is not loaded. Original error: {_import_error}. "
+            f"The 'geometry_binding' extension is not loaded. Original error: {_import_error}. "
             "Please ensure the package is installed correctly with compiled extensions."
         )
 

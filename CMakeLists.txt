@@ -20,16 +20,16 @@ set(PYBIND11_FINDPYTHON ON)
 find_package(pybind11 REQUIRED)
 
 # Define the extension module
-pybind11_add_module(cgal_binding src/hgp_clusterer/_cgal_binding.cpp)
+pybind11_add_module(geometry_binding src/hgp_clusterer/_geometry_binding.cpp)
 
 # Ensure Python headers are found (Critical fix)
 if(Python3_FOUND)
-    target_link_libraries(cgal_binding PRIVATE Python3::Module)
-    target_include_directories(cgal_binding PRIVATE ${Python3_INCLUDE_DIRS})
+    target_link_libraries(geometry_binding PRIVATE Python3::Module)
+    target_include_directories(geometry_binding PRIVATE ${Python3_INCLUDE_DIRS})
 endif()
 
 # Include directories
-target_include_directories(cgal_binding PRIVATE 
+target_include_directories(geometry_binding PRIVATE 
     ${CMAKE_CURRENT_SOURCE_DIR}/CGALDelaunay/orderk_delaunay_cpp/src
 )
 
@@ -39,7 +39,7 @@ target_include_directories(cgal_binding PRIVATE
 find_package(Eigen3 QUIET)
 
 if(TARGET Eigen3::Eigen)
-    target_link_libraries(cgal_binding PRIVATE Eigen3::Eigen)
+    target_link_libraries(geometry_binding PRIVATE Eigen3::Eigen)
 else()
     # Try finding via include dir variable if target missing
     message(STATUS "Eigen3 config not found. Searching for headers...")
@@ -52,7 +52,7 @@ else()
     
     if(EIGEN3_INCLUDE_DIR)
         message(STATUS "Eigen3 found at ${EIGEN3_INCLUDE_DIR}")
-        target_include_directories(cgal_binding PRIVATE ${EIGEN3_INCLUDE_DIR})
+        target_include_directories(geometry_binding PRIVATE ${EIGEN3_INCLUDE_DIR})
     else()
         message(FATAL_ERROR "Eigen3 not found. Please install libeigen3-dev or set EIGEN3_INCLUDE_DIR.")
     endif()
@@ -65,15 +65,15 @@ find_package(TBB QUIET)
 find_package(CGAL QUIET)
 if(CGAL_FOUND)
     message(STATUS "CGAL found! Enabled HGP_WITH_CGAL")
-    target_compile_definitions(cgal_binding PRIVATE HGP_WITH_CGAL)
-    target_link_libraries(cgal_binding PRIVATE CGAL::CGAL)
+    target_compile_definitions(geometry_binding PRIVATE HGP_WITH_CGAL)
+    target_link_libraries(geometry_binding PRIVATE CGAL::CGAL)
     
     if(TARGET TBB::tbb)
-        target_link_libraries(cgal_binding PRIVATE TBB::tbb)
+        target_link_libraries(geometry_binding PRIVATE TBB::tbb)
         if(TARGET TBB::tbbmalloc)
-            target_link_libraries(cgal_binding PRIVATE TBB::tbbmalloc)
+            target_link_libraries(geometry_binding PRIVATE TBB::tbbmalloc)
         endif()
-        target_compile_definitions(cgal_binding PRIVATE CGAL_LINKED_WITH_TBB)
+        target_compile_definitions(geometry_binding PRIVATE CGAL_LINKED_WITH_TBB)
     endif()
 else()
     message(STATUS "CGAL not found. CGAL backend will be disabled.")
@@ -123,14 +123,14 @@ endif()
 # Standardize Geogram usage
 if (TARGET geogram::geogram OR TARGET geogram)
     message(STATUS "Geogram found! Enabled HGP_WITH_GEOGRAM")
-    target_compile_definitions(cgal_binding PRIVATE HGP_WITH_GEOGRAM)
+    target_compile_definitions(geometry_binding PRIVATE HGP_WITH_GEOGRAM)
     # Enable GARGANTUA for 64-bit indices support in Geogram (Required if Geogram was built with it)
-    target_compile_definitions(cgal_binding PRIVATE GARGANTUA)
+    target_compile_definitions(geometry_binding PRIVATE GARGANTUA)
     
     if(TARGET geogram::geogram)
-        target_link_libraries(cgal_binding PRIVATE geogram::geogram)
+        target_link_libraries(geometry_binding PRIVATE geogram::geogram)
     else()
-        target_link_libraries(cgal_binding PRIVATE geogram)
+        target_link_libraries(geometry_binding PRIVATE geogram)
     endif()
 else()
     message(STATUS "Geogram not found. Geogram backend will be disabled.")
@@ -143,7 +143,7 @@ endif()
 
 # Compiler options
 if(MSVC)
-    target_compile_options(cgal_binding PRIVATE /O2 /Ob2 /DNDEBUG)
+    target_compile_options(geometry_binding PRIVATE /O2 /Ob2 /DNDEBUG)
 else()
-    target_compile_options(cgal_binding PRIVATE -O3 -march=native -DNDEBUG)
+    target_compile_options(geometry_binding PRIVATE -O3 -march=native -DNDEBUG)
 endif()

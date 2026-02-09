@@ -79,16 +79,16 @@ cython_ext = Extension(
     extra_link_args=["-fopenmp"],
 )
 
-# 2. CMake Extension (CGAL Binding)
-# The name "hgp_clusterer.cgal_binding" tells setuptools where to put the resulting .so
-# However, CMakeLists.txt produces "cgal_binding.so".
+# 2. CMake Extension (CGAL/Geogram Binding)
+# The name "hgp_clusterer.geometry_binding" tells setuptools where to put the resulting .so
+# However, CMakeLists.txt produces "geometry_binding.so".
 # We set CMAKE_LIBRARY_OUTPUT_DIRECTORY to the right folder, but the filename might need check.
 # pybind11_add_module uses the target name.
-# So if target is "cgal_binding", it produces "cgal_binding.so".
+# So if target is "geometry_binding", it produces "geometry_binding.so".
 # We want it to be inside hgp_clusterer package.
 # The `extdir` calculated above ends in `build/.../hgp_clusterer/`.
 # So it should work out.
-cmake_ext = CMakeExtension("hgp_clusterer.cgal_binding", sourcedir=".")
+cmake_ext = CMakeExtension("hgp_clusterer.geometry_binding", sourcedir=".")
 
 setup(
     ext_modules=cythonize([cython_ext], language_level="3") + [cmake_ext],

@@ -347,8 +347,8 @@ py::tuple compute_delaunay(
     return py::make_tuple(simplices_array, weights_array);
 }
 
-PYBIND11_MODULE(cgal_binding, m) {
-    m.doc() = "CGAL/Geogram-based Order-K Delaunay Triangulation Binding";
+PYBIND11_MODULE(geometry_binding, m) {
+    m.doc() = "Geometry binding (CGAL/Geogram) for HGP";
     m.def("compute_delaunay", &compute_delaunay, "Compute Order-K Delaunay",
           py::arg("points"), py::arg("K_max"), py::arg("precision")="safe", py::arg("verbose")=false, py::arg("backend")="geogram");
 }
