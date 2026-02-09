@@ -239,10 +239,7 @@ py::tuple compute_delaunay(
 
                 // Radius^2 - Distance^2
                 // Order-k definition logic (Lifted weight)
-                // We pass POSITIVE weights (R^2) to the backend.
-                // center_sq_norm - (sum_sq_norms * inv_k) is -Variance (Negative).
-                // So we flip: (sum_sq_norms * inv_k) - center_sq_norm.
-                bary_weights[i] = (sum_sq_norms * inv_k) - center_sq_norm;
+                bary_weights[i] = center_sq_norm - (sum_sq_norms * inv_k);
         #ifdef CGAL_LINKED_WITH_TBB
             }
         });
