@@ -78,9 +78,9 @@ def _build_graph_KSimplexes(
             
             if simplex_indices_arr.dtype != np.int32:
                  simplex_indices_arr = simplex_indices_arr.astype(np.int32)
-        except FileNotFoundError as exc:
+        except (FileNotFoundError, ImportError, RuntimeError) as exc:
             if verbose:
-                print(f"CGAL non disponible ({exc}). Repli sur la filtration Rips.")
+                print(f"CGAL/Geogram binding not available or failed ({exc}). Falling back to Rips filtration.")
             complex_chosen = "rips"
         else:
             n_simplices = simplex_indices_arr.shape[0]

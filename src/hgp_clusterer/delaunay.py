@@ -5,11 +5,13 @@ from pathlib import Path
 import warnings
 
 # Try to import the binary extension
+_import_error = None
 try:
     from hgp_clusterer.cgal_binding import compute_delaunay
-except ImportError:
+except ImportError as e:
     # Fallback or error message if not compiled
     compute_delaunay = None
+    _import_error = e
 
 def orderk_delaunay3(
     M: np.ndarray,
@@ -26,7 +28,7 @@ def orderk_delaunay3(
     """
     if compute_delaunay is None:
         raise ImportError(
-            "The 'cgal_binding' extension is not loaded. "
+            f"The 'cgal_binding' extension is not loaded. Original error: {_import_error}. "
             "Please ensure the package is installed correctly with compiled extensions."
         )
 
