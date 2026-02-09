@@ -15,18 +15,18 @@ def test_backend_cgal_default():
     except Exception as e:
         pytest.fail(f"CGAL fit failed: {e}")
 
-def test_backend_geogram_missing():
-    """Test that requesting Geogram backend raises appropriate error if not compiled."""
+def test_backend_geogram_available():
+    """Test that requesting Geogram backend works when compiled."""
     X = np.random.rand(20, 2)
     clusterer = HGPClusterer(min_cluster_size=5, backend='geogram', verbose=True)
     
-    # We expect a RuntimeError because we know Geogram was NOT compiled in this env
-    # If by miracle it was compiled, this test would need adjustment, but here we expect failure.
-    with pytest.raises(RuntimeError) as excinfo:
+    try:
         clusterer.fit(X)
-    
-    print(f"Caught expected error: {excinfo.value}")
-    assert "Geogram backend not compiled" in str(excinfo.value) or "Execution failed" in str(excinfo.value)
+        print("Geogram backend fit success")
+    except RuntimeError as e:
+        pytest.fail(f"Geogram backend raised RuntimeError unexpectedly: {e}")
+    except Exception as e:
+        pytest.fail(f"Geogram backend raised unexpected exception: {e}")
 
 if __name__ == "__main__":
     # Manual run if pytest not invoked

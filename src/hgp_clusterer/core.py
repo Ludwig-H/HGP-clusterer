@@ -293,6 +293,8 @@ class HGPClusterer(BaseEstimator, ClusterMixin):
         
         mask_valid = labels_faces != -1
         if not mask_valid.any():
+            if self.return_multi_clusters:
+                self.multi_clusters_ = [[] for _ in range(self.n_core_)]
             return np.full(self.n_core_, -1, dtype=np.int32)
             
         # Expand
