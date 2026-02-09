@@ -110,10 +110,10 @@ namespace HGP_Numerics {
         }
     }
 
-    inline double compute_meb_sq_radius(const double* flat_points, const std::vector<int>& indices, size_t dim) {
-        if (indices.empty()) return 0.0;
-        if (indices.size() == 1) return 0.0;
-        if (indices.size() == 2) {
+    inline double compute_meb_sq_radius(const double* flat_points, const int* indices, size_t k_size, size_t dim) {
+        if (k_size == 0) return 0.0;
+        if (k_size == 1) return 0.0;
+        if (k_size == 2) {
             double d2 = 0;
             const double* p1 = &flat_points[indices[0]*dim];
             const double* p2 = &flat_points[indices[1]*dim];
@@ -124,7 +124,7 @@ namespace HGP_Numerics {
             return d2 * 0.25;
         }
 
-        std::vector<int> P = indices;
+        std::vector<int> P(indices, indices + k_size);
         std::vector<int> R;
         R.reserve(dim + 1);
         
@@ -173,13 +173,16 @@ public:
 
     double compute_simplex_squared_radius(
         const double* flat_points,
-        const std::vector<int>& indices,
+        const int* indices,
+        size_t k,
         size_t dim
     ) override {
-        return HGP_Numerics::compute_meb_sq_radius(flat_points, indices, dim);
+        return HGP_Numerics::compute_meb_sq_radius(flat_points, indices, k, dim);
     }
 
 private:
+    mutable std::vector<double> _lifted_buffer;
+
     std::vector<std::pair<int, int>> _compute_edges(
         const double* flat_points,
         const std::vector<double>* weights_ptr,
@@ -270,31 +273,59 @@ private:
     ) {
         std::vector<std::pair<int, int>> edges;
         
-        // Lift points: (x, ..., x^2+...+z^2 - w)
+        // Lift points according to Geogram's expected input for BPOW:
+        // coords[dim] = sqrt(W - w_i)
+        // Geogram computes height = ||p||^2 - (coords[dim])^2 = ||p||^2 - (W - w_i) = ||p||^2 - W + w_i
+        // Wait.
+        // Geogram formula: height = -(-coord^2) + ||p||^2 = coord^2 + ||p||^2.
+        // If coord = sqrt(W - w_i), then height = W - w_i + ||p||^2.
+        // This is ||p||^2 - w_i + W.
+        // Power diagram is invariant by constant shift W.
+        // So this is correct.
+        
+        double max_weight = -std::numeric_limits<double>::infinity();
+        if (!weights.empty()) {
+            for(double w : weights) {
+                if(w > max_weight) max_weight = w;
+            }
+        } else {
+            max_weight = 0.0;
+        }
+        
+        // Ensure W is slightly larger than max_weight to avoid sqrt(0) issues?
+        // sqrt(0) is fine. But let's be safe against precision.
+        // Actually, if weights are equal, sqrt(0) is 0.
+        
         size_t lifted_dim = dim + 1;
-        std::vector<double> lifted_points(n_points * lifted_dim);
+        
+        // Re-use buffer if possible
+        size_t required_size = n_points * lifted_dim;
+        if (_lifted_buffer.size() < required_size) {
+            _lifted_buffer.resize(required_size);
+        }
+        
+        double* lifted_ptr = _lifted_buffer.data();
         
         #ifdef CGAL_LINKED_WITH_TBB
+        // TBB Parallel For cannot easily do reduction for max_weight without overhead.
+        // Since we already computed max_weight sequentially (fast enough), we just parallelize the filling.
         tbb::parallel_for(tbb::blocked_range<size_t>(0, n_points), [&](const tbb::blocked_range<size_t>& r) {
             for(size_t i=r.begin(); i!=r.end(); ++i) {
-                double sq_norm = 0.0;
                 for(size_t d=0; d<dim; ++d) {
-                    double val = flat_points[i*dim + d];
-                    lifted_points[i*lifted_dim + d] = val;
-                    sq_norm += val*val;
+                    lifted_ptr[i*lifted_dim + d] = flat_points[i*dim + d];
                 }
-                lifted_points[i*lifted_dim + dim] = sq_norm - weights[i];
+                // Use max_weight to ensure non-negative argument for sqrt
+                double diff = max_weight - weights[i];
+                lifted_ptr[i*lifted_dim + dim] = std::sqrt(diff < 0 ? 0 : diff);
             }
         });
         #else
         for(size_t i=0; i<n_points; ++i) {
-            double sq_norm = 0.0;
             for(size_t d=0; d<dim; ++d) {
-                double val = flat_points[i*dim + d];
-                lifted_points[i*lifted_dim + d] = val;
-                sq_norm += val*val;
+                lifted_ptr[i*lifted_dim + d] = flat_points[i*dim + d];
             }
-            lifted_points[i*lifted_dim + dim] = sq_norm - weights[i];
+            double diff = max_weight - weights[i];
+            lifted_ptr[i*lifted_dim + dim] = std::sqrt(diff < 0 ? 0 : diff);
         }
         #endif
 
@@ -303,31 +334,61 @@ private:
         else if (dim == 3) engine_name = "BPOW";
         
         GEO::Delaunay_var delaunay = GEO::Delaunay::create(lifted_dim, engine_name);
-        if (!delaunay) return edges;
+        if (!delaunay) {
+            std::cerr << "[Geogram Error] Failed to create engine: " << engine_name << std::endl;
+            return edges;
+        }
 
         delaunay->set_reorder(false);
-        delaunay->set_vertices(n_points, lifted_points.data());
+        delaunay->set_vertices(n_points, lifted_ptr);
         
-        lifted_points.clear();
-        lifted_points.shrink_to_fit();
-
         GEO::index_t n_cells = delaunay->nb_cells();
+        // std::cout << "[Geogram Debug] Engine=" << engine_name << ", Points=" << n_points << ", Cells=" << n_cells << std::endl;
         
-        // For Weighted, we cannot simply fallback to neighbors because NN neighbors 
-        // in lifted space are not the weighted Delaunay graph.
-        // So we only support cases where cells are generated.
         if (n_cells > 0) {
-            if (dim == 2) {
-                _extract_lower_hull_2d(delaunay, n_points, n_cells, edges);
+            int c_size = delaunay->cell_size();
+            std::cout << "[Geogram Debug] Dim=" << dim << ", CellSize=" << c_size << std::endl;
+            
+            // Case 1: The engine returned the Triangulation directly (dim == cell_size - 1)
+            // e.g. BPOW2d returning triangles for 2D Weighted Delaunay
+            if (c_size == dim + 1) {
+                 _extract_all_edges(delaunay, n_points, n_cells, c_size, edges);
             }
-            else if (dim == 3) {
-                _extract_lower_hull_3d(delaunay, n_points, n_cells, edges);
+            // Case 2: The engine returned a Lifted Triangulation (Convex Hull in dim+1)
+            // e.g. default 3D engine for 2D points lifted to paraboloid
+            else if (c_size == dim + 2) {
+                if (dim == 2) _extract_lower_hull_2d(delaunay, n_points, n_cells, edges);
+                else if (dim == 3) _extract_lower_hull_3d(delaunay, n_points, n_cells, edges);
+                else _extract_lower_hull_nd(delaunay, n_points, n_cells, dim, lifted_dim, edges);
             }
             else {
-                _extract_lower_hull_nd(delaunay, n_points, n_cells, dim, lifted_dim, edges);
+                 std::cerr << "[Geogram Warning] Unexpected cell size " << c_size << " for dim " << dim << std::endl;
             }
         }
         return edges;
+    }
+
+    void _extract_all_edges(
+        GEO::Delaunay_var& delaunay,
+        size_t n_points,
+        GEO::index_t n_cells,
+        int c_size,
+        std::vector<std::pair<int, int>>& edges
+    ) {
+        for(GEO::index_t c=0; c<n_cells; ++c) {
+            if(delaunay->keeps_infinite() && delaunay->cell_is_infinite(c)) continue;
+            
+            for(int i=0; i<c_size; ++i) {
+                for(int j=i+1; j<c_size; ++j) {
+                    GEO::index_t v1 = delaunay->cell_vertex(c, i);
+                    GEO::index_t v2 = delaunay->cell_vertex(c, j);
+                    if(v1 < n_points && v2 < n_points) {
+                        if(v1 < v2) edges.push_back({(int)v1, (int)v2});
+                        else edges.push_back({(int)v2, (int)v1});
+                    }
+                }
+            }
+        }
     }
 
     void _extract_lower_hull_2d(

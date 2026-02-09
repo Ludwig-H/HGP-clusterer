@@ -10,6 +10,7 @@
 #include <map>
 #include <thread>
 #include <chrono>
+#include <numeric>
 
 // Include the existing kernels logic
 // We assume kernels.hpp is in the include path
@@ -125,7 +126,9 @@ py::tuple compute_delaunay(
     }
 
     // 2. Initial Step (k=1) -> Standard Delaunay (Weighted with weights=0)
-    std::vector<std::vector<int>> prev_simplices; 
+    // Flattened simplices: [s1_v1, s1_v2, s2_v1, s2_v2, ...]
+    std::vector<int> prev_simplices; 
+    size_t current_k = 2; // Simplex size for K=1 (Edge = 2 vertices)
     
     {
         // For k=1, we can use the specialized standard Delaunay call which might be faster
@@ -143,37 +146,43 @@ py::tuple compute_delaunay(
         auto last = std::unique(edges.begin(), edges.end());
         edges.erase(last, edges.end());
 
-        prev_simplices.reserve(edges.size());
+        prev_simplices.reserve(edges.size() * 2);
         for(auto& p : edges) {
-            if(p.first < p.second) prev_simplices.push_back({p.first, p.second});
-            else prev_simplices.push_back({p.second, p.first});
+            if(p.first < p.second) {
+                prev_simplices.push_back(p.first);
+                prev_simplices.push_back(p.second);
+            } else {
+                prev_simplices.push_back(p.second);
+                prev_simplices.push_back(p.first);
+            }
         }
         
-        if (verbose) std::cout << "[Step 1] Found " << prev_simplices.size() << " edges.\n";
+        if (verbose) std::cout << "[Step 1] Found " << edges.size() << " edges.\n";
     }
 
     if (K_max == 1) {
         // Return result (Edges)
         // Shape (M, 2)
-        auto result = py::array_t<int32_t>({(long)prev_simplices.size(), (long)2});
+        size_t n_simplices = prev_simplices.size() / 2;
+        auto result = py::array_t<int32_t>({(long)n_simplices, (long)2});
         auto r_ptr = result.mutable_unchecked<2>();
-        for(size_t i=0; i<prev_simplices.size(); ++i) {
-            r_ptr(i, 0) = prev_simplices[i][0];
-            r_ptr(i, 1) = prev_simplices[i][1];
-        }
-
+        
         // Compute weights for edges (squared distance / 4)
-        auto weights = py::array_t<double>(prev_simplices.size());
+        auto weights = py::array_t<double>(n_simplices);
         auto w_ptr = weights.mutable_unchecked<1>();
         
         #ifdef CGAL_LINKED_WITH_TBB
-        tbb::parallel_for(tbb::blocked_range<size_t>(0, prev_simplices.size()), [&](const tbb::blocked_range<size_t>& r) {
+        tbb::parallel_for(tbb::blocked_range<size_t>(0, n_simplices), [&](const tbb::blocked_range<size_t>& r) {
             for(size_t i=r.begin(); i!=r.end(); ++i) {
         #else
-        for(size_t i=0; i<prev_simplices.size(); ++i) {
+        for(size_t i=0; i<n_simplices; ++i) {
         #endif
-                int idx1 = prev_simplices[i][0];
-                int idx2 = prev_simplices[i][1];
+                int idx1 = prev_simplices[i*2];
+                int idx2 = prev_simplices[i*2 + 1];
+                
+                r_ptr(i, 0) = idx1;
+                r_ptr(i, 1) = idx2;
+
                 double dist_sq = 0.0;
                 for(size_t d=0; d<dim; ++d) {
                     double diff = ptr[idx1*dim + d] - ptr[idx2*dim + d];
@@ -192,7 +201,7 @@ py::tuple compute_delaunay(
 
     // 3. Iterative Loop (k=2 to K)
     for (int k = 2; k <= K_max; ++k) {
-        size_t n_prev = prev_simplices.size();
+        size_t n_prev = prev_simplices.size() / current_k;
         if (n_prev == 0) break;
 
         // A. Compute Barycenters & Weights
@@ -205,24 +214,27 @@ py::tuple compute_delaunay(
         #else
         for(size_t i=0; i<n_prev; ++i) {
         #endif
-                const auto& simp = prev_simplices[i];
-                double inv_k = 1.0 / double(simp.size());
-                
+                double inv_k = 1.0 / double(current_k);
                 double sum_sq_norms = 0.0;
                 double center_sq_norm = 0.0;
-                std::vector<double> center(dim, 0.0);
-
-                for(int idx : simp) {
-                    sum_sq_norms += cloud.sq_norms[idx];
-                    for(size_t d=0; d<dim; ++d) {
-                        center[d] += ptr[idx * dim + d];
-                    }
-                }
-
+                
+                // Temp center buffer not strictly needed if we iterate dim
+                
+                // Direct computation to avoid vector allocation
+                const int* s_ptr = &prev_simplices[i * current_k];
+                
                 for(size_t d=0; d<dim; ++d) {
-                    center[d] *= inv_k;
-                    bary_coords[i * dim + d] = center[d];
-                    center_sq_norm += center[d] * center[d];
+                    double coord_sum = 0.0;
+                    for(size_t v=0; v<current_k; ++v) {
+                        coord_sum += ptr[s_ptr[v] * dim + d];
+                    }
+                    double c_val = coord_sum * inv_k;
+                    bary_coords[i * dim + d] = c_val;
+                    center_sq_norm += c_val * c_val;
+                }
+                
+                for(size_t v=0; v<current_k; ++v) {
+                    sum_sq_norms += cloud.sq_norms[s_ptr[v]];
                 }
 
                 // Radius^2 - Distance^2
@@ -244,98 +256,178 @@ py::tuple compute_delaunay(
         }
 
         // C. Reconstitution / Union
+        size_t next_k = current_k + 1;
+        
         #ifdef CGAL_LINKED_WITH_TBB
-        tbb::concurrent_vector<std::vector<int>> candidates;
+        tbb::concurrent_vector<int> candidates_flat;
         tbb::parallel_for(tbb::blocked_range<size_t>(0, dual_edges.size()), [&](const tbb::blocked_range<size_t>& r) {
+            // Thread-local buffer to reduce concurrent overhead
+            std::vector<int> local_buf; 
+            local_buf.reserve((r.end() - r.begin()) * next_k); // Heuristic
+            
             for(size_t i=r.begin(); i!=r.end(); ++i) {
         #else
-        std::vector<std::vector<int>> candidates;
+        std::vector<int> candidates_flat;
+        candidates_flat.reserve(dual_edges.size() * next_k);
         for(size_t i=0; i<dual_edges.size(); ++i) {
+            std::vector<int>& local_buf = candidates_flat; // Alias for non-tbb
         #endif
                 int idx_a = dual_edges[i].first;
                 int idx_b = dual_edges[i].second;
                 
-                const auto& sA = prev_simplices[idx_a];
-                const auto& sB = prev_simplices[idx_b];
+                const int* sA = &prev_simplices[idx_a * current_k];
+                const int* sB = &prev_simplices[idx_b * current_k];
                 
-                std::vector<int> merged; 
-                merged.reserve(sA.size() + 1);
+                // Merge sorted arrays
+                // We write directly to a small stack buffer then push to vector
+                // But since current_k is small, we can just do it.
+                // However, we need to know if size is exactly k+1
                 
-                size_t ia = 0, ib = 0;
-                while(ia < sA.size() && ib < sB.size()) {
-                    if(sA[ia] < sB[ib]) merged.push_back(sA[ia++]);
-                    else if(sB[ib] < sA[ia]) merged.push_back(sB[ib++]);
+                int merged[256]; // Should be enough for k < 255
+                // If k is huge, this stack alloc might be risky, but usually k < 50
+                // Fallback to heap if needed? No, order-k usually < 20.
+                
+                size_t ia = 0, ib = 0, im = 0;
+                while(ia < current_k && ib < current_k) {
+                    if(sA[ia] < sB[ib]) merged[im++] = sA[ia++];
+                    else if(sB[ib] < sA[ia]) merged[im++] = sB[ib++];
                     else { // equal
-                        merged.push_back(sA[ia]);
+                        merged[im++] = sA[ia];
                         ia++; ib++;
                     }
                 }
-                while(ia < sA.size()) merged.push_back(sA[ia++]);
-                while(ib < sB.size()) merged.push_back(sB[ib++]);
+                while(ia < current_k) merged[im++] = sA[ia++];
+                while(ib < current_k) merged[im++] = sB[ib++];
                 
-                if (merged.size() == sA.size() + 1) {
-                    candidates.push_back(merged);
+                if (im == next_k) {
+                    for(size_t x=0; x<next_k; ++x) local_buf.push_back(merged[x]);
                 }
         #ifdef CGAL_LINKED_WITH_TBB
+            }
+            // Flush local to concurrent
+            if(!local_buf.empty()) {
+                auto range = candidates_flat.grow_by(local_buf.size());
+                std::copy(local_buf.begin(), local_buf.end(), range);
             }
         });
         #else
         }
         #endif
 
-        if (candidates.empty()) {
+        if (candidates_flat.empty()) {
             prev_simplices.clear();
             break;
         }
 
-        std::vector<std::vector<int>> next_simplices;
-        next_simplices.reserve(candidates.size());
-        for(auto& c : candidates) next_simplices.push_back(std::move(c));
-
+        // Convert to contiguous std::vector if using TBB, because concurrent_vector is segmented
+        // and we need contiguous memory for pointer arithmetic in sort/unique logic.
         #ifdef CGAL_LINKED_WITH_TBB
-        tbb::parallel_sort(next_simplices.begin(), next_simplices.end());
+        std::vector<int> candidates_contiguous(candidates_flat.begin(), candidates_flat.end());
         #else
-        std::sort(next_simplices.begin(), next_simplices.end());
+        std::vector<int>& candidates_contiguous = candidates_flat;
         #endif
 
-        auto last_unique = std::unique(next_simplices.begin(), next_simplices.end());
-        next_simplices.erase(last_unique, next_simplices.end());
+        // D. Sort and Unique (Indirect)
+        size_t n_candidates = candidates_contiguous.size() / next_k;
+        std::vector<size_t> indices(n_candidates);
+        std::iota(indices.begin(), indices.end(), 0);
 
-        prev_simplices = std::move(next_simplices);
+        #ifdef CGAL_LINKED_WITH_TBB
+        tbb::parallel_sort(indices.begin(), indices.end(), [&](size_t i, size_t j) {
+            const int* a = &candidates_contiguous[i * next_k];
+            const int* b = &candidates_contiguous[j * next_k];
+            for(size_t x=0; x<next_k; ++x) {
+                if (a[x] != b[x]) return a[x] < b[x];
+            }
+            return false;
+        });
+        #else
+        std::sort(indices.begin(), indices.end(), [&](size_t i, size_t j) {
+            const int* a = &candidates_contiguous[i * next_k];
+            const int* b = &candidates_contiguous[j * next_k];
+            for(size_t x=0; x<next_k; ++x) {
+                if (a[x] != b[x]) return a[x] < b[x];
+            }
+            return false;
+        });
+        #endif
+
+        // Unique copy
+        std::vector<int> next_simplices_flat;
+        next_simplices_flat.reserve(candidates_contiguous.size()); // Max size
         
-        if(verbose) std::cout << "[Step " << k << "] Generated " << prev_simplices.size() << " simplices\n";
+        if (n_candidates > 0) {
+            // Always push first
+            const int* first = &candidates_contiguous[indices[0] * next_k];
+            next_simplices_flat.insert(next_simplices_flat.end(), first, first + next_k);
+            
+            for(size_t i=1; i<n_candidates; ++i) {
+                const int* curr = &candidates_contiguous[indices[i] * next_k];
+                const int* prev = &candidates_contiguous[indices[i-1] * next_k];
+                
+                bool diff = false;
+                for(size_t x=0; x<next_k; ++x) {
+                    if (curr[x] != prev[x]) {
+                        diff = true;
+                        break;
+                    }
+                }
+                
+                if(diff) {
+                    next_simplices_flat.insert(next_simplices_flat.end(), curr, curr + next_k);
+                }
+            }
+        }
+
+        prev_simplices = std::move(next_simplices_flat);
+        current_k = next_k; // Update k size
+        
+        if(verbose) std::cout << "[Step " << k << "] Generated " << prev_simplices.size() / current_k << " simplices\n";
     }
 
     // 4. Return Result (Simplices, Weights)
-    if (prev_simplices.empty()) {
+    size_t n_final_simplices = prev_simplices.empty() ? 0 : prev_simplices.size() / current_k;
+    
+    if (n_final_simplices == 0) {
         return py::make_tuple(py::array_t<int32_t>(), py::array_t<double>());
     }
     
-    size_t final_k = prev_simplices[0].size();
-    auto simplices_array = py::array_t<int32_t>({(long)prev_simplices.size(), (long)final_k});
+    auto simplices_array = py::array_t<int32_t>({(long)n_final_simplices, (long)current_k});
     auto s_ptr = simplices_array.mutable_unchecked<2>();
     
     // Fill simplices
-    for(size_t i=0; i<prev_simplices.size(); ++i) {
-        for(size_t j=0; j<final_k; ++j) {
-            s_ptr(i, j) = prev_simplices[i][j];
+    #ifdef CGAL_LINKED_WITH_TBB
+    tbb::parallel_for(tbb::blocked_range<size_t>(0, n_final_simplices), [&](const tbb::blocked_range<size_t>& r) {
+        for(size_t i=r.begin(); i!=r.end(); ++i) {
+            const int* src = &prev_simplices[i * current_k];
+            for(size_t j=0; j<current_k; ++j) {
+                s_ptr(i, j) = src[j];
+            }
+        }
+    });
+    #else
+    for(size_t i=0; i<n_final_simplices; ++i) {
+        const int* src = &prev_simplices[i * current_k];
+        for(size_t j=0; j<current_k; ++j) {
+            s_ptr(i, j) = src[j];
         }
     }
+    #endif
 
     // Compute weights (Squared Radii)
-    if(verbose) std::cout << "[Info] Computing squared radii for " << prev_simplices.size() << " simplices..." << std::endl;
+    if(verbose) std::cout << "[Info] Computing squared radii for " << n_final_simplices << " simplices..." << std::endl;
     
-    auto weights_array = py::array_t<double>(prev_simplices.size());
+    auto weights_array = py::array_t<double>(n_final_simplices);
     auto w_ptr = weights_array.mutable_unchecked<1>();
     
     #ifdef CGAL_LINKED_WITH_TBB
-    tbb::parallel_for(tbb::blocked_range<size_t>(0, prev_simplices.size()), [&](const tbb::blocked_range<size_t>& r) {
+    tbb::parallel_for(tbb::blocked_range<size_t>(0, n_final_simplices), [&](const tbb::blocked_range<size_t>& r) {
         for(size_t i=r.begin(); i!=r.end(); ++i) {
     #else
-    for(size_t i=0; i<prev_simplices.size(); ++i) {
+    for(size_t i=0; i<n_final_simplices; ++i) {
     #endif
             w_ptr(i) = kernel->compute_simplex_squared_radius(
-                ptr, prev_simplices[i], dim
+                ptr, &prev_simplices[i * current_k], current_k, dim
             );
     #ifdef CGAL_LINKED_WITH_TBB
         }

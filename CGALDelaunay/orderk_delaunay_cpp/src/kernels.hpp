@@ -37,7 +37,8 @@ struct WeightedDelaunayTraits {
     // 3. Radius computation (Welzl's algorithm)
     virtual double compute_simplex_squared_radius(
         const double* flat_points,
-        const std::vector<int>& indices,
+        const int* indices,
+        size_t k,
         size_t dim
     ) = 0;
 
@@ -170,12 +171,14 @@ struct WeightedDelaunay2D : public WeightedDelaunayTraits {
 
     double compute_simplex_squared_radius(
         const double* flat_points,
-        const std::vector<int>& indices,
+        const int* indices,
+        size_t k,
         size_t /*dim*/
     ) override {
         std::vector<Point_2> pts;
-        pts.reserve(indices.size());
-        for(int idx : indices) {
+        pts.reserve(k);
+        for(size_t i=0; i<k; ++i) {
+            int idx = indices[i];
             pts.emplace_back(flat_points[2*idx], flat_points[2*idx+1]);
         }
         Min_sphere ms(pts.begin(), pts.end());
@@ -285,12 +288,14 @@ struct WeightedDelaunay3D : public WeightedDelaunayTraits {
 
     double compute_simplex_squared_radius(
         const double* flat_points,
-        const std::vector<int>& indices,
+        const int* indices,
+        size_t k,
         size_t /*dim*/
     ) override {
         std::vector<Point_3> pts;
-        pts.reserve(indices.size());
-        for(int idx : indices) {
+        pts.reserve(k);
+        for(size_t i=0; i<k; ++i) {
+            int idx = indices[i];
             pts.emplace_back(flat_points[3*idx], flat_points[3*idx+1], flat_points[3*idx+2]);
         }
         Min_sphere ms(pts.begin(), pts.end());
@@ -427,7 +432,8 @@ struct WeightedDelaunayDD : public WeightedDelaunayTraits {
 
     double compute_simplex_squared_radius(
         const double* /*flat_points*/,
-        const std::vector<int>& /*indices*/,
+        const int* /*indices*/,
+        size_t /*k*/,
         size_t /*dim*/
     ) override {
         // dD Min_sphere compilation issues with Epick_d/Epeck_d traits.
