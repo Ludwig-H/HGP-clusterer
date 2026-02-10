@@ -742,17 +742,8 @@ private:
         GEO::index_t n_cells,
         std::vector<std::pair<int, int>>& edges
     ) {
-        #ifdef CGAL_LINKED_WITH_TBB
-        tbb::concurrent_vector<std::pair<int, int>> concurrent_edges;
-        tbb::parallel_for(tbb::blocked_range<GEO::index_t>(0, n_cells), [&](const tbb::blocked_range<GEO::index_t>& r) {
-            std::vector<std::pair<int, int>> local_edges;
-            // Reserve heuristic: 10 edges per cell (conservative)
-            local_edges.reserve((r.end() - r.begin()) * 10); 
-
-            for(GEO::index_t c=r.begin(); c!=r.end(); ++c) {
-        #else
+        // Sequential extraction to save memory (avoid concurrent_vector copy peak)
         for (GEO::index_t c = 0; c < n_cells; ++c) {
-        #endif
             if (delaunay->keeps_infinite() && delaunay->cell_is_infinite(c)) continue;
 
             // Optimization: Precompute sum of weights (lifted coordinate, index 3)
@@ -803,35 +794,14 @@ private:
                                 int idx_b = v_idx[local_v[b]];
                                 if (idx_b >= (GEO::index_t)n_points) continue;
                                 
-                                #ifdef CGAL_LINKED_WITH_TBB
-                                if (idx_a < idx_b) local_edges.push_back({(int)idx_a, (int)idx_b});
-                                else local_edges.push_back({(int)idx_b, (int)idx_a});
-                                #else
                                 if (idx_a < idx_b) edges.push_back({(int)idx_a, (int)idx_b});
                                 else edges.push_back({(int)idx_b, (int)idx_a});
-                                #endif
                             }
                         }
                     }
                 }
             }
-        #ifdef CGAL_LINKED_WITH_TBB
-            } // end loop cells
-
-            // Local Deduplication (Crucial for Memory Saving)
-            if(!local_edges.empty()) {
-                std::sort(local_edges.begin(), local_edges.end());
-                auto last = std::unique(local_edges.begin(), local_edges.end());
-                local_edges.erase(last, local_edges.end());
-
-                auto it = concurrent_edges.grow_by(local_edges.size());
-                std::copy(local_edges.begin(), local_edges.end(), it);
-            }
-        });
-        edges.assign(concurrent_edges.begin(), concurrent_edges.end());
-        #else
         }
-        #endif
     }
 
     void _extract_lower_hull_nd(
