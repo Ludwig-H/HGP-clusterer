@@ -275,13 +275,6 @@ private:
         
         // Lift points according to Geogram's expected input for BPOW:
         // coords[dim] = sqrt(W - w_i)
-        // Geogram computes height = ||p||^2 - (coords[dim])^2 = ||p||^2 - (W - w_i) = ||p||^2 - W + w_i
-        // Wait.
-        // Geogram formula: height = -(-coord^2) + ||p||^2 = coord^2 + ||p||^2.
-        // If coord = sqrt(W - w_i), then height = W - w_i + ||p||^2.
-        // This is ||p||^2 - w_i + W.
-        // Power diagram is invariant by constant shift W.
-        // So this is correct.
         
         double max_weight = -std::numeric_limits<double>::infinity();
         if (!weights.empty()) {
@@ -291,10 +284,6 @@ private:
         } else {
             max_weight = 0.0;
         }
-        
-        // Ensure W is slightly larger than max_weight to avoid sqrt(0) issues?
-        // sqrt(0) is fine. But let's be safe against precision.
-        // Actually, if weights are equal, sqrt(0) is 0.
         
         size_t lifted_dim = dim + 1;
         
@@ -307,14 +296,11 @@ private:
         double* lifted_ptr = _lifted_buffer.data();
         
         #ifdef CGAL_LINKED_WITH_TBB
-        // TBB Parallel For cannot easily do reduction for max_weight without overhead.
-        // Since we already computed max_weight sequentially (fast enough), we just parallelize the filling.
         tbb::parallel_for(tbb::blocked_range<size_t>(0, n_points), [&](const tbb::blocked_range<size_t>& r) {
             for(size_t i=r.begin(); i!=r.end(); ++i) {
                 for(size_t d=0; d<dim; ++d) {
                     lifted_ptr[i*lifted_dim + d] = flat_points[i*dim + d];
                 }
-                // Use max_weight to ensure non-negative argument for sqrt
                 double diff = max_weight - weights[i];
                 lifted_ptr[i*lifted_dim + dim] = std::sqrt(diff < 0 ? 0 : diff);
             }
@@ -343,26 +329,19 @@ private:
         delaunay->set_vertices(n_points, lifted_ptr);
         
         GEO::index_t n_cells = delaunay->nb_cells();
-        // std::cout << "[Geogram Debug] Engine=" << engine_name << ", Points=" << n_points << ", Cells=" << n_cells << std::endl;
         
         if (n_cells > 0) {
             int c_size = delaunay->cell_size();
-            std::cout << "[Geogram Debug] Dim=" << dim << ", CellSize=" << c_size << std::endl;
             
             // Case 1: The engine returned the Triangulation directly (dim == cell_size - 1)
-            // e.g. BPOW2d returning triangles for 2D Weighted Delaunay
             if (c_size == dim + 1) {
                  _extract_all_edges(delaunay, n_points, n_cells, c_size, edges);
             }
             // Case 2: The engine returned a Lifted Triangulation (Convex Hull in dim+1)
-            // e.g. default 3D engine for 2D points lifted to paraboloid
             else if (c_size == dim + 2) {
                 if (dim == 2) _extract_lower_hull_2d(delaunay, n_points, n_cells, edges);
                 else if (dim == 3) _extract_lower_hull_3d(delaunay, n_points, n_cells, edges);
                 else _extract_lower_hull_nd(delaunay, n_points, n_cells, dim, lifted_dim, edges);
-            }
-            else {
-                 std::cerr << "[Geogram Warning] Unexpected cell size " << c_size << " for dim " << dim << std::endl;
             }
         }
         return edges;
