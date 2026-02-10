@@ -573,8 +573,6 @@ private:
     // Parallel Extraction Helpers
     // ==============================================================================
 
-#include <limits>
-
     void _parallel_extract_all_edges(
         GEO::Delaunay_var& delaunay,
         size_t n_points,
@@ -582,88 +580,73 @@ private:
         int c_size,
         std::vector<std::pair<int, int>>& edges
     ) {
-        int n_edges_per_cell = (c_size * (c_size - 1)) / 2;
-        size_t total_edges_max = n_cells * n_edges_per_cell;
-        
-        // Pre-allocate everything (Zero-Copy strategy)
-        edges.resize(total_edges_max);
-        
-        const int SENTINEL = std::numeric_limits<int>::max();
-
         #ifdef CGAL_LINKED_WITH_TBB
-        tbb::parallel_for(tbb::blocked_range<GEO::index_t>(0, n_cells), [&](const tbb::blocked_range<GEO::index_t>& r) {
-             for(GEO::index_t c=r.begin(); c!=r.end(); ++c) {
-                size_t offset = c * n_edges_per_cell;
-                
-                bool is_infinite = (delaunay->keeps_infinite() && delaunay->cell_is_infinite(c));
-                
-                if (is_infinite) {
-                    for(int k=0; k<n_edges_per_cell; ++k) {
-                        edges[offset + k] = {SENTINEL, SENTINEL};
-                    }
-                    continue;
-                }
+        tbb::concurrent_vector<std::pair<int, int>> concurrent_edges;
+        
+        // Chunk size: Trade-off between local dedup efficiency and load balancing
+        size_t chunk_size = 1024; 
+        
+        tbb::parallel_for(tbb::blocked_range<GEO::index_t>(0, n_cells, chunk_size), 
+            [&](const tbb::blocked_range<GEO::index_t>& r) {
+            
+            std::vector<std::pair<int, int>> local_edges;
+            // Heuristic reserve: 6 edges per cell, but we expect dedup to reduce it
+            local_edges.reserve((r.end() - r.begin()) * 6);
 
-                int k = 0;
+            for(GEO::index_t c=r.begin(); c!=r.end(); ++c) {
+                if(delaunay->keeps_infinite() && delaunay->cell_is_infinite(c)) continue;
+                
                 for(int i=0; i<c_size; ++i) {
                     for(int j=i+1; j<c_size; ++j) {
                         GEO::index_t v1 = delaunay->cell_vertex(c, i);
                         GEO::index_t v2 = delaunay->cell_vertex(c, j);
-                        
                         if(v1 < n_points && v2 < n_points) {
-                            if(v1 < v2) edges[offset + k] = {(int)v1, (int)v2};
-                            else edges[offset + k] = {(int)v2, (int)v1};
-                        } else {
-                            edges[offset + k] = {SENTINEL, SENTINEL};
+                            if(v1 < v2) local_edges.push_back({(int)v1, (int)v2});
+                            else local_edges.push_back({(int)v2, (int)v1});
                         }
-                        k++;
                     }
                 }
-             }
+            }
+            
+            // Local Deduplication (Crucial for Memory)
+            if(!local_edges.empty()) {
+                std::sort(local_edges.begin(), local_edges.end());
+                auto last = std::unique(local_edges.begin(), local_edges.end());
+                local_edges.erase(last, local_edges.end());
+                
+                // Flush to global
+                auto it = concurrent_edges.grow_by(local_edges.size());
+                std::copy(local_edges.begin(), local_edges.end(), it);
+            }
         });
-        // In-place Parallel Sort
+        
+        // Copy back to std::vector (contiguous)
+        edges.assign(concurrent_edges.begin(), concurrent_edges.end());
+        
+        // Final Global Sort & Unique
         tbb::parallel_sort(edges.begin(), edges.end());
+        auto last = std::unique(edges.begin(), edges.end());
+        edges.erase(last, edges.end());
 
         #else
         // Sequential Fallback
         for(GEO::index_t c=0; c<n_cells; ++c) {
-            size_t offset = c * n_edges_per_cell;
-            bool is_infinite = (delaunay->keeps_infinite() && delaunay->cell_is_infinite(c));
-            
-            if (is_infinite) {
-                for(int k=0; k<n_edges_per_cell; ++k) edges[offset + k] = {SENTINEL, SENTINEL};
-                continue;
-            }
-
-            int k = 0;
+            if(delaunay->keeps_infinite() && delaunay->cell_is_infinite(c)) continue;
             for(int i=0; i<c_size; ++i) {
                 for(int j=i+1; j<c_size; ++j) {
                     GEO::index_t v1 = delaunay->cell_vertex(c, i);
                     GEO::index_t v2 = delaunay->cell_vertex(c, j);
                     if(v1 < n_points && v2 < n_points) {
-                        if(v1 < v2) edges[offset + k] = {(int)v1, (int)v2};
-                        else edges[offset + k] = {(int)v2, (int)v1};
-                    } else {
-                        edges[offset + k] = {SENTINEL, SENTINEL};
+                        if(v1 < v2) edges.push_back({(int)v1, (int)v2});
+                        else edges.push_back({(int)v2, (int)v1});
                     }
-                    k++;
                 }
             }
         }
         std::sort(edges.begin(), edges.end());
-        #endif
-        
-        // Remove Duplicates and Sentinels
         auto last = std::unique(edges.begin(), edges.end());
-        
-        // Check for sentinels at the end (since sorted, they are at the back)
-        if (last != edges.begin()) {
-            auto it = last - 1;
-            if (it->first == SENTINEL) {
-                last = it; // Cut before the sentinel block
-            }
-        }
         edges.erase(last, edges.end());
+        #endif
     }
 
     void _extract_lower_hull_2d(
