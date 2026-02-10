@@ -541,7 +541,7 @@ private:
 
         std::string engine_name = "default";
         if (dim == 2) engine_name = "BPOW2d";
-        else if (dim == 3) engine_name = "BPOW";
+        else if (dim == 3) engine_name = "PDEL"; // Parallel Regular Triangulation (Fastest)
         
         GEO::Delaunay_var delaunay = GEO::Delaunay::create(lifted_dim, engine_name);
         if (!delaunay) {
