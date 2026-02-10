@@ -110,68 +110,231 @@ namespace HGP_Numerics {
         }
     }
 
-    // Optimized solver for Triangle (3 points in dim dimensions)
+    // ==============================================================================
+    // Specialized Geometry Kernels (Stack-based, Allocation-free)
+    // ==============================================================================
+
+    // Solve MEB for Triangle (3 points) and return Center + RadiusSq
+    // Used as fallback for N=4
+    inline void get_meb_3(
+        const double* p0, const double* p1, const double* p2, 
+        size_t dim, 
+        Vec& center, double& r_sq
+    ) {
+        // Relative vectors
+        // u = p1 - p0
+        // v = p2 - p0
+        
+        double u_sq = 0, v_sq = 0, dot_uv = 0;
+        // w_sq (p2-p1) = u^2 + v^2 - 2u.v
+        
+        for(size_t k=0; k<dim; ++k) {
+            double uk = p1[k] - p0[k];
+            double vk = p2[k] - p0[k];
+            u_sq += uk * uk;
+            v_sq += vk * vk;
+            dot_uv += uk * vk;
+        }
+        
+        double w_sq = u_sq + v_sq - 2*dot_uv;
+
+        // Check Obtuse Angles
+        // Angle at P0 (between u and v)
+        if (dot_uv <= 0) {
+            // Center is midpoint of P1-P2 (longest edge opposite to P0)
+            // Wait, if angle at P0 is obtuse, P1-P2 is the opposite edge.
+            // Center is midpoint of P1, P2.
+            // r_sq = |p1-p2|^2 / 4 = w_sq / 4
+            for(size_t k=0; k<dim; ++k) center(k) = 0.5 * (p1[k] + p2[k]);
+            r_sq = w_sq * 0.25;
+            return;
+        }
+        
+        // Angle at P1 (between -u and w=v-u) -> dot = u_sq - dot_uv
+        if (u_sq - dot_uv <= 0) {
+            // Center is midpoint of P0-P2
+            for(size_t k=0; k<dim; ++k) center(k) = 0.5 * (p0[k] + p2[k]);
+            r_sq = v_sq * 0.25;
+            return;
+        }
+
+        // Angle at P2 (between -v and -w=u-v) -> dot = v_sq - dot_uv
+        if (v_sq - dot_uv <= 0) {
+            // Center is midpoint of P0-P1
+            for(size_t k=0; k<dim; ++k) center(k) = 0.5 * (p0[k] + p1[k]);
+            r_sq = u_sq * 0.25;
+            return;
+        }
+
+        // Acute Triangle: Circumcenter
+        // O = P0 + a*u + b*v
+        // u.(O-P0) = u.u/2  => a*u^2 + b*u.v = u^2/2
+        // v.(O-P0) = v.v/2  => a*u.v + b*v^2 = v^2/2
+        
+        double det = u_sq * v_sq - dot_uv * dot_uv;
+        if (det <= 1e-14) {
+            // Degenerate (collinear): Midpoint of longest edge (hypotenuse)
+            // Since we passed angle checks, this shouldn't strictly happen unless very flat acute
+            double max_sq = std::max({u_sq, v_sq, w_sq});
+            if (u_sq == max_sq) { // P0-P1
+                 for(size_t k=0; k<dim; ++k) center(k) = 0.5 * (p0[k] + p1[k]);
+                 r_sq = u_sq * 0.25;
+            } else if (v_sq == max_sq) { // P0-P2
+                 for(size_t k=0; k<dim; ++k) center(k) = 0.5 * (p0[k] + p2[k]);
+                 r_sq = v_sq * 0.25;
+            } else { // P1-P2
+                 for(size_t k=0; k<dim; ++k) center(k) = 0.5 * (p1[k] + p2[k]);
+                 r_sq = w_sq * 0.25;
+            }
+            return;
+        }
+
+        double inv_det = 0.5 / det;
+        double rhs_u = 0.5 * u_sq;
+        double rhs_v = 0.5 * v_sq;
+        
+        // Cramer 2x2
+        // | u2  uv | |a| = |ru|
+        // | uv  v2 | |b| = |rv|
+        
+        double alpha = (v_sq * u_sq - dot_uv * v_sq); // Wait, rhs are u^2/2 etc.
+        // alpha = (rhs_u * v_sq - rhs_v * dot_uv) / det
+        alpha = (u_sq * v_sq - v_sq * dot_uv) * inv_det; 
+        
+        // beta = (u_sq * rhs_v - dot_uv * rhs_u) / det
+        double beta = (u_sq * v_sq - u_sq * dot_uv) * inv_det;
+
+        // Recompute standard coords
+        for(size_t k=0; k<dim; ++k) {
+            center(k) = p0[k] + alpha * (p1[k] - p0[k]) + beta * (p2[k] - p0[k]);
+        }
+        
+        // Radius: Distance from P0 (or center norm)
+        // r^2 = |alpha u + beta v|^2
+        r_sq = alpha*alpha*u_sq + beta*beta*v_sq + 2*alpha*beta*dot_uv;
+    }
+
+    // N=3 wrapper for the interface
     inline double compute_meb_sq_radius_3(const double* flat_points, const int* indices, size_t dim) {
+        // Reuse the full solver but discard center
+        Vec c(dim);
+        double r2;
         const double* p0 = &flat_points[indices[0] * dim];
         const double* p1 = &flat_points[indices[1] * dim];
         const double* p2 = &flat_points[indices[2] * dim];
-
-        // Edges vectors
-        // u = p1 - p0
-        // v = p2 - p0
-        // w = p2 - p1
-        
-        double u_sq = 0, v_sq = 0, w_sq = 0;
-        double dot_uv = 0;
-
-        for(size_t k=0; k<dim; ++k) {
-            double u_k = p1[k] - p0[k];
-            double v_k = p2[k] - p0[k];
-            double w_k = p2[k] - p1[k];
-            u_sq += u_k * u_k;
-            v_sq += v_k * v_k;
-            w_sq += w_k * w_k;
-            dot_uv += u_k * v_k;
-        }
-
-        // Check for obtuse angles (dot products < 0 means angle > 90)
-        // Angle at P0: dot(p1-p0, p2-p0) = dot_uv
-        if (dot_uv <= 0) return std::max(u_sq, v_sq) * 0.25; // Obtuse at P0 -> Longest edge from P0
-
-        // Angle at P1: dot(p0-p1, p2-p1) = dot(-u, w) = -u.w = -u.(v-u) = u.u - u.v
-        if (u_sq - dot_uv <= 0) return std::max(u_sq, w_sq) * 0.25; // Obtuse at P1
-
-        // Angle at P2: dot(p0-p2, p1-p2) = dot(-v, -w) = v.w = v.(v-u) = v.v - v.u
-        if (v_sq - dot_uv <= 0) return std::max(v_sq, w_sq) * 0.25; // Obtuse at P2
-
-        // Acute triangle: Circumradius
-        // R = abc / 4K where K is area
-        // a=sqrt(w_sq), b=sqrt(v_sq), c=sqrt(u_sq)
-        // 16 K^2 = 4 u^2 v^2 - (u^2 + v^2 - w^2)^2  (Heron-like)
-        // Actually simpler with sin formula: R = a / 2sinA
-        // Or vector formula: R = ||u|| ||v|| ||u-v|| / 2 ||u x v|| (in 3D)
-        // General dim:
-        // Denom = 4 * (u^2 v^2 - (u.v)^2)
-        double denom = 4.0 * (u_sq * v_sq - dot_uv * dot_uv);
-        if (denom <= 1e-14) return std::max({u_sq, v_sq, w_sq}) * 0.25; // Collinear fallback
-
-        double num = u_sq * v_sq * w_sq;
-        return num / denom;
+        get_meb_3(p0, p1, p2, dim, c, r2);
+        return r2;
     }
 
-    // Stack-based Welzl for small N (up to 4) to avoid heap allocation
-    // Simplified version
-    inline double compute_meb_sq_radius_small(const double* flat_points, const int* indices, size_t k_size, size_t dim) {
-        // Fallback to Eigen-based Welzl but using fixed-size stack arrays
-        // Actually, generic welzl creates vectors.
-        // For N=4, we just use the existing generic Welzl but we can optimize the vector usage?
-        // Or simply trust the generic one is "fast enough" if we avoid allocation.
-        // But solve_basis uses Eigen MatrixXd which allocates.
-        // Let's stick to the generic one for N >= 4 for now, but N=3 optimization is huge for K=2.
+    // Specialized N=4 Solver
+    inline double compute_meb_sq_radius_4(const double* flat_points, const int* indices, size_t dim) {
+        const double* p0 = &flat_points[indices[0] * dim];
+        const double* p1 = &flat_points[indices[1] * dim];
+        const double* p2 = &flat_points[indices[2] * dim];
+        const double* p3 = &flat_points[indices[3] * dim];
+
+        // 1. Try Circumcenter of Tetrahedron
+        // O = P0 + x(p1-p0) + y(p2-p0) + z(p3-p0)
         
-        // TODO: A truly allocation-free Welzl for N=4 would be better.
-        // For now, redirecting N=3 is the biggest win.
-        return 0.0; 
+        // Gram Matrix entries
+        double dot[3][3]; 
+        // 0:u, 1:v, 2:w
+        const double* vecs[3] = {p1, p2, p3}; // actually p[i]-p0
+        
+        // Compute dots and norms
+        for(int i=0; i<3; ++i) {
+            for(int j=i; j<3; ++j) {
+                double d = 0;
+                for(size_t k=0; k<dim; ++k) {
+                    d += (vecs[i][k] - p0[k]) * (vecs[j][k] - p0[k]);
+                }
+                dot[i][j] = d;
+                if(i!=j) dot[j][i] = d;
+            }
+        }
+
+        Eigen::Matrix3d M;
+        Eigen::Vector3d rhs;
+        for(int i=0; i<3; ++i) {
+            for(int j=0; j<3; ++j) M(i,j) = dot[i][j];
+            rhs(i) = 0.5 * dot[i][i];
+        }
+
+        // Solve M * coords = rhs
+        // Use LDLT for stability with PSD matrix
+        auto solver = M.ldlt();
+        if(solver.info() == Eigen::Success && solver.rcond() > 1e-10) {
+            Eigen::Vector3d coords = solver.solve(rhs);
+            
+            // Check containment (Barycentric coords >= 0)
+            // lambda_0 = 1 - sum(coords)
+            double sum_c = coords.sum();
+            if(coords.minCoeff() >= -1e-10 && sum_c <= 1.0 + 1e-10) {
+                // Circumcenter is inside!
+                // Radius = |x u + y v + z w|^2
+                // = coords^T * M * coords
+                return coords.transpose() * M * coords;
+            }
+        }
+
+        // 2. Fallback: Max of Faces
+        // If circumcenter is outside (or singular), solution is on boundary.
+        // We check all 4 faces.
+        // The global MEB is determined by the face MEB that covers the 4th point?
+        // No, standard algorithm: 
+        // Solution is the MEB of one of the faces.
+        // Which one? The one that contains the 4th point. 
+        // But simply taking the one with the *largest* radius is a sufficient heuristic 
+        // for N=4 in convex position (Tetrahedron) *if* we assume the points are not inside one another.
+        // Actually, for a tetrahedron, if the circumcenter is outside, the MEB is unique and lies on a face/edge.
+        // Checking all 4 faces and taking the valid one with min radius? No.
+        // The MEB is the "smallest enclosing ball".
+        // It's the unique ball.
+        // Strategy: 
+        // Compute MEB of each face F_i.
+        // Check if Point P_i (opposite) is inside.
+        // If yes, this IS the solution.
+        
+        // Face 0: P1, P2, P3 (opposite P0)
+        {
+            Vec c(dim); double r2;
+            get_meb_3(p1, p2, p3, dim, c, r2);
+            // Check P0 distance
+            double d2 = 0; for(size_t k=0; k<dim; ++k) d2 += (p0[k]-c(k))*(p0[k]-c(k));
+            if(d2 <= r2 + 1e-10) return r2;
+        }
+        // Face 1: P0, P2, P3 (opposite P1)
+        {
+            Vec c(dim); double r2;
+            get_meb_3(p0, p2, p3, dim, c, r2);
+            double d2 = 0; for(size_t k=0; k<dim; ++k) d2 += (p1[k]-c(k))*(p1[k]-c(k));
+            if(d2 <= r2 + 1e-10) return r2;
+        }
+        // Face 2: P0, P1, P3 (opposite P2)
+        {
+            Vec c(dim); double r2;
+            get_meb_3(p0, p1, p3, dim, c, r2);
+            double d2 = 0; for(size_t k=0; k<dim; ++k) d2 += (p2[k]-c(k))*(p2[k]-c(k));
+            if(d2 <= r2 + 1e-10) return r2;
+        }
+        // Face 3: P0, P1, P2 (opposite P3)
+        {
+            Vec c(dim); double r2;
+            get_meb_3(p0, p1, p2, dim, c, r2);
+            double d2 = 0; for(size_t k=0; k<dim; ++k) d2 += (p3[k]-c(k))*(p3[k]-c(k));
+            if(d2 <= r2 + 1e-10) return r2;
+        }
+
+        // If we reach here, it might be numerical noise or degenerate.
+        // Return the max radius found? Or fallback to Welzl?
+        // Fallback to generic Welzl for safety.
+        // But usually one face covers it.
+        // Let's fallback to recursive Welzl to be 100% safe against edge cases.
+        std::vector<int> P(indices, indices + 4);
+        std::vector<int> R; R.reserve(dim+1);
+        Vec c(dim); double r_sq=0;
+        welzl(flat_points, P, R, 4, dim, c, r_sq);
+        return r_sq;
     }
 
     inline double compute_meb_sq_radius(const double* flat_points, const int* indices, size_t k_size, size_t dim) {
@@ -190,13 +353,15 @@ namespace HGP_Numerics {
         if (k_size == 3) {
             return compute_meb_sq_radius_3(flat_points, indices, dim);
         }
+        if (k_size == 4) {
+            return compute_meb_sq_radius_4(flat_points, indices, dim);
+        }
 
-        // Generic Welzl for K >= 4
+        // Generic Welzl for K > 4
         std::vector<int> P(indices, indices + k_size);
         std::vector<int> R;
         R.reserve(dim + 1);
         
-        // Randomized heuristics for stability
         if (k_size > 10) {
              for (size_t i = P.size() - 1; i > 0; --i) {
                 size_t j = (size_t((i * 12345 + 6789)) % (i + 1)); 
