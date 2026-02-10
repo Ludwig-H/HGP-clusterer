@@ -30,8 +30,10 @@
 // ==============================================================================
 namespace HGP_Numerics {
 
-    using Vec = Eigen::VectorXd;
-    using Mat = Eigen::MatrixXd;
+    // Use stack allocation for small dimensions (up to 32) to avoid heap overhead
+    // This is critical because solve_basis is called millions of times.
+    using Vec = Eigen::Matrix<double, Eigen::Dynamic, 1, 0, 32, 1>;
+    using Mat = Eigen::Matrix<double, Eigen::Dynamic, Eigen::Dynamic, 0, 32, 32>;
 
     // Solves for the center and squared radius of the sphere defined by boundary points R
     inline void solve_basis(
@@ -54,6 +56,7 @@ namespace HGP_Numerics {
         }
 
         size_t n_vecs = m - 1;
+        // Use Resize-friendly initialization (won't malloc if size < 32)
         Mat V(dim, n_vecs);
         Vec b(n_vecs);
         const double* q0 = &flat_points[R[0]*dim];
@@ -436,9 +439,13 @@ private:
             edges = _compute_weighted(flat_points, *weights_ptr, n_points, dim);
         }
 
-        // Deduplicate
+        // Deduplicate (Parallel sort could be used here but std::sort is usually fast enough for edges list)
         if (!edges.empty()) {
+            #ifdef CGAL_LINKED_WITH_TBB
+            tbb::parallel_sort(edges.begin(), edges.end());
+            #else
             std::sort(edges.begin(), edges.end());
+            #endif
             auto last = std::unique(edges.begin(), edges.end());
             edges.erase(last, edges.end());
         }
@@ -455,7 +462,7 @@ private:
         
         std::string engine_name = "default";
         if (dim == 2) engine_name = "BDEL2d";
-        else if (dim == 3) engine_name = "BDEL";
+        else if (dim == 3) engine_name = "PDEL"; // Optimized Parallel Engine
 
         GEO::Delaunay_var delaunay = GEO::Delaunay::create(dim, engine_name);
         if (!delaunay) return edges;
@@ -465,27 +472,12 @@ private:
 
         GEO::index_t n_cells = delaunay->nb_cells();
         
-        // Strategy 1: If cells are available (2D/3D), use them
         if (n_cells > 0) {
             int n_verts_per_cell = delaunay->cell_size();
-            for(GEO::index_t c = 0; c < n_cells; ++c) {
-                if (delaunay->keeps_infinite() && delaunay->cell_is_infinite(c)) continue;
-
-                for(int i=0; i<n_verts_per_cell; ++i) {
-                    for(int j=i+1; j<n_verts_per_cell; ++j) {
-                        GEO::index_t v1 = delaunay->cell_vertex(c, i);
-                        GEO::index_t v2 = delaunay->cell_vertex(c, j);
-                        
-                        if (v1 < n_points && v2 < n_points) {
-                            if (v1 < v2) edges.push_back({(int)v1, (int)v2});
-                            else edges.push_back({(int)v2, (int)v1});
-                        }
-                    }
-                }
-            }
+            _parallel_extract_all_edges(delaunay, n_points, n_cells, n_verts_per_cell, edges);
         } 
-        // Strategy 2: If no cells (nD fallback to NN), use neighbors graph
         else {
+            // Fallback for nD NN if no cells
             GEO::vector<GEO::index_t> neighbors;
             for(GEO::index_t i = 0; i < n_points; ++i) {
                 delaunay->get_neighbors(i, neighbors);
@@ -509,9 +501,6 @@ private:
     ) {
         std::vector<std::pair<int, int>> edges;
         
-        // Lift points according to Geogram's expected input for BPOW:
-        // coords[dim] = sqrt(W - w_i)
-        
         double max_weight = -std::numeric_limits<double>::infinity();
         if (!weights.empty()) {
             for(double w : weights) {
@@ -523,7 +512,6 @@ private:
         
         size_t lifted_dim = dim + 1;
         
-        // Re-use buffer if possible
         size_t required_size = n_points * lifted_dim;
         if (_lifted_buffer.size() < required_size) {
             _lifted_buffer.resize(required_size);
@@ -569,30 +557,60 @@ private:
         if (n_cells > 0) {
             int c_size = delaunay->cell_size();
             
-            // Case 1: The engine returned the Triangulation directly (dim == cell_size - 1)
             if (c_size == dim + 1) {
-                 _extract_all_edges(delaunay, n_points, n_cells, c_size, edges);
+                 _parallel_extract_all_edges(delaunay, n_points, n_cells, c_size, edges);
             }
-            // Case 2: The engine returned a Lifted Triangulation (Convex Hull in dim+1)
             else if (c_size == dim + 2) {
-                if (dim == 2) _extract_lower_hull_2d(delaunay, n_points, n_cells, edges);
-                else if (dim == 3) _extract_lower_hull_3d(delaunay, n_points, n_cells, edges);
-                else _extract_lower_hull_nd(delaunay, n_points, n_cells, dim, lifted_dim, edges);
+                if (dim == 2) _extract_lower_hull_2d(delaunay, n_points, n_cells, edges); // Parallel inside
+                else if (dim == 3) _extract_lower_hull_3d(delaunay, n_points, n_cells, edges); // Parallel inside
+                else _extract_lower_hull_nd(delaunay, n_points, n_cells, dim, lifted_dim, edges); // Parallel inside
             }
         }
         return edges;
     }
 
-    void _extract_all_edges(
+    // ==============================================================================
+    // Parallel Extraction Helpers
+    // ==============================================================================
+
+    void _parallel_extract_all_edges(
         GEO::Delaunay_var& delaunay,
         size_t n_points,
         GEO::index_t n_cells,
         int c_size,
         std::vector<std::pair<int, int>>& edges
     ) {
+        #ifdef CGAL_LINKED_WITH_TBB
+        tbb::concurrent_vector<std::pair<int, int>> concurrent_edges;
+        tbb::parallel_for(tbb::blocked_range<GEO::index_t>(0, n_cells), [&](const tbb::blocked_range<GEO::index_t>& r) {
+             std::vector<std::pair<int, int>> local_edges;
+             local_edges.reserve((r.end() - r.begin()) * c_size);
+
+             for(GEO::index_t c=r.begin(); c!=r.end(); ++c) {
+                if(delaunay->keeps_infinite() && delaunay->cell_is_infinite(c)) continue;
+                
+                for(int i=0; i<c_size; ++i) {
+                    for(int j=i+1; j<c_size; ++j) {
+                        GEO::index_t v1 = delaunay->cell_vertex(c, i);
+                        GEO::index_t v2 = delaunay->cell_vertex(c, j);
+                        if(v1 < n_points && v2 < n_points) {
+                            if(v1 < v2) local_edges.push_back({(int)v1, (int)v2});
+                            else local_edges.push_back({(int)v2, (int)v1});
+                        }
+                    }
+                }
+             }
+             
+             if (!local_edges.empty()) {
+                 auto it = concurrent_edges.grow_by(local_edges.size());
+                 std::copy(local_edges.begin(), local_edges.end(), it);
+             }
+        });
+        edges.assign(concurrent_edges.begin(), concurrent_edges.end());
+
+        #else
         for(GEO::index_t c=0; c<n_cells; ++c) {
             if(delaunay->keeps_infinite() && delaunay->cell_is_infinite(c)) continue;
-            
             for(int i=0; i<c_size; ++i) {
                 for(int j=i+1; j<c_size; ++j) {
                     GEO::index_t v1 = delaunay->cell_vertex(c, i);
@@ -604,6 +622,7 @@ private:
                 }
             }
         }
+        #endif
     }
 
     void _extract_lower_hull_2d(
@@ -612,32 +631,31 @@ private:
         GEO::index_t n_cells,
         std::vector<std::pair<int, int>>& edges
     ) {
-        // Iterate over all cells (tetrahedra) in the 3D lifted triangulation
-        for (GEO::index_t c = 0; c < n_cells; ++c) {
-            // Check if cell is infinite (should not happen if we iterate only finite cells, 
-            // but standard Geogram nb_cells() might include them depending on impl)
+        #ifdef CGAL_LINKED_WITH_TBB
+        tbb::concurrent_vector<std::pair<int, int>> concurrent_edges;
+        tbb::parallel_for(tbb::blocked_range<GEO::index_t>(0, n_cells), [&](const tbb::blocked_range<GEO::index_t>& r) {
+            std::vector<std::pair<int, int>> local_edges;
+            
+            for(GEO::index_t c=r.begin(); c!=r.end(); ++c) {
+        #else
+            for(GEO::index_t c = 0; c < n_cells; ++c) {
+        #endif
             if (delaunay->keeps_infinite() && delaunay->cell_is_infinite(c)) continue;
 
-            // 3D cell has 4 facets
             for (GEO::index_t f = 0; f < 4; ++f) {
-                // Check adjacency
                 GEO::index_t adj = delaunay->cell_adjacent(c, f);
-                
-                // If adjacent is NO_INDEX (-1) or Infinite, then this facet is on the boundary of the convex hull
                 bool is_boundary = (adj == GEO::index_t(-1));
                 if (!is_boundary && delaunay->keeps_infinite()) {
                     if (delaunay->cell_is_infinite(adj)) is_boundary = true;
                 }
 
                 if (is_boundary) {
-                    // Extract vertices of the facet
                     GEO::index_t v_idx[3];
                     int k = 0;
                     for(int j=0; j<4; ++j) {
                         if(j != (int)f) v_idx[k++] = delaunay->cell_vertex(c, j);
                     }
                     
-                    // Geometric check: Is it facing down?
                     const double* p0 = delaunay->vertex_ptr(v_idx[0]);
                     const double* p1 = delaunay->vertex_ptr(v_idx[1]);
                     const double* p2 = delaunay->vertex_ptr(v_idx[2]);
@@ -649,36 +667,41 @@ private:
                     double ny = u[2]*v[0] - u[0]*v[2];
                     double nz = u[0]*v[1] - u[1]*v[0];
                     
-                    // Orient normal outwards
-                    GEO::index_t v_in = delaunay->cell_vertex(c, f); // The vertex opposite to the facet
+                    GEO::index_t v_in = delaunay->cell_vertex(c, f);
                     const double* p_in = delaunay->vertex_ptr(v_in);
                     double dx = p_in[0] - p0[0];
                     double dy = p_in[1] - p0[1];
                     double dz = p_in[2] - p0[2];
                     
-                    if (nx*dx + ny*dy + nz*dz > 0) {
-                        // If dot product > 0, normal points inwards (towards v_in)
-                        // We want outward normal.
-                        nz = -nz;
-                    }
+                    if (nx*dx + ny*dy + nz*dz > 0) nz = -nz;
 
-                    // Lower hull check: Normal z component is negative
                     if (nz < 0) {
-                        // Add edges of this triangle (projected to 2D -> just indices)
-                        // We must ensure indices are valid input points (finite)
-                        if (v_idx[0] < n_points && v_idx[1] < n_points) {
-                            if (v_idx[0] < v_idx[1]) edges.push_back({(int)v_idx[0], (int)v_idx[1]}); else edges.push_back({(int)v_idx[1], (int)v_idx[0]});
-                        }
-                        if (v_idx[1] < n_points && v_idx[2] < n_points) {
-                            if (v_idx[1] < v_idx[2]) edges.push_back({(int)v_idx[1], (int)v_idx[2]}); else edges.push_back({(int)v_idx[2], (int)v_idx[1]});
-                        }
-                        if (v_idx[0] < n_points && v_idx[2] < n_points) {
-                            if (v_idx[0] < v_idx[2]) edges.push_back({(int)v_idx[0], (int)v_idx[2]}); else edges.push_back({(int)v_idx[2], (int)v_idx[0]});
-                        }
+                        auto add_edge = [&](GEO::index_t i1, GEO::index_t i2) {
+                             if (i1 < n_points && i2 < n_points) {
+                                #ifdef CGAL_LINKED_WITH_TBB
+                                 if (i1 < i2) local_edges.push_back({(int)i1, (int)i2}); else local_edges.push_back({(int)i2, (int)i1});
+                                #else
+                                 if (i1 < i2) edges.push_back({(int)i1, (int)i2}); else edges.push_back({(int)i2, (int)i1});
+                                #endif
+                             }
+                        };
+                        add_edge(v_idx[0], v_idx[1]);
+                        add_edge(v_idx[1], v_idx[2]);
+                        add_edge(v_idx[0], v_idx[2]);
                     }
                 }
             }
+        #ifdef CGAL_LINKED_WITH_TBB
+            } // end loop
+            if(!local_edges.empty()) {
+                auto it = concurrent_edges.grow_by(local_edges.size());
+                std::copy(local_edges.begin(), local_edges.end(), it);
+            }
+        });
+        edges.assign(concurrent_edges.begin(), concurrent_edges.end());
+        #else
         }
+        #endif
     }
 
     void _extract_lower_hull_3d(
@@ -687,10 +710,32 @@ private:
         GEO::index_t n_cells,
         std::vector<std::pair<int, int>>& edges
     ) {
+        #ifdef CGAL_LINKED_WITH_TBB
+        tbb::concurrent_vector<std::pair<int, int>> concurrent_edges;
+        tbb::parallel_for(tbb::blocked_range<GEO::index_t>(0, n_cells), [&](const tbb::blocked_range<GEO::index_t>& r) {
+            std::vector<std::pair<int, int>> local_edges;
+            // Reserve heuristic: 10 edges per cell (conservative)
+            local_edges.reserve((r.end() - r.begin()) * 10); 
+
+            for(GEO::index_t c=r.begin(); c!=r.end(); ++c) {
+        #else
         for (GEO::index_t c = 0; c < n_cells; ++c) {
+        #endif
             if (delaunay->keeps_infinite() && delaunay->cell_is_infinite(c)) continue;
 
-            // 4D cell (pentatope) has 5 facets (tetrahedra)
+            // Optimization: Precompute sum of weights (lifted coordinate, index 3)
+            // Cell has 5 vertices.
+            double w_sum = 0.0;
+            double v_w[5]; 
+            GEO::index_t v_idx[5];
+            
+            for(int j=0; j<5; ++j) {
+                v_idx[j] = delaunay->cell_vertex(c, j);
+                // Accessing the 4th coordinate (index 3) of the lifted point
+                v_w[j] = delaunay->vertex_ptr(v_idx[j])[3];
+                w_sum += v_w[j];
+            }
+
             for (GEO::index_t f = 0; f < 5; ++f) {
                 GEO::index_t adj = delaunay->cell_adjacent(c, f);
                 bool is_boundary = (adj == GEO::index_t(-1));
@@ -699,49 +744,62 @@ private:
                 }
 
                 if (is_boundary) {
-                    // Gather vertices of the facet
-                    std::vector<GEO::index_t> face_v; 
-                    face_v.reserve(4);
-                    for(int j=0; j<5; ++j) {
-                        if(j != (int)f) face_v.push_back(delaunay->cell_vertex(c, j));
-                    }
-
-                    // Geometric check: Centroid comparison
-                    // (Simpler than computing 4D normal)
+                    // Geometric check: Lower Hull
+                    // Centroid of facet (excluding v_f) vs Centroid of cell
+                    // H_f < H_c  <=>  Sum(w_others) / 4 < Sum(all) / 5
+                    // <=> 5 * (Sum(all) - w_f) < 4 * Sum(all)
+                    // <=> Sum(all) < 5 * w_f
                     
-                    double cell_c[4] = {0, 0, 0, 0};
-                    for(int j=0; j<5; ++j) {
-                        GEO::index_t v = delaunay->cell_vertex(c, j);
-                        const double* p = delaunay->vertex_ptr(v);
-                        for(int d=0; d<4; ++d) cell_c[d] += p[d];
-                    }
-                    for(int d=0; d<4; ++d) cell_c[d] /= 5.0;
+                    if (w_sum < 5.0 * v_w[f]) {
+                        // Extract edges of the facet (tetrahedron)
+                        // Facet vertices are all v_idx[j] where j != f
+                        
+                        // We have 4 vertices in the facet. 6 Edges.
+                        // Vertices indices in `v_idx` array excluding `f`
+                        int local_v[4];
+                        int k=0;
+                        for(int j=0; j<5; ++j) {
+                            if(j != f) local_v[k++] = j;
+                        }
+                        
+                        for(int a=0; a<4; ++a) {
+                            int idx_a = v_idx[local_v[a]];
+                            // Skip invalid points early (though usually checked outside)
+                            if (idx_a >= (GEO::index_t)n_points) continue;
 
-                    double facet_c[4] = {0, 0, 0, 0};
-                    for(auto v : face_v) {
-                        const double* p = delaunay->vertex_ptr(v);
-                        for(int d=0; d<4; ++d) facet_c[d] += p[d];
-                    }
-                    for(int d=0; d<4; ++d) facet_c[d] *= 0.25;
-
-                    // Lower hull check: Facet centroid is "below" cell centroid in lifted dim (index 3)
-                    if (facet_c[3] < cell_c[3]) {
-                        // Edges of the tetrahedron (facet)
-                        size_t f_dim = 4; // 4 vertices
-                        for(size_t a=0; a<f_dim; ++a) {
-                            for(size_t b=a+1; b<f_dim; ++b) {
-                                GEO::index_t v1 = face_v[a];
-                                GEO::index_t v2 = face_v[b];
-                                if(v1 < n_points && v2 < n_points) {
-                                    if (v1 < v2) edges.push_back({(int)v1, (int)v2});
-                                    else edges.push_back({(int)v2, (int)v1});
-                                }
+                            for(int b=a+1; b<4; ++b) {
+                                int idx_b = v_idx[local_v[b]];
+                                if (idx_b >= (GEO::index_t)n_points) continue;
+                                
+                                #ifdef CGAL_LINKED_WITH_TBB
+                                if (idx_a < idx_b) local_edges.push_back({(int)idx_a, (int)idx_b});
+                                else local_edges.push_back({(int)idx_b, (int)idx_a});
+                                #else
+                                if (idx_a < idx_b) edges.push_back({(int)idx_a, (int)idx_b});
+                                else edges.push_back({(int)idx_b, (int)idx_a});
+                                #endif
                             }
                         }
                     }
                 }
             }
+        #ifdef CGAL_LINKED_WITH_TBB
+            } // end loop cells
+
+            // Local Deduplication (Crucial for Memory Saving)
+            if(!local_edges.empty()) {
+                std::sort(local_edges.begin(), local_edges.end());
+                auto last = std::unique(local_edges.begin(), local_edges.end());
+                local_edges.erase(last, local_edges.end());
+
+                auto it = concurrent_edges.grow_by(local_edges.size());
+                std::copy(local_edges.begin(), local_edges.end(), it);
+            }
+        });
+        edges.assign(concurrent_edges.begin(), concurrent_edges.end());
+        #else
         }
+        #endif
     }
 
     void _extract_lower_hull_nd(
@@ -752,9 +810,16 @@ private:
         size_t lifted_dim,
         std::vector<std::pair<int, int>>& edges
     ) {
-        GEO::index_t n_facets_per_cell = delaunay->cell_size(); // should be lifted_dim + 1
+        GEO::index_t n_facets_per_cell = delaunay->cell_size();
 
+        #ifdef CGAL_LINKED_WITH_TBB
+        tbb::concurrent_vector<std::pair<int, int>> concurrent_edges;
+        tbb::parallel_for(tbb::blocked_range<GEO::index_t>(0, n_cells), [&](const tbb::blocked_range<GEO::index_t>& r) {
+            std::vector<std::pair<int, int>> local_edges;
+            for(GEO::index_t c=r.begin(); c!=r.end(); ++c) {
+        #else
         for (GEO::index_t c = 0; c < n_cells; ++c) {
+        #endif
             if (delaunay->keeps_infinite() && delaunay->cell_is_infinite(c)) continue;
 
             for (GEO::index_t f = 0; f < n_facets_per_cell; ++f) {
@@ -765,48 +830,54 @@ private:
                 }
 
                 if (is_boundary) {
-                    // Gather vertices
                     std::vector<GEO::index_t> face_v;
                     face_v.reserve(n_facets_per_cell - 1);
                     for(GEO::index_t i=0; i<n_facets_per_cell; ++i) {
                         if (i != f) face_v.push_back(delaunay->cell_vertex(c, i));
                     }
                     
-                    // Geometric check: Centroid comparison
-                    std::vector<double> cell_centroid(lifted_dim, 0.0);
+                    // Simple centroid check (Optimization: avoid std::vector for coords if dim is small)
+                    double c_lifted = 0;
                     for(GEO::index_t j=0; j<n_facets_per_cell; ++j) {
-                        GEO::index_t v_idx = delaunay->cell_vertex(c, j);
-                        const double* p = delaunay->vertex_ptr(v_idx);
-                        for(size_t d=0; d<lifted_dim; ++d) cell_centroid[d] += p[d];
+                        c_lifted += delaunay->vertex_ptr(delaunay->cell_vertex(c, j))[dim];
                     }
-                    double inv_c = 1.0 / double(n_facets_per_cell);
-                    for(size_t d=0; d<lifted_dim; ++d) cell_centroid[d] *= inv_c;
+                    c_lifted /= double(n_facets_per_cell);
 
-                    std::vector<double> facet_centroid(lifted_dim, 0.0);
-                    for(auto v_idx : face_v) {
-                        const double* p = delaunay->vertex_ptr(v_idx);
-                        for(size_t d=0; d<lifted_dim; ++d) facet_centroid[d] += p[d];
+                    double f_lifted = 0;
+                    for(auto v : face_v) {
+                        f_lifted += delaunay->vertex_ptr(v)[dim];
                     }
-                    double inv_f = 1.0 / double(face_v.size());
-                    for(size_t d=0; d<lifted_dim; ++d) facet_centroid[d] *= inv_f;
+                    f_lifted /= double(face_v.size());
 
-                    // Lower hull check
-                    if (facet_centroid[dim] < cell_centroid[dim]) {
+                    if (f_lifted < c_lifted) {
                         size_t f_dim = face_v.size();
                         for(size_t a=0; a<f_dim; ++a) {
                             for(size_t b=a+1; b<f_dim; ++b) {
                                 GEO::index_t v1 = face_v[a];
                                 GEO::index_t v2 = face_v[b];
                                 if(v1 < n_points && v2 < n_points) {
-                                    if (v1 < v2) edges.push_back({(int)v1, (int)v2});
-                                    else edges.push_back({(int)v2, (int)v1});
+                                    #ifdef CGAL_LINKED_WITH_TBB
+                                    if (v1 < v2) local_edges.push_back({(int)v1, (int)v2}); else local_edges.push_back({(int)v2, (int)v1});
+                                    #else
+                                    if (v1 < v2) edges.push_back({(int)v1, (int)v2}); else edges.push_back({(int)v2, (int)v1});
+                                    #endif
                                 }
                             }
                         }
                     }
                 }
             }
+        #ifdef CGAL_LINKED_WITH_TBB
+            }
+            if(!local_edges.empty()) {
+                auto it = concurrent_edges.grow_by(local_edges.size());
+                std::copy(local_edges.begin(), local_edges.end(), it);
+            }
+        });
+        edges.assign(concurrent_edges.begin(), concurrent_edges.end());
+        #else
         }
+        #endif
     }
 };
 
