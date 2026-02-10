@@ -1,12 +1,17 @@
 # HGP-clusterer
 
-**HGP-clusterer** est une implémentation Python performante de l'algorithme de clustering par percolation d'hypergraphes. Il combine la topologie algébrique (complexes simpliciaux) et la théorie de la percolation pour détecter des clusters de formes complexes, même en présence de bruit important.
+**HGP-clusterer** est une implémentation Python haute performance de l'algorithme de clustering par percolation d'hypergraphes. Il combine la topologie algébrique (complexes simpliciaux) et la théorie de la percolation pour détecter des clusters de formes complexes, même en présence de bruit important.
 
-L'algorithme suit ces étapes clés :
-1.  Construction d'un **hypergraphe** (complexe de Rips ou Delaunay).
-2.  Calcul d'un **Arbre Couvrant Minimum (MST)** sur le graphe dual (les faces deviennent des nœuds).
-3.  Condensation de l'arbre en une hiérarchie stable (similaire à HDBSCAN).
-4.  Sélection des clusters optimaux par **Excess of Mass (EOM)** ou critères de stabilité.
+Ce projet inclut désormais un **double backend géométrique (CGAL et Geogram)** optimisé pour le calcul parallèle intensif.
+
+## Fonctionnalités Clés
+
+- **Clustering Topologique** : Détection robuste de structures non-convexes via l'ordre-k Delaunay.
+- **Double Backend Géométrique** :
+  - **CGAL** (référence) : Exactitude arithmétique garantie.
+  - **Geogram** (expérimental/performant) : Moteur massivement parallèle optimisé pour les machines multicœurs, incluant une implémentation "Zero-Malloc" de l'algorithme de Welzl et une extraction de graphe thread-safe.
+- **Raffinement Dynamique** : "Splitting" interactif des clusters sans recalcul géométrique coûteux.
+- **Performance** : Cœur C++/Cython/TBB, passage à l'échelle sur des millions de points.
 
 ## Installation
 
@@ -16,7 +21,7 @@ L'algorithme suit ces étapes clés :
 pip install .
 ```
 
-Pour bénéficier de l'accélération géométrique (sphères minimales via `cyminiball`) et des outils de réduction de dimension (UMAP) :
+Pour bénéficier de toutes les fonctionnalités géométriques :
 
 ```bash
 pip install .[geometry,umap]
@@ -24,21 +29,20 @@ pip install .[geometry,umap]
 
 ### Développement
 
-Pour modifier le code source :
-
 ```bash
 pip install -e .
 ```
 
 ### Pré-requis système
 - **Python** >= 3.9
-- **Compilateur C++** (g++ ou clang) pour l'extension Cython.
+- **Compilateur C++** (g++ ou clang) compatible C++14.
+- **CMake** (pour la compilation du binding géométrique).
 
-*(Optionnel)* Pour la filtration exacte "Order-k Delaunay", compilez les binaires CGAL fournis dans `CGALDelaunay/` avec `python scripts/setup_cgal.py`. Sinon, l'algorithme utilise automatiquement l'approximation Rips (très performante).
+L'installation détectera automatiquement la présence de Geogram (dans `geogram_install/`) ou CGAL sur le système.
 
 ## Utilisation
 
-La classe `HGPClusterer` suit l'API standard de scikit-learn (`fit`, `predict`).
+La classe `HGPClusterer` suit l'API standard de scikit-learn.
 
 ```python
 import numpy as np
@@ -47,45 +51,36 @@ from hgp_clusterer import HGPClusterer
 # Génération de données
 X = np.random.RandomState(42).randn(1000, 2)
 
-# Initialisation et ajustement
+# Initialisation
+# backend='geogram' est recommandé pour les gros jeux de données (N > 100k)
 clusterer = HGPClusterer(
-    min_cluster_size=20,  # Taille minimale d'un cluster
-    min_samples=5,        # Paramètre de robustesse au bruit
-    K=2,                  # Dimension des simplexes (2 = triangles)
+    min_cluster_size=20,
+    min_samples=5,
+    K=2,                  # K=1 pour graphe simple, K=2 pour triangles
+    backend='geogram',    # ou 'cgal'
     verbose=True
 )
 
 labels = clusterer.fit_predict(X)
 
-print(f"Nombre de clusters trouvés : {len(np.unique(labels[labels >= 0]))}")
+print(f"Clusters trouvés : {len(np.unique(labels[labels >= 0]))}")
 ```
 
-## Fonctionnalités Avancées
+## Optimisations Récentes (Geogram)
 
-### Raffinement Dynamique (Splitting)
-
-Une force unique de HGP est la capacité de "découper" des clusters connectés par de fins ponts sans recalculer toute la structure géométrique. Vous pouvez définir une règle de découpage personnalisée et ré-extraire les clusters instantanément.
-
-```python
-# Après un premier fit()
-def ma_regle_de_split(parent_indices, children_list_indices):
-    # Exemple : diviser si le parent est trop gros (> 100 points)
-    if len(parent_indices) > 100:
-        return True
-    return False
-
-nouvelles_labels = clusterer.refine_clusters(splitting=ma_regle_de_split)
-```
-
-### Gestion de la Mémoire et Performance
-
-Le cœur de l'algorithme est écrit en **Cython** et optimise agressivement l'utilisation mémoire via des graphes duaux implicites et des structures union-find rapides. Il passe à l'échelle sur des millions de points.
-
-## Dépannage
-
-- **ImportError cyminiball** : Si l'installation échoue, le package bascule automatiquement sur une implémentation NumPy (légèrement plus lente mais universelle).
-- **Problèmes de compilation** : Assurez-vous que `python-dev` ou `python.h` est accessible. Sur Linux : `sudo apt install python3-dev`.
+Le backend Geogram a été profondément optimisé pour le cas "Order-k Delaunay" en dimension 3 (lifté en 4D) :
+1.  **Parallélisme TBB** : L'extraction du dual de Delaunay est entièrement parallélisée.
+2.  **Welzl Zero-Malloc** : Calcul des rayons de sphères englobantes sans allocation dynamique (gain de performance majeur).
+3.  **Fast 4D Lower-Hull** : Algorithme simplifié pour l'extraction du diagramme de puissance, réduisant l'arithmétique et l'empreinte mémoire.
 
 ## Licence
 
-MIT
+**ATTENTION : USAGE NON-COMMERCIAL UNIQUEMENT.**
+
+Ce logiciel est distribué sous une licence restrictive.
+- **Autorisé** : Usage académique, recherche, éducation, projets personnels.
+- **Interdit** : Tout usage commercial, intégration dans un produit vendu, services payants.
+
+Voir le fichier `LICENSE` pour le texte complet.
+
+Copyright (c) 2026 Ludwig-H.

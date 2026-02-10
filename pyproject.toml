@@ -15,7 +15,7 @@ version = "0.1.0"
 description = "HypergraphPercol clustering algorithm"
 authors = [{ name = "HypergraphPercol" }]
 readme = "README.md"
-license = { text = "MIT" }
+license = { text = "Proprietary - Non-Commercial Usage Only" }
 requires-python = ">=3.9"
 dependencies = [
   "numpy>=1.24,<2.1",
