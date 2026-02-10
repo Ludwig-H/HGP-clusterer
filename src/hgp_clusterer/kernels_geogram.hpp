@@ -110,6 +110,70 @@ namespace HGP_Numerics {
         }
     }
 
+    // Optimized solver for Triangle (3 points in dim dimensions)
+    inline double compute_meb_sq_radius_3(const double* flat_points, const int* indices, size_t dim) {
+        const double* p0 = &flat_points[indices[0] * dim];
+        const double* p1 = &flat_points[indices[1] * dim];
+        const double* p2 = &flat_points[indices[2] * dim];
+
+        // Edges vectors
+        // u = p1 - p0
+        // v = p2 - p0
+        // w = p2 - p1
+        
+        double u_sq = 0, v_sq = 0, w_sq = 0;
+        double dot_uv = 0;
+
+        for(size_t k=0; k<dim; ++k) {
+            double u_k = p1[k] - p0[k];
+            double v_k = p2[k] - p0[k];
+            double w_k = p2[k] - p1[k];
+            u_sq += u_k * u_k;
+            v_sq += v_k * v_k;
+            w_sq += w_k * w_k;
+            dot_uv += u_k * v_k;
+        }
+
+        // Check for obtuse angles (dot products < 0 means angle > 90)
+        // Angle at P0: dot(p1-p0, p2-p0) = dot_uv
+        if (dot_uv <= 0) return std::max(u_sq, v_sq) * 0.25; // Obtuse at P0 -> Longest edge from P0
+
+        // Angle at P1: dot(p0-p1, p2-p1) = dot(-u, w) = -u.w = -u.(v-u) = u.u - u.v
+        if (u_sq - dot_uv <= 0) return std::max(u_sq, w_sq) * 0.25; // Obtuse at P1
+
+        // Angle at P2: dot(p0-p2, p1-p2) = dot(-v, -w) = v.w = v.(v-u) = v.v - v.u
+        if (v_sq - dot_uv <= 0) return std::max(v_sq, w_sq) * 0.25; // Obtuse at P2
+
+        // Acute triangle: Circumradius
+        // R = abc / 4K where K is area
+        // a=sqrt(w_sq), b=sqrt(v_sq), c=sqrt(u_sq)
+        // 16 K^2 = 4 u^2 v^2 - (u^2 + v^2 - w^2)^2  (Heron-like)
+        // Actually simpler with sin formula: R = a / 2sinA
+        // Or vector formula: R = ||u|| ||v|| ||u-v|| / 2 ||u x v|| (in 3D)
+        // General dim:
+        // Denom = 4 * (u^2 v^2 - (u.v)^2)
+        double denom = 4.0 * (u_sq * v_sq - dot_uv * dot_uv);
+        if (denom <= 1e-14) return std::max({u_sq, v_sq, w_sq}) * 0.25; // Collinear fallback
+
+        double num = u_sq * v_sq * w_sq;
+        return num / denom;
+    }
+
+    // Stack-based Welzl for small N (up to 4) to avoid heap allocation
+    // Simplified version
+    inline double compute_meb_sq_radius_small(const double* flat_points, const int* indices, size_t k_size, size_t dim) {
+        // Fallback to Eigen-based Welzl but using fixed-size stack arrays
+        // Actually, generic welzl creates vectors.
+        // For N=4, we just use the existing generic Welzl but we can optimize the vector usage?
+        // Or simply trust the generic one is "fast enough" if we avoid allocation.
+        // But solve_basis uses Eigen MatrixXd which allocates.
+        // Let's stick to the generic one for N >= 4 for now, but N=3 optimization is huge for K=2.
+        
+        // TODO: A truly allocation-free Welzl for N=4 would be better.
+        // For now, redirecting N=3 is the biggest win.
+        return 0.0; 
+    }
+
     inline double compute_meb_sq_radius(const double* flat_points, const int* indices, size_t k_size, size_t dim) {
         if (k_size == 0) return 0.0;
         if (k_size == 1) return 0.0;
@@ -123,14 +187,21 @@ namespace HGP_Numerics {
             }
             return d2 * 0.25;
         }
+        if (k_size == 3) {
+            return compute_meb_sq_radius_3(flat_points, indices, dim);
+        }
 
+        // Generic Welzl for K >= 4
         std::vector<int> P(indices, indices + k_size);
         std::vector<int> R;
         R.reserve(dim + 1);
         
-        for (size_t i = P.size() - 1; i > 0; --i) {
-            size_t j = (size_t((i * 12345 + 6789)) % (i + 1)); 
-            std::swap(P[i], P[j]);
+        // Randomized heuristics for stability
+        if (k_size > 10) {
+             for (size_t i = P.size() - 1; i > 0; --i) {
+                size_t j = (size_t((i * 12345 + 6789)) % (i + 1)); 
+                std::swap(P[i], P[j]);
+            }
         }
 
         Vec center(dim);
