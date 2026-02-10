@@ -540,8 +540,8 @@ private:
         #endif
 
         std::string engine_name = "default";
-        if (dim == 2) engine_name = "PDEL"; // Parallel Regular Triangulation (Lifted 3D)
-        else if (dim == 3) engine_name = "PDEL"; // Parallel Regular Triangulation (Fastest)
+        if (dim == 2) engine_name = "PDEL"; // Parallel Regular Triangulation (Lifted 3D) - Keep, fits in RAM
+        else if (dim == 3) engine_name = "BPOW"; // Revert to Sequential BPOW for 3D Weighted (Memory constrained)
         
         GEO::Delaunay_var delaunay = GEO::Delaunay::create(lifted_dim, engine_name);
         if (!delaunay) {
