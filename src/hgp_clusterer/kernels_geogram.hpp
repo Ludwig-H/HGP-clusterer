@@ -569,11 +569,17 @@ private:
                  _parallel_extract_all_edges(delaunay, n_points, n_cells, c_size, edges);
             }
             else if (c_size == dim + 2) {
-                if (dim == 2) _extract_lower_hull_2d(delaunay, n_points, n_cells, edges); // Parallel inside
-                else if (dim == 3) _extract_lower_hull_3d(delaunay, n_points, n_cells, edges); // Parallel inside
-                else _extract_lower_hull_nd(delaunay, n_points, n_cells, dim, lifted_dim, edges); // Parallel inside
+                if (dim == 2) _extract_lower_hull_2d(delaunay, n_points, n_cells, edges);
+                else if (dim == 3) _extract_lower_hull_3d(delaunay, n_points, n_cells, edges);
+                else _extract_lower_hull_nd(delaunay, n_points, n_cells, dim, lifted_dim, edges);
             }
         }
+        
+        // Release memory immediately
+        delaunay.reset();
+        _lifted_buffer.clear();
+        _lifted_buffer.shrink_to_fit();
+        
         return edges;
     }
 
