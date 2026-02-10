@@ -467,7 +467,11 @@ private:
         GEO::Delaunay_var delaunay = GEO::Delaunay::create(dim, engine_name);
         if (!delaunay) return edges;
 
+        // Memory Optimization
+        delaunay->set_stores_neighbors(false);
+        delaunay->set_stores_cicl(false);
         delaunay->set_reorder(false);
+        
         delaunay->set_vertices(n_points, flat_points);
 
         GEO::index_t n_cells = delaunay->nb_cells();
@@ -549,7 +553,11 @@ private:
             return edges;
         }
 
+        // Memory Optimization: Disable auxiliary structures
+        delaunay->set_stores_neighbors(false);
+        delaunay->set_stores_cicl(false);
         delaunay->set_reorder(false);
+        
         delaunay->set_vertices(n_points, lifted_ptr);
         
         GEO::index_t n_cells = delaunay->nb_cells();
