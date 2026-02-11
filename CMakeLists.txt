@@ -126,7 +126,7 @@ if (TARGET geogram::geogram OR TARGET geogram)
     message(STATUS "Geogram found! Enabled HGP_WITH_GEOGRAM")
     target_compile_definitions(geometry_binding PRIVATE HGP_WITH_GEOGRAM)
     # Enable GARGANTUA for 64-bit indices support in Geogram (Required if Geogram was built with it)
-    target_compile_definitions(geometry_binding PRIVATE GARGANTUA)
+    # target_compile_definitions(geometry_binding PRIVATE GARGANTUA)
     
     if(TARGET geogram::geogram)
         target_link_libraries(geometry_binding PRIVATE geogram::geogram)
