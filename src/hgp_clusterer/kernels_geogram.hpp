@@ -462,7 +462,7 @@ private:
         
         std::string engine_name = "default";
         if (dim == 2) engine_name = "BDEL2d";
-        else if (dim == 3) engine_name = "PDEL"; // Optimized Parallel Engine
+        else if (dim == 3) engine_name = "default"; // "PDEL" disabled for stability
 
         GEO::Delaunay_var delaunay = GEO::Delaunay::create(dim, engine_name);
         if (!delaunay) return edges;
@@ -545,7 +545,7 @@ private:
 
         std::string engine_name = "default";
         if (dim == 2) engine_name = "PDEL"; // Parallel Regular Triangulation (Lifted 3D)
-        else if (dim == 3) engine_name = "PDEL"; // Parallel Regular Triangulation (Fastest, High RAM usage)
+        else if (dim == 3) engine_name = "default"; // Parallel Regular Triangulation (Fastest, High RAM usage)
         
         GEO::Delaunay_var delaunay = GEO::Delaunay::create(lifted_dim, engine_name);
         if (!delaunay) {
