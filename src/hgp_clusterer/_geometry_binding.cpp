@@ -110,7 +110,7 @@ py::tuple compute_delaunay(
         if(const char* env = std::getenv("CGAL_NTHREADS")) {
             geo_threads = std::atoi(env);
         }
-        GEO::Process::set_maximum_concurrent_threads(geo_threads);
+        GEO::Process::set_max_threads(geo_threads);
         if (verbose) std::cout << "[Geogram] Max threads set to: " << geo_threads << std::endl;
         
         #else
