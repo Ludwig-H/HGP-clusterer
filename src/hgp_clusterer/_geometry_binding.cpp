@@ -16,6 +16,7 @@
 // We assume kernels.hpp is in the include path
 #include "kernels.hpp"
 #include "kernels_geogram.hpp"
+#include <geogram/basic/process.h>
 
 // TBB for parallelism
 #ifdef CGAL_LINKED_WITH_TBB
@@ -103,6 +104,15 @@ py::tuple compute_delaunay(
         #ifdef HGP_WITH_GEOGRAM
         kernel = std::make_unique<GeogramDelaunayImpl>();
         if (verbose) std::cout << "[Backend] Using Geogram" << std::endl;
+        
+        // Limit Geogram threads to avoid OOM/Crash on high-core machines (like Colab Pro)
+        int geo_threads = 8; // Default safe cap
+        if(const char* env = std::getenv("CGAL_NTHREADS")) {
+            geo_threads = std::atoi(env);
+        }
+        GEO::Process::set_maximum_concurrent_threads(geo_threads);
+        if (verbose) std::cout << "[Geogram] Max threads set to: " << geo_threads << std::endl;
+        
         #else
         throw std::runtime_error("Geogram backend not compiled (HGP_WITH_GEOGRAM not defined).");
         #endif

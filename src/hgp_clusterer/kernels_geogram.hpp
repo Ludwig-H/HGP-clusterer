@@ -462,7 +462,7 @@ private:
         
         std::string engine_name = "default";
         if (dim == 2) engine_name = "BDEL2d";
-        else if (dim == 3) engine_name = "default"; // "PDEL" disabled for stability
+        else if (dim == 3) engine_name = "PDEL"; // Re-enabled PDEL for speed (User Request)
 
         GEO::Delaunay_var delaunay = GEO::Delaunay::create(dim, engine_name);
         if (!delaunay) return edges;
