@@ -89,11 +89,22 @@ py::tuple compute_delaunay(
     
     PointCloud cloud(ptr, N, dim); // Recalculate sq_norms
 
-    // Setup TBB
-    #ifdef CGAL_LINKED_WITH_TBB
+    // Setup Parallelism (TBB & Geogram)
     int nthreads = std::thread::hardware_concurrency();
-    if(const char* env = std::getenv("CGAL_NTHREADS")) nthreads = std::atoi(env);
-    // Limit global parallelism
+    
+    // Check Environment Variables
+    if(const char* env = std::getenv("GEOGRAM_NUM_THREADS")) {
+        nthreads = std::atoi(env);
+    } else if(const char* env = std::getenv("CGAL_NTHREADS")) {
+        nthreads = std::atoi(env);
+    }
+    
+    // Sanity check
+    if (nthreads < 1) nthreads = 1;
+
+    #ifdef CGAL_LINKED_WITH_TBB
+    // Limit TBB global parallelism to match Geogram's allocation
+    // This prevents "thread storms" where TBB and Geogram fight for resources
     static tbb::global_control global_limit(tbb::global_control::max_allowed_parallelism, nthreads);
     #endif
 
@@ -105,13 +116,9 @@ py::tuple compute_delaunay(
         kernel = std::make_unique<GeogramDelaunayImpl>();
         if (verbose) std::cout << "[Backend] Using Geogram" << std::endl;
         
-        // Limit Geogram threads to avoid OOM/Crash on high-core machines (like Colab Pro)
-        int geo_threads = 8; // Default safe cap
-        if(const char* env = std::getenv("CGAL_NTHREADS")) {
-            geo_threads = std::atoi(env);
-        }
-        GEO::Process::set_max_threads(geo_threads);
-        if (verbose) std::cout << "[Geogram] Max threads set to: " << geo_threads << std::endl;
+        // Configure Geogram Threads
+        GEO::Process::set_max_threads(nthreads);
+        if (verbose) std::cout << "[Geogram] Max threads set to: " << nthreads << std::endl;
         
         #else
         throw std::runtime_error("Geogram backend not compiled (HGP_WITH_GEOGRAM not defined).");

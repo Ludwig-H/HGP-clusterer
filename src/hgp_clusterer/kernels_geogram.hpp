@@ -461,8 +461,15 @@ private:
         std::vector<std::pair<int, int>> edges;
         
         std::string engine_name = "default";
+        const char* env_engine = std::getenv("GEOGRAM_ENGINE_3D");
+
         if (dim == 2) engine_name = "BDEL2d";
-        else if (dim == 3) engine_name = "PDEL"; // Re-enabled PDEL for speed (User Request)
+        else if (dim == 3) {
+            if (env_engine) engine_name = std::string(env_engine);
+            else engine_name = "PDEL"; 
+        }
+        
+        std::cout << "[Geogram] Creating Delaunay engine: " << engine_name << " for dim " << dim << std::endl;
 
         GEO::Delaunay_var delaunay = GEO::Delaunay::create(dim, engine_name);
         if (!delaunay) return edges;
@@ -470,7 +477,12 @@ private:
         // Memory Optimization
         delaunay->set_stores_neighbors(false);
         delaunay->set_stores_cicl(false);
-        delaunay->set_reorder(false);
+        
+        // CRITICAL FIX: PDEL (ParallelDelaunay3d) requires reordering to be enabled.
+        // If set to false, it expects manual BRIO levels via set_BRIO_levels().
+        // Since we don't provide them, disabling reordering causes a SegFault 
+        // when PDEL tries to access the uninitialized levels vector.
+        delaunay->set_reorder(true);
         
         delaunay->set_vertices(n_points, flat_points);
 
@@ -543,9 +555,14 @@ private:
         }
         #endif
 
+        const char* env_engine = std::getenv("GEOGRAM_ENGINE_3D");
         std::string engine_name = "default";
-        if (dim == 2) engine_name = "PDEL"; // Re-enabled PDEL for Lifted 3D
-        else if (dim == 3) engine_name = "default"; // Parallel Regular Triangulation (Fastest, High RAM usage)
+        
+        if (dim == 2) engine_name = "BDEL"; // PDEL is unstable
+        else if (dim == 3) {
+            if (env_engine) engine_name = std::string(env_engine);
+            else engine_name = "PDEL"; 
+        }
         
         GEO::Delaunay_var delaunay = GEO::Delaunay::create(lifted_dim, engine_name);
         if (!delaunay) {
@@ -556,7 +573,12 @@ private:
         // Memory Optimization: Disable auxiliary structures
         delaunay->set_stores_neighbors(false);
         delaunay->set_stores_cicl(false);
-        delaunay->set_reorder(false);
+        
+        // CRITICAL FIX: PDEL (ParallelDelaunay3d) requires reordering to be enabled.
+        // If set to false, it expects manual BRIO levels via set_BRIO_levels().
+        // Since we don't provide them, disabling reordering causes a SegFault 
+        // when PDEL tries to access the uninitialized levels vector.
+        delaunay->set_reorder(true);
         
         delaunay->set_vertices(n_points, lifted_ptr);
         
