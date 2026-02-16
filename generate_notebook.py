@@ -415,8 +415,8 @@ try:
 except ImportError:
     print("⚠️ Module HGPClusterer introuvable. Tentative de correction du path...")
     import sys
-    if "/content/HGP-clusterer" not in sys.path:
-        sys.path.append("/content/HGP-clusterer")
+    if "/content/HGP-clusterer/src" not in sys.path:
+        sys.path.append("/content/HGP-clusterer/src")
     try:
         from hgp_clusterer import HGPClusterer
         print("✅ HGPClusterer importé avec succès après correction du path.")
