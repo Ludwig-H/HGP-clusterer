@@ -87,9 +87,13 @@ if(NOT CGAL_FOUND)
         /opt/local/include
     )
     
-    find_library(GMP_LIB gmp)
-    find_library(MPFR_LIB mpfr)
+    find_library(GMP_LIB gmp PATHS /usr/lib/x86_64-linux-gnu /usr/lib /usr/local/lib)
+    find_library(MPFR_LIB mpfr PATHS /usr/lib/x86_64-linux-gnu /usr/lib /usr/local/lib)
     
+    message(STATUS "  - CGAL_INCLUDE_DIR: ${CGAL_INCLUDE_DIR}")
+    message(STATUS "  - GMP_LIB: ${GMP_LIB}")
+    message(STATUS "  - MPFR_LIB: ${MPFR_LIB}")
+
     if(CGAL_INCLUDE_DIR AND GMP_LIB AND MPFR_LIB)
         message(STATUS "CGAL found manually at ${CGAL_INCLUDE_DIR}")
         set(CGAL_FOUND TRUE)
@@ -102,6 +106,8 @@ if(NOT CGAL_FOUND)
                 INTERFACE_LINK_LIBRARIES "${GMP_LIB};${MPFR_LIB}"
             )
         endif()
+    else()
+        message(STATUS "Manual fallback failed: Missing one of include dir, GMP, or MPFR.")
     endif()
 endif()
 
