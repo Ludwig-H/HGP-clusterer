@@ -155,46 +155,78 @@ add_cell("""# @title 2.1 Configuration Séquence et Téléchargement
 SEQUENCE_TO_TEST = 8 # @param {type:"integer"}
 DOWNLOAD_DATA = True # @param {type:"boolean"}
 
-# Mapping des IDs Google Drive des séquences individuelles.
-# Remplissez ce dictionnaire si vous connaissez les IDs des sous-dossiers pour éviter de tout télécharger.
-SEQUENCE_DRIVE_IDS = {
-    8: "1UqFKvekjyic6L_8KD1kcv8MuGmQMIk0A",
+# Choix du mode de téléchargement :
+# - 'Folder' : Télécharge fichier par fichier (Très lent pour 10k fichiers, mais utile si on a que le lien du dossier)
+# - 'Zip' : Télécharge une archive unique et décompresse (Beaucoup plus rapide, recommandé)
+DOWNLOAD_MODE = "Folder" # @param ["Folder", "Zip"]
+
+# IDs Google Drive
+# Remplissez l'ID correspondant au mode choisi.
+DRIVE_IDS = {
+    "Folder": "1UqFKvekjyic6L_8KD1kcv8MuGmQMIk0A", # ID du dossier de la séquence 08
+    "Zip": "" # METTRE L'ID DU FICHIER ZIP ICI SI DISPONIBLE
 }
 
-# Dossier Racine (contient toutes les séquences)
+# Dossier Racine (Fallback si ID spécifique non trouvé)
 ROOT_FOLDER_ID = "1ORVzSo-TWbNHeAC0-k3mxX9AiJHI_tVu"
 
 if DOWNLOAD_DATA:
     import os
-
+    import shutil
+    
     # Destination racine
     base_dest = "/content/semantic_kitti_data"
+    seq_str = f"{SEQUENCE_TO_TEST:02d}"
+    target_dir = os.path.join(base_dest, seq_str)
+    
+    if not os.path.exists(target_dir):
+        print(f"Démarrage du téléchargement (Mode : {DOWNLOAD_MODE})...")
+        
+        if DOWNLOAD_MODE == "Zip":
+            zip_id = DRIVE_IDS["Zip"]
+            if not zip_id:
+                raise ValueError("Mode Zip sélectionné mais aucun ID fourni dans DRIVE_IDS['Zip'].")
+            
+            print(f"Téléchargement de l'archive Zip (ID: {zip_id})...")
+            zip_path = os.path.join(base_dest, "sequence.zip")
+            os.makedirs(base_dest, exist_ok=True)
+            
+            # Téléchargement
+            !gdown {zip_id} -O {zip_path} --quiet
+            
+            print("Décompression...")
+            # On décompresse. Attention à la structure interne du zip.
+            # On suppose ici que le zip contient directement les données (velodyne/, labels/, etc.)
+            # ou un dossier parent.
+            !unzip -q {zip_path} -d {target_dir}
+            !rm {zip_path}
+            
+            # Vérification de la structure (si le zip contenait un sous-dossier, on remonte)
+            if not os.path.exists(os.path.join(target_dir, "velodyne")):
+                # Tentative de correction automatique de la structure
+                sub_dirs = [d for d in os.listdir(target_dir) if os.path.isdir(os.path.join(target_dir, d))]
+                if len(sub_dirs) == 1:
+                    inner_dir = os.path.join(target_dir, sub_dirs[0])
+                    print(f"Structure imbriquée détectée, déplacement de {inner_dir} vers {target_dir}...")
+                    for item in os.listdir(inner_dir):
+                        shutil.move(os.path.join(inner_dir, item), target_dir)
+                    os.rmdir(inner_dir)
 
-    if not os.path.exists(base_dest):
-        print("Démarrage du téléchargement...")
-
-        # Vérifie si on a un ID spécifique pour la séquence demandée
-        seq_id = SEQUENCE_DRIVE_IDS.get(SEQUENCE_TO_TEST)
-
-        if seq_id:
-            print(f"Téléchargement de la séquence {SEQUENCE_TO_TEST} uniquement (ID: {seq_id})...")
-            # On crée le dossier de la séquence pour gdown
-            # Structure cible : /content/semantic_kitti_data/XX
-            seq_str = f"{SEQUENCE_TO_TEST:02d}"
-            target_dir = os.path.join(base_dest, seq_str)
-
-            # Note: gdown --folder crée le dossier s'il n'existe pas, mais on veut s'assurer de la structure
-            !gdown --folder {seq_id} -O {target_dir} --quiet --remaining-ok
-
-        else:
-            print(f"ID spécifique non trouvé pour la séquence {SEQUENCE_TO_TEST}.")
-            print(f"Téléchargement du dataset complet depuis le dossier racine (ID: {ROOT_FOLDER_ID})...")
-            print("Cela peut prendre du temps.")
-            !gdown --folder {ROOT_FOLDER_ID} -O {base_dest} --quiet --remaining-ok
-
-        print("Téléchargement terminé (ou limité par Google).")
+        elif DOWNLOAD_MODE == "Folder":
+            folder_id = DRIVE_IDS["Folder"]
+            if not folder_id:
+                # Fallback sur le root folder (pas idéal mais fonctionnel)
+                print(f"ID spécifique manquant, tentative via le dossier racine {ROOT_FOLDER_ID}")
+                folder_id = ROOT_FOLDER_ID
+                !gdown --folder {folder_id} -O {base_dest} --quiet --remaining-ok
+            else:
+                print(f"Téléchargement du dossier (ID: {folder_id})...")
+                # On crée le dossier de la séquence pour gdown
+                !gdown --folder {folder_id} -O {target_dir} --quiet --remaining-ok
+        
+        print("Téléchargement terminé.")
     else:
-        print(f"Dossier {base_dest} existe déjà. Skip download.")
+        print(f"Dossier {target_dir} existe déjà. Skip download.")
 else:
     print("Téléchargement désactivé.")
 
