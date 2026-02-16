@@ -76,6 +76,35 @@ if(POLICY CMP0167)
 endif()
 
 find_package(CGAL)
+
+if(NOT CGAL_FOUND)
+    message(STATUS "CGAL Config not found. Attempting manual search for headers and libraries...")
+    find_path(CGAL_INCLUDE_DIR NAMES CGAL/basic.h
+        PATHS 
+        $ENV{CGAL_DIR}/include
+        /usr/include
+        /usr/local/include
+        /opt/local/include
+    )
+    
+    find_library(GMP_LIB gmp)
+    find_library(MPFR_LIB mpfr)
+    
+    if(CGAL_INCLUDE_DIR AND GMP_LIB AND MPFR_LIB)
+        message(STATUS "CGAL found manually at ${CGAL_INCLUDE_DIR}")
+        set(CGAL_FOUND TRUE)
+        
+        # Create imported target manually
+        if(NOT TARGET CGAL::CGAL)
+            add_library(CGAL::CGAL INTERFACE IMPORTED)
+            set_target_properties(CGAL::CGAL PROPERTIES
+                INTERFACE_INCLUDE_DIRECTORIES "${CGAL_INCLUDE_DIR}"
+                INTERFACE_LINK_LIBRARIES "${GMP_LIB};${MPFR_LIB}"
+            )
+        endif()
+    endif()
+endif()
+
 if(CGAL_FOUND)
     message(STATUS "CGAL found! Enabled HGP_WITH_CGAL")
     target_compile_definitions(geometry_binding PRIVATE HGP_WITH_CGAL)
