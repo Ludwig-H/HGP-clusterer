@@ -17,8 +17,7 @@ notebook = {
     "language_info": {
       "name": "python",
       "version": "3.10"
-    },
-    "accelerator": "GPU"
+    }
   },
   "cells": []
 }
