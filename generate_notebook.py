@@ -122,6 +122,13 @@ if BACKEND == 'geogram':
 
 elif BACKEND == 'cgal':
     print("Configuration CGAL...")
+    
+    # -- FIX: Add CGAL path to environment for setup_cgal.py --
+    cgal_prefix = "/usr/lib/x86_64-linux-gnu/cmake/CGAL"
+    current_cpp = os.environ.get("CMAKE_PREFIX_PATH", "")
+    os.environ["CMAKE_PREFIX_PATH"] = f"{current_cpp}:{cgal_prefix}" if current_cpp else cgal_prefix
+    # ---------------------------------------------------------
+
     # On tente de construire l'outil CGAL, mais on continue même en cas d'erreur
     # car le setup.py principal pourrait réussir autrement.
     try:
@@ -136,9 +143,9 @@ install_cmd = "pip install --no-build-isolation -v --no-deps ."
 if BACKEND == 'geogram':
     install_cmd = f"GEOGRAM_INSTALL_PREFIX=/usr/local {install_cmd}"
 elif BACKEND == 'cgal':
-    # On passe explicitement les variables pour que CMake les voie dans le sous-processus pip
-    # CMAKE_PREFIX_PATH aide à trouver les libs installées dans le prefix local
-    install_cmd = f"CGALDELAUNAY_ROOT={WORKDIR}/HGP-clusterer/CGALDelaunay CMAKE_PREFIX_PATH={WORKDIR}/HGP-clusterer {install_cmd}"
+    # Ajout du chemin système pour CGAL (Debian/Ubuntu/Colab)
+    # Note: On le passe aussi explicitement ici pour être sûr
+    install_cmd = f"CGALDELAUNAY_ROOT={WORKDIR}/HGP-clusterer/CGALDelaunay CMAKE_PREFIX_PATH={WORKDIR}/HGP-clusterer:{cgal_prefix} {install_cmd}"
 
 print(f"Exécution : {install_cmd}")
 !{install_cmd}
