@@ -71,7 +71,11 @@ if(TARGET TBB::tbb)
 endif()
 
 # 3. CGAL Support (Optional)
-find_package(CGAL QUIET)
+if(POLICY CMP0167)
+    cmake_policy(SET CMP0167 OLD)
+endif()
+
+find_package(CGAL)
 if(CGAL_FOUND)
     message(STATUS "CGAL found! Enabled HGP_WITH_CGAL")
     target_compile_definitions(geometry_binding PRIVATE HGP_WITH_CGAL)

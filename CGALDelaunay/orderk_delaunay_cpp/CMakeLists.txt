@@ -8,6 +8,10 @@ if(NOT CMAKE_BUILD_TYPE)
   set(CMAKE_BUILD_TYPE Release)
 endif()
 
+if(POLICY CMP0167)
+    cmake_policy(SET CMP0167 OLD)
+endif()
+
 find_package(CGAL REQUIRED)
 find_package(Eigen3 REQUIRED)
 find_package(TBB QUIET)
