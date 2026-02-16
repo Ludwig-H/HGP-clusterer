@@ -76,7 +76,7 @@ if [ "$BACKEND" = "cgal" ]; then
 fi""", title="oXWQ4Fbd1O2M")
 
 add_cell("""# @title 1.3 Installation des dépendances Python
-!pip install -q --upgrade pip setuptools wheel Cython cmake jedi gdown
+!pip install -q --upgrade pip setuptools wheel Cython cmake jedi gdown pybind11
 !pip install -q numpy scipy scikit-learn plotly tqdm joblib open3d plyfile hdbscan pandas matplotlib pyyaml""", title="wchS4VWb1O2N")
 
 add_cell("""%%bash
@@ -120,17 +120,8 @@ if BACKEND == 'geogram':
 
 elif BACKEND == 'cgal':
     print("Configuration CGAL...")
+    # Le script setup_cgal.py prépare l'environnement si nécessaire
     !python3 {WORKDIR}/HGP-clusterer/scripts/setup_cgal.py
-    cgal_dir = f"{WORKDIR}/HGP-clusterer/CGALDelaunay"
-    projects = [
-        'EdgesCGALDelaunay2D', 'EdgesCGALDelaunay3D', 'EdgesCGALDelaunayND',
-        'EdgesCGALWeightedDelaunay2D', 'EdgesCGALWeightedDelaunay3D', 'EdgesCGALWeightedDelaunayND'
-    ]
-    for proj in projects:
-        p_path = f"{cgal_dir}/{proj}"
-        !cmake -S {p_path} -B {p_path}/build -DCMAKE_BUILD_TYPE=Release
-        !cmake --build {p_path}/build --config Release
-        !cmake --install {p_path}/build --prefix {WORKDIR}/HGP-clusterer
 
 os.chdir(f"{WORKDIR}/HGP-clusterer")
 !rm -rf build dist *.egg-info
