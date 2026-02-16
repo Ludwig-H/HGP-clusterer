@@ -50,6 +50,12 @@ class CMakeBuild(build_ext):
             # CMake uses semicolon as list separator
             prefix_path = os.environ['CMAKE_PREFIX_PATH'].replace(os.pathsep, ";")
             cmake_args.append(f"-DCMAKE_PREFIX_PATH={prefix_path}")
+            
+            # Heuristic: If specific CGAL path is in prefix, set CGAL_DIR explicitly
+            for path in os.environ['CMAKE_PREFIX_PATH'].split(os.pathsep):
+                if path.endswith("CGAL") and "cmake" in path:
+                    cmake_args.append(f"-DCGAL_DIR={path}")
+                    break
         
         # Multi-config generators (like Visual Studio) need simplified config
         build_args = ["--config", cfg]

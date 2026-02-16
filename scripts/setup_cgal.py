@@ -13,7 +13,16 @@ def main():
     build_dir.mkdir(parents=True, exist_ok=True)
     
     print(f"Building C++ tool in {build_dir}...")
-    subprocess.run(["cmake", "..", "-DCMAKE_BUILD_TYPE=Release"], cwd=build_dir, check=True)
+    cmd = ["cmake", "..", "-DCMAKE_BUILD_TYPE=Release"]
+    
+    if "CMAKE_PREFIX_PATH" in os.environ:
+        cmd.append(f"-DCMAKE_PREFIX_PATH={os.environ['CMAKE_PREFIX_PATH'].replace(os.pathsep, ';')}")
+        for path in os.environ['CMAKE_PREFIX_PATH'].split(os.pathsep):
+            if path.endswith("CGAL") and "cmake" in path:
+                cmd.append(f"-DCGAL_DIR={path}")
+                break
+
+    subprocess.run(cmd, cwd=build_dir, check=True)
     subprocess.run(["make", "-j"], cwd=build_dir, check=True)
     print("Build complete.")
 
