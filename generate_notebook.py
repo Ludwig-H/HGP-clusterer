@@ -134,7 +134,17 @@ elif BACKEND == 'cgal':
 
 os.chdir(f"{WORKDIR}/HGP-clusterer")
 !rm -rf build dist *.egg-info
-!pip install -v --no-deps .
+
+install_cmd = "pip install --no-build-isolation -v --no-deps ."
+if BACKEND == 'geogram':
+    install_cmd = f"GEOGRAM_INSTALL_PREFIX=/usr/local {install_cmd}"
+elif BACKEND == 'cgal':
+    # On passe explicitement les variables pour que CMake les voie dans le sous-processus pip
+    # CMAKE_PREFIX_PATH aide à trouver les libs installées dans le prefix local
+    install_cmd = f"CGALDELAUNAY_ROOT={WORKDIR}/HGP-clusterer/CGALDelaunay CMAKE_PREFIX_PATH={WORKDIR}/HGP-clusterer {install_cmd}"
+
+print(f"Exécution : {install_cmd}")
+!{install_cmd}
 
 os.environ["CGALDELAUNAY_ROOT"] = f"{WORKDIR}/HGP-clusterer/CGALDelaunay"
 
