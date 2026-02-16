@@ -72,7 +72,8 @@ apt-get update -qq
 apt-get install -y -qq build-essential cmake git libeigen3-dev libomp-dev
 
 if [ "$BACKEND" = "cgal" ]; then
-    apt-get install -y -qq libcgal-dev libtbb-dev libtbbmalloc2 libgmp-dev libmpfr-dev
+    # libboost-all-dev est souvent nécessaire pour que CMake détecte correctement CGAL
+    apt-get install -y -qq libcgal-dev libtbb-dev libtbbmalloc2 libgmp-dev libmpfr-dev libboost-all-dev
 fi""", title="oXWQ4Fbd1O2M")
 
 add_cell("""# @title 1.3 Installation des dépendances Python
@@ -103,6 +104,7 @@ fi""", title="X4Sn5xYc1O2O")
 add_cell("""# @title 1.5 Compilation de HGP
 import os
 import sys
+import subprocess
 
 WORKDIR = "/content"
 os.chdir(WORKDIR)
@@ -120,8 +122,12 @@ if BACKEND == 'geogram':
 
 elif BACKEND == 'cgal':
     print("Configuration CGAL...")
-    # Le script setup_cgal.py prépare l'environnement si nécessaire
-    !python3 {WORKDIR}/HGP-clusterer/scripts/setup_cgal.py
+    # On tente de construire l'outil CGAL, mais on continue même en cas d'erreur
+    # car le setup.py principal pourrait réussir autrement.
+    try:
+        subprocess.run(["python3", f"{WORKDIR}/HGP-clusterer/scripts/setup_cgal.py"], check=True)
+    except subprocess.CalledProcessError:
+        print("⚠️ Attention: Echec du script setup_cgal.py. Tentative de continuation avec le build principal...")
 
 os.chdir(f"{WORKDIR}/HGP-clusterer")
 !rm -rf build dist *.egg-info
