@@ -36,8 +36,12 @@ def add_cell(source, cell_type="code", title=None):
         "metadata": {},
         "source": source
     }
+    if cell_type == "code":
+        cell["execution_count"] = None
+        cell["outputs"] = []
+        
     if title:
-        cell["metadata"]["id"] = title.lower().replace(" ", "_")
+        cell["metadata"]["id"] = title
     notebook["cells"].append(cell)
 
 # -----------------------------------------------------------------------------
@@ -53,7 +57,7 @@ Ce notebook implémente un pipeline de segmentation panoptique 4D en utilisant *
 3.  **Preprocessing** : Construction d'un nuage de points 4D (x, y, z, t) ou BEV-4D (x, y, t).
 4.  **Clustering** : HGP-clusterer pour l'association spatio-temporelle avec choix de la fonction de splitting (Oracle ou Géométrique).
 5.  **Evaluation** : Calcul de la métrique LSTQ (LiDAR Segmentation and Tracking Quality).
-6.  **Visualisation** : Rendu 3D interactif.""", cell_type="markdown")
+6.  **Visualisation** : Rendu 3D interactif.""", cell_type="markdown", title="r6k5rnJ01O2I")
 
 # -----------------------------------------------------------------------------
 # 2. Setup
@@ -61,7 +65,7 @@ Ce notebook implémente un pipeline de segmentation panoptique 4D en utilisant *
 add_cell("""# @title 1.1 Choix du Backend Géométrique
 # 'geogram' est recommandé pour la vitesse (headless). 'cgal' est plus lent mais exact.
 BACKEND = 'cgal'  # @param ['geogram', 'cgal']
-print(f"Backend sélectionné : {BACKEND}")""")
+print(f"Backend sélectionné : {BACKEND}")""", title="kN3IXi0p1O2L")
 
 add_cell("""%%bash
 # @title 1.2 Installation des dépendances système
@@ -70,11 +74,11 @@ apt-get install -y -qq build-essential cmake git libeigen3-dev libomp-dev
 
 if [ "$BACKEND" = "cgal" ]; then
     apt-get install -y -qq libcgal-dev libtbb-dev libtbbmalloc2 libgmp-dev libmpfr-dev
-fi""")
+fi""", title="oXWQ4Fbd1O2M")
 
 add_cell("""# @title 1.3 Installation des dépendances Python
 !pip install -q --upgrade pip setuptools wheel Cython cmake jedi gdown
-!pip install -q numpy scipy scikit-learn plotly tqdm joblib open3d plyfile hdbscan pandas matplotlib pyyaml""")
+!pip install -q numpy scipy scikit-learn plotly tqdm joblib open3d plyfile hdbscan pandas matplotlib pyyaml""", title="wchS4VWb1O2N")
 
 add_cell("""%%bash
 # @title 1.4 Installation de HGP-clusterer et SemanticKITTI-API
@@ -95,7 +99,7 @@ if [ -d semantic-kitti-api ]; then
     git -C semantic-kitti-api pull --ff-only
 else
     git clone https://github.com/PRBonn/semantic-kitti-api.git
-fi""")
+fi""", title="X4Sn5xYc1O2O")
 
 add_cell("""# @title 1.5 Compilation de HGP
 import os
@@ -139,7 +143,7 @@ try:
     from hgp_clusterer import HGPClusterer
     print("✅ HGPClusterer installé.")
 except ImportError as e:
-    print(f"❌ Erreur import HGP: {e}")""")
+    print(f"❌ Erreur import HGP: {e}")""", title="Wt1wHunY1O2P")
 
 # -----------------------------------------------------------------------------
 # 3. Data Loading
@@ -155,7 +159,7 @@ DOWNLOAD_DATA = True # @param {type:"boolean"}
 # Mapping des IDs Google Drive des séquences individuelles.
 # Remplissez ce dictionnaire si vous connaissez les IDs des sous-dossiers pour éviter de tout télécharger.
 SEQUENCE_DRIVE_IDS = {
-    # 8: "ID_SPECIFIQUE_SEQUENCE_08",
+    # 8: "1UqFKvekjyic6L_8KD1kcv8MuGmQMIk0A",
 }
 
 # Dossier Racine (contient toutes les séquences)
@@ -163,39 +167,39 @@ ROOT_FOLDER_ID = "1ORVzSo-TWbNHeAC0-k3mxX9AiJHI_tVu"
 
 if DOWNLOAD_DATA:
     import os
-    
+
     # Destination racine
     base_dest = "/content/semantic_kitti_data"
-    
+
     if not os.path.exists(base_dest):
         print("Démarrage du téléchargement...")
-        
+
         # Vérifie si on a un ID spécifique pour la séquence demandée
         seq_id = SEQUENCE_DRIVE_IDS.get(SEQUENCE_TO_TEST)
-        
+
         if seq_id:
             print(f"Téléchargement de la séquence {SEQUENCE_TO_TEST} uniquement (ID: {seq_id})...")
             # On crée le dossier de la séquence pour gdown
             # Structure cible : /content/semantic_kitti_data/XX
             seq_str = f"{SEQUENCE_TO_TEST:02d}"
             target_dir = os.path.join(base_dest, seq_str)
-            
+
             # Note: gdown --folder crée le dossier s'il n'existe pas, mais on veut s'assurer de la structure
             !gdown --folder {seq_id} -O {target_dir} --quiet --remaining-ok
-            
+
         else:
             print(f"ID spécifique non trouvé pour la séquence {SEQUENCE_TO_TEST}.")
             print(f"Téléchargement du dataset complet depuis le dossier racine (ID: {ROOT_FOLDER_ID})...")
             print("Cela peut prendre du temps.")
             !gdown --folder {ROOT_FOLDER_ID} -O {base_dest} --quiet --remaining-ok
-        
+
         print("Téléchargement terminé (ou limité par Google).")
     else:
         print(f"Dossier {base_dest} existe déjà. Skip download.")
 else:
     print("Téléchargement désactivé.")
 
-print(f"Séquence cible pour le test : {SEQUENCE_TO_TEST}")""")
+print(f"Séquence cible pour le test : {SEQUENCE_TO_TEST}")""", title="A9Y4dn0P1O2P")
 
 add_cell("""# @title 2.2 Loader SemanticKITTI
 import os
@@ -205,17 +209,17 @@ import glob
 class SemanticKITTILoader:
     def __init__(self, base_path, sequence_num):
         self.seq_str = f"{sequence_num:02d}"
-        
-        # Recherche du dossier de la séquence. 
+
+        # Recherche du dossier de la séquence.
         # Structure attendue : base_path/08 ou base_path/sequences/08
-        
+
         # 1. Chercher direct
         possible_paths = glob.glob(f"{base_path}/{self.seq_str}")
-        
+
         # 2. Chercher dans un sous-dossier 'sequences' (structure officielle KITTI)
         if not possible_paths:
             possible_paths = glob.glob(f"{base_path}/**/sequences/{self.seq_str}", recursive=True)
-            
+
         # 3. Chercher récursivement n'importe où (au cas où gdown a créé une structure intermédiaire)
         if not possible_paths:
              possible_paths = glob.glob(f"{base_path}/**/{self.seq_str}", recursive=True)
@@ -225,33 +229,33 @@ class SemanticKITTILoader:
         for p in possible_paths:
             if os.path.exists(os.path.join(p, 'velodyne')):
                 valid_paths.append(p)
-        
+
         if not valid_paths:
             raise ValueError(f"Séquence {self.seq_str} introuvable dans {base_path}. Vérifiez que le dossier 'velodyne' est bien présent.")
-            
+
         self.seq_path = valid_paths[0]
         print(f"Séquence chargée : {self.seq_path}")
-        
+
         self.velo_path = os.path.join(self.seq_path, 'velodyne')
         self.label_path = os.path.join(self.seq_path, 'labels')
         self.poses_file = os.path.join(self.seq_path, 'poses.txt')
         self.calib_file = os.path.join(self.seq_path, 'calib.txt')
-        
+
         # Fallback pour poses.txt/calib.txt s'ils sont dans le dossier parent (structure dataset/sequences/08)
         if not os.path.exists(self.poses_file):
              # Essayer de remonter d'un niveau (dataset/sequences/) ou deux
              parent = os.path.dirname(self.seq_path) # dataset/sequences
              grandparent = os.path.dirname(parent) # dataset
-             
+
              # Cas dataset/poses.txt (peu probable mais...)
              # Cas dataset/sequences/08/poses.txt (standard)
-             pass 
+             pass
 
         self.scan_files = sorted(glob.glob(os.path.join(self.velo_path, '*.bin')))
         self.label_files = sorted(glob.glob(os.path.join(self.label_path, '*.label')))
         self.poses = self._load_poses()
         self.calib = self._load_calib()
-        
+
     def _load_poses(self):
         if not os.path.exists(self.poses_file):
             print(f"Info: poses.txt non trouvé ({self.poses_file}).")
@@ -265,7 +269,7 @@ class SemanticKITTILoader:
         return poses
 
     def _load_calib(self):
-        if not os.path.exists(self.calib_file): 
+        if not os.path.exists(self.calib_file):
             print(f"Info: calib.txt non trouvé ({self.calib_file}).")
             return np.eye(4)
         calib = {}
@@ -291,7 +295,7 @@ class SemanticKITTILoader:
         label = np.fromfile(self.label_files[idx], dtype=np.uint32)
         return label & 0xFFFF, label >> 16
 
-    def __len__(self): return len(self.scan_files)""")
+    def __len__(self): return len(self.scan_files)""", title="mJ8rAu0N1O2Q")
 
 # -----------------------------------------------------------------------------
 # 4. 4D Construction
@@ -314,28 +318,28 @@ Time_idx = None
 try:
     loader = SemanticKITTILoader("/content/semantic_kitti_data", SEQUENCE_TO_TEST)
     points_4d, gt_sem, gt_inst, times = [], [], [], []
-    
+
     print(f"Chargement frames {START_FRAME} -> {START_FRAME + NUM_FRAMES}...")
     for i in range(NUM_FRAMES):
         idx = START_FRAME + i
         if idx >= len(loader): break
-        
+
         pts = loader.get_scan(idx, apply_pose=True)
         s, inst = loader.get_labels(idx)
-        
+
         # 4D Point: x, y, z, t
         t_col = np.full((len(pts), 1), i * DT_SCALE)
         points_4d.append(np.hstack([pts, t_col]))
         gt_sem.append(s)
         gt_inst.append(inst)
         times.extend([i] * len(pts))
-    
+
     if points_4d:
         X_4d = np.vstack(points_4d)
         Y_sem = np.hstack(gt_sem)
         Y_inst = np.hstack(gt_inst)
         Time_idx = np.array(times)
-        
+
         # Bird's Eye View : on utilise uniquement x, y, t pour le clustering
         if APPLY_BEV:
             print("Mode Bird's-Eye-View (BEV) activé : Clustering sur (x, y, t).")
@@ -343,7 +347,7 @@ try:
         else:
             print("Mode 4D Complet activé : Clustering sur (x, y, z, t).")
             X_clustering = X_4d
-        
+
         print(f"Nuage 4D: {X_4d.shape} points.")
         print(f"Input Clustering: {X_clustering.shape}")
     else:
@@ -365,8 +369,7 @@ except Exception as e:
     Y_inst = y_syn + 1 # Instance ID > 0
     Time_idx = (t_syn / DT_SCALE).astype(int)
     X_clustering = X_4d if not APPLY_BEV else X_4d[:, [0, 1, 3]]
-    print(f"Données synthétiques générées: {X_clustering.shape}")
-""")
+    print(f"Données synthétiques générées: {X_clustering.shape}")""", title="-7bzecQb1O2Q")
 
 # -----------------------------------------------------------------------------
 # 5. Clustering
@@ -389,9 +392,9 @@ except ImportError:
     except ImportError as e:
         raise RuntimeError(f"❌ Impossible d'importer HGPClusterer même après correction. Erreur: {e}. Veuillez vérifier la compilation en section 1.5.")
 
-K = 5 # @param {type:"integer"}
+K = 3 # @param {type:"integer"}
 MIN_CLUSTER_SIZE = 50 # @param {type:"integer"}
-SPLIT_MODE = "Oracle" # @param ["None", "Oracle", "Geometric"]
+SPLIT_MODE = "None" # @param ["None", "Oracle", "Geometric"]
 
 # Vérification préalable des données
 if X_clustering is None:
@@ -404,41 +407,41 @@ def oracle_split(parent, children):
     # Utilise Y_inst global
     p_labels = Y_inst[parent]; p_labels = p_labels[p_labels > 0]
     if len(p_labels) == 0: return False
-    
+
     # Pureté majoritaire du parent
     parent_purity = np.max(np.unique(p_labels, return_counts=True)[1]) / len(p_labels)
-    
+
     child_purity_sum = 0; total = 0
     for c in children:
         c_labels = Y_inst[c]; c_labels = c_labels[c_labels > 0]
         if len(c_labels) > 0:
             child_purity_sum += np.max(np.unique(c_labels, return_counts=True)[1])
             total += len(c_labels)
-    
+
     child_purity = child_purity_sum / total if total > 0 else 0
-    
+
     # Critère : On split si on gagne en pureté
     return child_purity > parent_purity + 0.05
 
 def geometric_split(parent, children):
     "Split si le parent est géométriquement incohérent (variance trop élevée) comparé aux enfants."
     pts_parent = X_clustering[parent]
-    
+
     # Calcul variance spatiale (x, y uniquement pour robustesse)
     var_parent = np.var(pts_parent[:, :2], axis=0).sum()
-    
+
     weighted_var_children = 0
     total_len = 0
-    
+
     for c in children:
         pts_child = X_clustering[c]
         if len(pts_child) < 2: continue
         v = np.var(pts_child[:, :2], axis=0).sum()
         weighted_var_children += v * len(pts_child)
         total_len += len(pts_child)
-        
+
     avg_var_children = weighted_var_children / total_len if total_len > 0 else var_parent
-    
+
     # Critère : Si la variance du père est significativement plus grande que la moyenne des fils
     # Cela suggère que le père regroupe des clusters bien séparés spatialement
     if var_parent > 1.5 * avg_var_children and var_parent > 5.0: # Seuil arbitraire 5m^2
@@ -471,8 +474,7 @@ try:
 except Exception as e:
     print(f"Erreur durant le clustering: {e}")
     # Fallback labels pour que la suite ne plante pas
-    labels_pred = np.zeros(len(X_clustering), dtype=int)
-""")
+    labels_pred = np.zeros(len(X_clustering), dtype=int)""", title="tT_pybI-1O2R")
 
 # -----------------------------------------------------------------------------
 # 6. Evaluation (LSTQ)
@@ -490,26 +492,26 @@ def compute_lstq_simplified(pred_labels, gt_inst_labels, gt_sem_labels):
     # Ignorer le bruit
     mask = (gt_inst_labels > 0) & (pred_labels >= 0)
     if np.sum(mask) == 0: return 0.0, 0.0
-    
+
     # Intersection Matrix: rows=GT, cols=Pred
     # C'est une approximation, le vrai LSTQ utilise une association hongroise sur les tubes 4D
-    
+
     from sklearn.metrics import confusion_matrix
-    
+
     # Remap labels to 0..N for confusion matrix
     u_gt, inv_gt = np.unique(gt_inst_labels[mask], return_inverse=True)
     u_pred, inv_pred = np.unique(pred_labels[mask], return_inverse=True)
-    
+
     cm = confusion_matrix(inv_gt, inv_pred)
-    
+
     # T-IoU pour chaque paire (GT_i, Pred_j)
     # IoU = Intersection / Union
     # Intersection = cm[i, j]
     # Union = count_gt[i] + count_pred[j] - cm[i, j]
-    
+
     count_gt = cm.sum(axis=1)
     count_pred = cm.sum(axis=0)
-    
+
     # Association greedy : Pour chaque GT, on prend le Pred qui maximise l'IoU
     ious = []
     for i in range(len(u_gt)):
@@ -521,7 +523,7 @@ def compute_lstq_simplified(pred_labels, gt_inst_labels, gt_sem_labels):
                 iou = inter / union
                 if iou > best_iou: best_iou = iou
         ious.append(best_iou)
-        
+
     s_assoc = np.mean(ious) if ious else 0.0
     return s_assoc
 
@@ -531,7 +533,7 @@ if X_clustering is not None and len(X_clustering) > 0:
     print(f"S_assoc (Tracking Quality) : {s_assoc:.4f}")
     print("Note: Ceci est une approximation. Pour le score officiel, utilisez evaluate_panoptic.py de l'API SemanticKITTI.")
 else:
-    print("Pas de données pour l'évaluation.")""")
+    print("Pas de données pour l'évaluation.")""", title="eQImb5yp1O2R")
 
 # -----------------------------------------------------------------------------
 # 7. Visualization
@@ -543,10 +545,10 @@ if X_4d is not None and len(X_4d) > 0:
     idx = np.arange(0, len(X_4d), 10) # Downsample
     X_v = X_4d[idx]
     L_v = labels_pred[idx]
-    
+
     fig = go.Figure()
     u_l = np.unique(L_v)
-    
+
     for l in u_l:
         if l == -1: continue
         m = L_v == l
@@ -557,8 +559,8 @@ if X_4d is not None and len(X_4d) > 0:
     fig.update_layout(title="HGP Clusters 4D", scene=dict(aspectmode='data'))
     fig.show()
 else:
-    print("Pas de données à afficher.")""")
+    print("Pas de données à afficher.")""", title="d0t8xdfp1O2S")
 
 # Save notebook
 with open('tests/SemanticKITTI/HGP_SemanticKITTI_4D_Panoptic.ipynb', 'w') as f:
-    json.dump(notebook, f, indent=2)
+    json.dump(notebook, f, indent=2, ensure_ascii=False)
