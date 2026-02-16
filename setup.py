@@ -45,6 +45,9 @@ class CMakeBuild(build_ext):
             f"-DCMAKE_BUILD_TYPE={cfg}",
             f"-Dpybind11_DIR={pybind11.get_cmake_dir()}",
         ]
+
+        if "CMAKE_PREFIX_PATH" in os.environ:
+            cmake_args.append(f"-DCMAKE_PREFIX_PATH={os.environ['CMAKE_PREFIX_PATH']}")
         
         # Multi-config generators (like Visual Studio) need simplified config
         build_args = ["--config", cfg]
