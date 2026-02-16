@@ -83,12 +83,13 @@ if(NOT CGAL_FOUND)
         PATHS 
         $ENV{CGAL_DIR}/include
         /usr/include
+        /usr/include/x86_64-linux-gnu
         /usr/local/include
         /opt/local/include
     )
     
-    find_library(GMP_LIB gmp PATHS /usr/lib/x86_64-linux-gnu /usr/lib /usr/local/lib)
-    find_library(MPFR_LIB mpfr PATHS /usr/lib/x86_64-linux-gnu /usr/lib /usr/local/lib)
+    find_library(GMP_LIB gmp PATHS /usr/lib/x86_64-linux-gnu /usr/lib /usr/local/lib /lib/x86_64-linux-gnu /lib)
+    find_library(MPFR_LIB mpfr PATHS /usr/lib/x86_64-linux-gnu /usr/lib /usr/local/lib /lib/x86_64-linux-gnu /lib)
     
     message(STATUS "  - CGAL_INCLUDE_DIR: ${CGAL_INCLUDE_DIR}")
     message(STATUS "  - GMP_LIB: ${GMP_LIB}")
