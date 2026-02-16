@@ -160,14 +160,16 @@ DOWNLOAD_DATA = True # @param {type:"boolean"}
 # - 'Zip' : Télécharge une archive unique et décompresse (Beaucoup plus rapide, recommandé)
 DOWNLOAD_MODE = "Folder" # @param ["Folder", "Zip"]
 
-# IDs Google Drive
-# Remplissez l'ID correspondant au mode choisi.
-DRIVE_IDS = {
-    "Folder": "1UqFKvekjyic6L_8KD1kcv8MuGmQMIk0A", # ID du dossier de la séquence 08
-    "Zip": "" # METTRE L'ID DU FICHIER ZIP ICI SI DISPONIBLE
+# IDs Google Drive par séquence
+# Remplissez ce dictionnaire avec les IDs des dossiers ou des zips pour chaque séquence.
+SEQUENCE_DRIVE_IDS = {
+    8: {
+        "Folder": "1UqFKvekjyic6L_8KD1kcv8MuGmQMIk0A",
+        "Zip": "" # METTRE L'ID DU FICHIER ZIP ICI SI DISPONIBLE
+    }
 }
 
-# Dossier Racine (Fallback si ID spécifique non trouvé)
+# Dossier Racine (Fallback si ID spécifique non trouvé en mode Folder)
 ROOT_FOLDER_ID = "1ORVzSo-TWbNHeAC0-k3mxX9AiJHI_tVu"
 
 if DOWNLOAD_DATA:
@@ -182,43 +184,48 @@ if DOWNLOAD_DATA:
     if not os.path.exists(target_dir):
         print(f"Démarrage du téléchargement (Mode : {DOWNLOAD_MODE})...")
         
+        # Récupération des IDs pour la séquence choisie
+        seq_ids = SEQUENCE_DRIVE_IDS.get(SEQUENCE_TO_TEST, {})
+        
         if DOWNLOAD_MODE == "Zip":
-            zip_id = DRIVE_IDS["Zip"]
+            zip_id = seq_ids.get("Zip")
             if not zip_id:
-                raise ValueError("Mode Zip sélectionné mais aucun ID fourni dans DRIVE_IDS['Zip'].")
-            
-            print(f"Téléchargement de l'archive Zip (ID: {zip_id})...")
-            zip_path = os.path.join(base_dest, "sequence.zip")
-            os.makedirs(base_dest, exist_ok=True)
-            
-            # Téléchargement
-            !gdown {zip_id} -O {zip_path} --quiet
-            
-            print("Décompression...")
-            # On décompresse. Attention à la structure interne du zip.
-            # On suppose ici que le zip contient directement les données (velodyne/, labels/, etc.)
-            # ou un dossier parent.
-            !unzip -q {zip_path} -d {target_dir}
-            !rm {zip_path}
-            
-            # Vérification de la structure (si le zip contenait un sous-dossier, on remonte)
-            if not os.path.exists(os.path.join(target_dir, "velodyne")):
-                # Tentative de correction automatique de la structure
-                sub_dirs = [d for d in os.listdir(target_dir) if os.path.isdir(os.path.join(target_dir, d))]
-                if len(sub_dirs) == 1:
-                    inner_dir = os.path.join(target_dir, sub_dirs[0])
-                    print(f"Structure imbriquée détectée, déplacement de {inner_dir} vers {target_dir}...")
-                    for item in os.listdir(inner_dir):
-                        shutil.move(os.path.join(inner_dir, item), target_dir)
-                    os.rmdir(inner_dir)
+                print(f"⚠️ Aucun ID Zip trouvé pour la séquence {SEQUENCE_TO_TEST}. Veuillez remplir SEQUENCE_DRIVE_IDS.")
+                print("Passage automatique en mode Folder (Fallback)...")
+                # On ne lance pas d'erreur, on essaie le folder si possible, sinon root
+                DOWNLOAD_MODE = "Folder" 
+            else:
+                print(f"Téléchargement de l'archive Zip (ID: {zip_id})...")
+                zip_path = os.path.join(base_dest, "sequence.zip")
+                os.makedirs(base_dest, exist_ok=True)
+                
+                # Téléchargement
+                !gdown {zip_id} -O {zip_path} --quiet
+                
+                print("Décompression...")
+                # On décompresse
+                !unzip -q {zip_path} -d {target_dir}
+                !rm {zip_path}
+                
+                # Vérification de la structure (si le zip contenait un sous-dossier, on remonte)
+                if not os.path.exists(os.path.join(target_dir, "velodyne")):
+                    # Tentative de correction automatique
+                    sub_dirs = [d for d in os.listdir(target_dir) if os.path.isdir(os.path.join(target_dir, d))]
+                    if len(sub_dirs) == 1:
+                        inner_dir = os.path.join(target_dir, sub_dirs[0])
+                        print(f"Structure imbriquée détectée, déplacement de {inner_dir} vers {target_dir}...")
+                        for item in os.listdir(inner_dir):
+                            shutil.move(os.path.join(inner_dir, item), target_dir)
+                        os.rmdir(inner_dir)
 
-        elif DOWNLOAD_MODE == "Folder":
-            folder_id = DRIVE_IDS["Folder"]
+        # Note: Ce bloc est exécuté si mode Folder OU si fallback depuis Zip
+        if DOWNLOAD_MODE == "Folder":
+            folder_id = seq_ids.get("Folder")
             if not folder_id:
                 # Fallback sur le root folder (pas idéal mais fonctionnel)
-                print(f"ID spécifique manquant, tentative via le dossier racine {ROOT_FOLDER_ID}")
-                folder_id = ROOT_FOLDER_ID
-                !gdown --folder {folder_id} -O {base_dest} --quiet --remaining-ok
+                print(f"ID spécifique Folder manquant pour la séquence {SEQUENCE_TO_TEST}.")
+                print(f"Tentative de téléchargement via le dossier racine {ROOT_FOLDER_ID}...")
+                !gdown --folder {ROOT_FOLDER_ID} -O {base_dest} --quiet --remaining-ok
             else:
                 print(f"Téléchargement du dossier (ID: {folder_id})...")
                 # On crée le dossier de la séquence pour gdown
