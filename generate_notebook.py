@@ -158,7 +158,7 @@ DOWNLOAD_DATA = True # @param {type:"boolean"}
 # Mapping des IDs Google Drive des séquences individuelles.
 # Remplissez ce dictionnaire si vous connaissez les IDs des sous-dossiers pour éviter de tout télécharger.
 SEQUENCE_DRIVE_IDS = {
-    # 8: "1UqFKvekjyic6L_8KD1kcv8MuGmQMIk0A",
+    8: "1UqFKvekjyic6L_8KD1kcv8MuGmQMIk0A",
 }
 
 # Dossier Racine (contient toutes les séquences)
