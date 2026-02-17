@@ -23,7 +23,7 @@ def main():
                 break
 
     subprocess.run(cmd, cwd=build_dir, check=True)
-    subprocess.run(["make", "-j"], cwd=build_dir, check=True)
+    subprocess.run(["make", "-j1"], cwd=build_dir, check=True)
     print("Build complete.")
 
 if __name__ == "__main__":

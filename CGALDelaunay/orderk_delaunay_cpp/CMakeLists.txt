@@ -43,6 +43,8 @@ if(TARGET TBB::tbb)
     target_compile_definitions(orderk_delaunay_cpp PRIVATE CGAL_LINKED_WITH_TBB)
 endif()
 
+target_compile_definitions(orderk_delaunay_cpp PRIVATE HGP_WITH_CGAL)
+
 if(MSVC)
   target_compile_options(orderk_delaunay_cpp PRIVATE /O2 /Ob2 /DNDEBUG)
 else()

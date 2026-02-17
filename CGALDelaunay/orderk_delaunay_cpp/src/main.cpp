@@ -112,7 +112,7 @@ int main(int argc, char** argv) {
 
     // Setup Kernel
     bool exact_mode = (precision == "exact");
-    auto kernel = create_kernel(cloud.dim, exact_mode);
+    auto kernel = create_cgal_kernel(cloud.dim, exact_mode);
     if (!kernel) {
         std::cerr << "Error: unsupported dimension/kernel combination.\n";
         return 1;
@@ -141,8 +141,8 @@ int main(int argc, char** argv) {
 
         prev_simplices.reserve(edges.size());
         for(auto& p : edges) {
-            if(p.first < p.second) prev_simplices.push_back({p.first, p.second});
-            else prev_simplices.push_back({p.second, p.first});
+            if(p.first < p.second) prev_simplices.push_back(std::vector<int>{p.first, p.second});
+            else prev_simplices.push_back(std::vector<int>{p.second, p.first});
         }
         
         if (verbose) std::cerr << "[Step 1] Found " << prev_simplices.size() << " edges.\n";
@@ -305,7 +305,7 @@ int main(int argc, char** argv) {
         for(size_t i=0; i<prev_simplices.size(); ++i) {
         #endif
                 simplex_weights[i] = kernel->compute_simplex_squared_radius(
-                    cloud.data.data(), prev_simplices[i], cloud.dim
+                    cloud.data.data(), prev_simplices[i].data(), prev_simplices[i].size(), cloud.dim
                 );
         #ifdef CGAL_LINKED_WITH_TBB
             }
