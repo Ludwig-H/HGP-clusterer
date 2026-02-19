@@ -16,7 +16,9 @@
 // We assume kernels.hpp is in the include path
 #include "kernels.hpp"
 #include "kernels_geogram.hpp"
+#ifdef HGP_WITH_GEOGRAM
 #include <geogram/basic/process.h>
+#endif
 
 // TBB for parallelism
 #ifdef CGAL_LINKED_WITH_TBB
@@ -112,6 +114,18 @@ py::tuple compute_delaunay(
     std::unique_ptr<WeightedDelaunayTraits> kernel;
 
     if (backend == "geogram") {
+        const bool geogram_weighted_2d = (dim == 2 && K_max > 1);
+        if (geogram_weighted_2d) {
+            #ifdef HGP_WITH_CGAL
+            if (verbose) {
+                std::cout << "[Backend] Geogram requested, but weighted 2D order-k currently uses CGAL fallback for consistency." << std::endl;
+            }
+            bool exact_mode = (precision == "exact");
+            kernel = create_cgal_kernel(dim, exact_mode);
+            #else
+            throw std::runtime_error("Geogram weighted 2D mode requires CGAL fallback, but CGAL backend is not compiled.");
+            #endif
+        } else {
         #ifdef HGP_WITH_GEOGRAM
         kernel = std::make_unique<GeogramDelaunayImpl>();
         if (verbose) std::cout << "[Backend] Using Geogram" << std::endl;
@@ -123,6 +137,7 @@ py::tuple compute_delaunay(
         #else
         throw std::runtime_error("Geogram backend not compiled (HGP_WITH_GEOGRAM not defined).");
         #endif
+        }
     } else {
         // Default to CGAL if backend="cgal" or unknown
         if (backend != "cgal" && verbose) {
