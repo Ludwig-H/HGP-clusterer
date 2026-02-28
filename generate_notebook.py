@@ -477,85 +477,111 @@ MIN_CLUSTER_SIZE = 50 # @param {type:"integer"}
 SPLIT_MODE = "None" # @param ["None", "Oracle", "Geometric"]
 
 # Vérification préalable des données
-if X_clustering is None:
-    raise RuntimeError("Erreur critique: X_clustering n'est pas défini. Veuillez vérifier la cellule 'Construction du Nuage 4D'.")
+if X_clustering is None or len(X_clustering) == 0:
+    raise RuntimeError("Erreur critique: X_clustering est vide ou n'est pas défini. Veuillez vérifier la cellule 'Construction du Nuage 4D'.")
 
-# --- Fonctions de Splitting ---
+# Initialisation du tableau global des prédictions (ID des instances)
+# -1 indique le bruit/non-assigné
+labels_pred = np.full(len(X_clustering), -1, dtype=int)
+global_instance_offset = 0
 
-def oracle_split(parent, children):
-    "Split si les enfants sont nettement plus purs sémantiquement que le parent."
-    # Utilise Y_inst global
-    p_labels = Y_inst[parent]; p_labels = p_labels[p_labels > 0]
-    if len(p_labels) == 0: return False
+# --- Boucle par classe sémantique ---
+# Pour une segmentation panoptique propre, le clustering est indépendant pour chaque classe "Thing".
 
-    # Pureté majoritaire du parent
-    parent_purity = np.max(np.unique(p_labels, return_counts=True)[1]) / len(p_labels)
+unique_classes = np.unique(Y_sem)
+print(f"Classes sémantiques trouvées dans ce bloc de frames : {unique_classes}")
 
-    child_purity_sum = 0; total = 0
-    for c in children:
-        c_labels = Y_inst[c]; c_labels = c_labels[c_labels > 0]
-        if len(c_labels) > 0:
-            child_purity_sum += np.max(np.unique(c_labels, return_counts=True)[1])
-            total += len(c_labels)
+for semantic_class in unique_classes:
+    if semantic_class not in THINGS_CLASSES and SEMANTIC_MODE == "Oracle":
+        # Ce cas ne devrait pas arriver si le nuage a été pré-filtré, mais par sécurité :
+        continue
+    
+    # Masque pour extraire uniquement les points de la classe courante
+    class_mask = (Y_sem == semantic_class)
+    X_class = X_clustering[class_mask]
+    Y_inst_class = Y_inst[class_mask] # Utile si Oracle Split
 
-    child_purity = child_purity_sum / total if total > 0 else 0
+    if len(X_class) < MIN_CLUSTER_SIZE:
+        # Pas assez de points pour former un cluster, on les laisse à -1
+        print(f"Classe {semantic_class} ignorée (seulement {len(X_class)} points, min={MIN_CLUSTER_SIZE}).")
+        continue
 
-    # Critère : On split si on gagne en pureté
-    return child_purity > parent_purity + 0.05
+    print(f"--- Traitement de la classe sémantique {semantic_class} ({len(X_class)} points) ---")
 
-def geometric_split(parent, children):
-    "Split si le parent est géométriquement incohérent (variance trop élevée) comparé aux enfants."
-    pts_parent = X_clustering[parent]
+    # --- Fonctions de Splitting adaptées au sous-masque ---
+    def oracle_split(parent, children):
+        "Split si les enfants sont nettement plus purs sémantiquement que le parent."
+        p_labels = Y_inst_class[parent]; p_labels = p_labels[p_labels > 0]
+        if len(p_labels) == 0: return False
 
-    # Calcul variance spatiale (x, y uniquement pour robustesse)
-    var_parent = np.var(pts_parent[:, :2], axis=0).sum()
+        parent_purity = np.max(np.unique(p_labels, return_counts=True)[1]) / len(p_labels)
 
-    weighted_var_children = 0
-    total_len = 0
+        child_purity_sum = 0; total = 0
+        for c in children:
+            c_labels = Y_inst_class[c]; c_labels = c_labels[c_labels > 0]
+            if len(c_labels) > 0:
+                child_purity_sum += np.max(np.unique(c_labels, return_counts=True)[1])
+                total += len(c_labels)
 
-    for c in children:
-        pts_child = X_clustering[c]
-        if len(pts_child) < 2: continue
-        v = np.var(pts_child[:, :2], axis=0).sum()
-        weighted_var_children += v * len(pts_child)
-        total_len += len(pts_child)
+        child_purity = child_purity_sum / total if total > 0 else 0
+        return child_purity > parent_purity + 0.05
 
-    avg_var_children = weighted_var_children / total_len if total_len > 0 else var_parent
+    def geometric_split(parent, children):
+        "Split si le parent est géométriquement incohérent (variance trop élevée) comparé aux enfants."
+        pts_parent = X_class[parent]
+        var_parent = np.var(pts_parent[:, :2], axis=0).sum()
 
-    # Critère : Si la variance du père est significativement plus grande que la moyenne des fils
-    # Cela suggère que le père regroupe des clusters bien séparés spatialement
-    if var_parent > 1.5 * avg_var_children and var_parent > 5.0: # Seuil arbitraire 5m^2
-        return True
-    return False
+        weighted_var_children = 0; total_len = 0
+        for c in children:
+            pts_child = X_class[c]
+            if len(pts_child) < 2: continue
+            v = np.var(pts_child[:, :2], axis=0).sum()
+            weighted_var_children += v * len(pts_child)
+            total_len += len(pts_child)
 
-# --- Sélection de la fonction ---
-if SPLIT_MODE == "Oracle":
-    split_func = oracle_split
-    print("Fonction de splitting : Oracle (basée sur la vérité terrain)")
-elif SPLIT_MODE == "Geometric":
-    split_func = geometric_split
-    print("Fonction de splitting : Géométrique (basée sur la variance spatiale)")
-else:
-    split_func = None
-    print("Fonction de splitting : Aucune (Clustering standard)")
+        avg_var_children = weighted_var_children / total_len if total_len > 0 else var_parent
+        if var_parent > 1.5 * avg_var_children and var_parent > 5.0:
+            return True
+        return False
 
-clusterer = HGPClusterer(
-    K=K, min_cluster_size=MIN_CLUSTER_SIZE, min_samples=K+1,
-    splitting=split_func,
-    backend=BACKEND,
-    cgal_root=os.environ.get("CGALDELAUNAY_ROOT"),
-    verbose=True
-)
+    # --- Sélection de la fonction ---
+    if SPLIT_MODE == "Oracle":
+        split_func = oracle_split
+    elif SPLIT_MODE == "Geometric":
+        split_func = geometric_split
+    else:
+        split_func = None
 
-print("Clustering en cours...")
-t0 = time.time()
-try:
-    labels_pred = clusterer.fit_predict(X_clustering)
-    print(f"Fini en {time.time()-t0:.2f}s. Clusters trouvés : {len(set(labels_pred))-1}")
-except Exception as e:
-    print(f"Erreur durant le clustering: {e}")
-    # Fallback labels pour que la suite ne plante pas
-    labels_pred = np.zeros(len(X_clustering), dtype=int)""", title="tT_pybI-1O2R")
+    clusterer = HGPClusterer(
+        K=K, min_cluster_size=MIN_CLUSTER_SIZE, min_samples=K+1,
+        splitting=split_func,
+        backend=BACKEND,
+        cgal_root=os.environ.get("CGALDELAUNAY_ROOT"),
+        verbose=False # Rendu silencieux pour ne pas spammer la boucle
+    )
+
+    t0 = time.time()
+    try:
+        class_labels_pred = clusterer.fit_predict(X_class)
+        num_clusters = len(set(class_labels_pred)) - (1 if -1 in class_labels_pred else 0)
+        print(f"  -> {num_clusters} clusters trouvés en {time.time()-t0:.2f}s.")
+        
+        # On assigne des IDs globaux uniques à ces nouveaux clusters
+        valid_cluster_mask = class_labels_pred >= 0
+        if np.any(valid_cluster_mask):
+            # Décalage des labels pour qu'ils soient uniques sur toute la scène
+            class_labels_pred[valid_cluster_mask] += global_instance_offset
+            
+            # Injection dans le tableau global
+            labels_pred[class_mask] = class_labels_pred
+            
+            # Mise à jour de l'offset pour la prochaine classe
+            global_instance_offset = np.max(class_labels_pred) + 1
+            
+    except Exception as e:
+        print(f"  -> Erreur durant le clustering de la classe {semantic_class}: {e}")
+
+print(f"\\nClustering global terminé. Total instances uniques détectées : {global_instance_offset}")""", title="tT_pybI-1O2R")
 
 # -----------------------------------------------------------------------------
 # 6. Evaluation (LSTQ)
