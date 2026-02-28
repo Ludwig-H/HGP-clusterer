@@ -66,15 +66,14 @@ add_cell("""# @title 1.1 Choix du Backend Géométrique
 BACKEND = 'cgal'  # @param ['geogram', 'cgal']
 print(f"Backend sélectionné : {BACKEND}")""", title="kN3IXi0p1O2L")
 
-add_cell("""%%bash
-# @title 1.2 Installation des dépendances système
-apt-get update -qq
-apt-get install -y -qq build-essential cmake git libeigen3-dev libomp-dev
+add_cell("""# @title 1.2 Installation des dépendances système
+!apt-get update -qq
+!apt-get install -y -qq build-essential cmake git libeigen3-dev libomp-dev
 
-if [ "$BACKEND" = "cgal" ]; then
+if BACKEND == 'cgal':
     # libboost-all-dev est souvent nécessaire pour que CMake détecte correctement CGAL
-    apt-get install -y -qq libcgal-dev libtbb-dev libtbbmalloc2 libgmp-dev libmpfr-dev libboost-all-dev
-fi""", title="oXWQ4Fbd1O2M")
+    !apt-get install -y -qq libcgal-dev libtbb-dev libtbbmalloc2 libgmp-dev libmpfr-dev libboost-all-dev
+""", title="oXWQ4Fbd1O2M")
 
 add_cell("""# @title 1.3 Installation des dépendances Python
 !pip install -q --upgrade pip setuptools wheel Cython cmake jedi gdown pybind11
