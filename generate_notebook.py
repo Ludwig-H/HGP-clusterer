@@ -364,9 +364,22 @@ APPLY_BEV = True # @param {type:"boolean"}
 # (Note: Le chargement d'une prédiction réseau externe viendrait ici dans une future mise à jour)
 SEMANTIC_MODE = "Oracle" # @param ["Oracle", "None"]
 
-# SemanticKITTI classes "things" (véhicules, piétons, cyclistes...)
-# Classes : 10, 11, 13, 15, 16, 18, 20, 30, 31, 32 et leurs équivalents "moving" (>250)
-THINGS_CLASSES = set([10, 11, 13, 15, 16, 18, 20, 30, 31, 32, 252, 253, 254, 255, 256, 257, 258, 259])
+# Mapping officiel SemanticKITTI (fusionne les classes "moving" avec leur équivalent statique)
+LEARNING_MAP = {
+  0: 0, 1: 0, 10: 1, 11: 2, 13: 5, 15: 3, 16: 5, 18: 4, 20: 5, 30: 6, 
+  31: 7, 32: 8, 40: 9, 44: 10, 48: 11, 49: 12, 50: 13, 51: 14, 52: 0, 
+  60: 9, 70: 15, 71: 16, 72: 17, 80: 18, 81: 19, 99: 0, 252: 1, 
+  253: 7, 254: 6, 255: 8, 256: 5, 257: 5, 258: 4, 259: 5
+}
+# Vecteur de mapping rapide (taille max 260)
+max_key = max(LEARNING_MAP.keys())
+LABEL_MAP_ARRAY = np.zeros(max_key + 1, dtype=np.uint32)
+for k, v in LEARNING_MAP.items():
+    LABEL_MAP_ARRAY[k] = v
+
+# SemanticKITTI classes "things" dans l'espace mappé (1 à 8)
+# 1:car, 2:bicycle, 3:motorcycle, 4:truck, 5:other-vehicle, 6:person, 7:bicyclist, 8:motorcyclist
+THINGS_CLASSES = set([1, 2, 3, 4, 5, 6, 7, 8])
 
 # Initialisation des variables pour éviter les NameError
 X_clustering = None
@@ -387,7 +400,10 @@ try:
         if idx >= len(loader): break
 
         pts = loader.get_scan(idx, apply_pose=True)
-        s, inst = loader.get_labels(idx)
+        s_raw, inst = loader.get_labels(idx)
+        
+        # Mapping des labels sémantiques bruts vers l'espace d'évaluation
+        s = LABEL_MAP_ARRAY[s_raw]
 
         # 4D Point: x, y, z, t
         t_col = np.full((len(pts), 1), i * DT_SCALE)
