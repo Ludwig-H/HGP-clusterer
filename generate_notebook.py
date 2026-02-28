@@ -358,6 +358,15 @@ START_FRAME = 0 # @param {type:"integer"}
 NUM_FRAMES = 10 # @param {type:"integer"}
 DT_SCALE = 0.5  # @param {type:"number"}
 APPLY_BEV = True # @param {type:"boolean"}
+# Mode Sémantique :
+# - 'Oracle' : Utilise la vérité terrain fournie par SemanticKITTI pour filtrer les objets mobiles (Things).
+# - 'None' : Ne filtre rien (Lance le clustering sur absolument toute la scène, lent et non recommandé).
+# (Note: Le chargement d'une prédiction réseau externe viendrait ici dans une future mise à jour)
+SEMANTIC_MODE = "Oracle" # @param ["Oracle", "None"]
+
+# SemanticKITTI classes "things" (véhicules, piétons, cyclistes...)
+# Classes : 10, 11, 13, 15, 16, 18, 20, 30, 31, 32 et leurs équivalents "moving" (>250)
+THINGS_CLASSES = set([10, 11, 13, 15, 16, 18, 20, 30, 31, 32, 252, 253, 254, 255, 256, 257, 258, 259])
 
 # Initialisation des variables pour éviter les NameError
 X_clustering = None
@@ -365,11 +374,13 @@ X_4d = None
 Y_sem = None
 Y_inst = None
 Time_idx = None
+Original_Indices = None # Pour garder la trace si on filtre
 
 try:
     loader = SemanticKITTILoader("/content/semantic_kitti_data", SEQUENCE_TO_TEST)
-    points_4d, gt_sem, gt_inst, times = [], [], [], []
-
+    points_4d, gt_sem, gt_inst, times, indices = [], [], [], [], []
+    
+    total_points = 0
     print(f"Chargement frames {START_FRAME} -> {START_FRAME + NUM_FRAMES}...")
     for i in range(NUM_FRAMES):
         idx = START_FRAME + i
@@ -380,46 +391,64 @@ try:
 
         # 4D Point: x, y, z, t
         t_col = np.full((len(pts), 1), i * DT_SCALE)
-        points_4d.append(np.hstack([pts, t_col]))
+        pts_4d = np.hstack([pts, t_col])
+        
+        # Filtre Sémantique
+        if SEMANTIC_MODE == "Oracle":
+            # On ne garde que les classes "Things"
+            mask = np.array([sem in THINGS_CLASSES for sem in s])
+            pts_4d = pts_4d[mask]
+            s = s[mask]
+            inst = inst[mask]
+            
+            # Si on veut garder l'index original par rapport à la frame (pour de la visulaisation par ex)
+            frame_indices = np.arange(len(mask))[mask]
+        else:
+            frame_indices = np.arange(len(pts))
+
+        points_4d.append(pts_4d)
         gt_sem.append(s)
         gt_inst.append(inst)
-        times.extend([i] * len(pts))
+        times.extend([i] * len(pts_4d))
+        indices.append(frame_indices + total_points)
+        total_points += len(pts) # On ajoute le total brut pour les indices absolus
 
     if points_4d:
         X_4d = np.vstack(points_4d)
         Y_sem = np.hstack(gt_sem)
         Y_inst = np.hstack(gt_inst)
         Time_idx = np.array(times)
+        Original_Indices = np.hstack(indices)
 
         # Bird's Eye View : on utilise uniquement x, y, t pour le clustering
         if APPLY_BEV:
-            print("Mode Bird's-Eye-View (BEV) activé : Clustering sur (x, y, t).")
+            print(f"Mode Bird's-Eye-View (BEV) activé : Clustering sur (x, y, t).")
             X_clustering = np.column_stack([X_4d[:, 0], X_4d[:, 1], X_4d[:, 3]])
         else:
             print("Mode 4D Complet activé : Clustering sur (x, y, z, t).")
             X_clustering = X_4d
 
-        print(f"Nuage 4D: {X_4d.shape} points.")
+        print(f"Sémantique : Mode {SEMANTIC_MODE}.")
+        print(f"Nuage 4D filtré: {X_4d.shape} points conservés.")
         print(f"Input Clustering: {X_clustering.shape}")
     else:
-        print("Aucun point chargé. Vérifiez les chemins.")
+        print("Aucun point chargé ou aucun point 'thing' trouvé. Vérifiez les chemins.")
 
 except Exception as e:
     print(f"Erreur lors du chargement des données: {e}")
     print("---------------------------------------------------------")
     print("⚠️ GÉNÉRATION DE DONNÉES SYNTHÉTIQUES (FALLBACK) ⚠️")
     print("---------------------------------------------------------")
-    # Fallback : Génération de données synthétiques pour que le notebook puisse continuer
     from sklearn.datasets import make_blobs
     n_samples = 5000
     X_syn, y_syn = make_blobs(n_samples=n_samples, n_features=3, centers=5, cluster_std=1.0)
-    # Ajout dimension temps synthétique
     t_syn = np.random.randint(0, NUM_FRAMES, size=n_samples) * DT_SCALE
     X_4d = np.column_stack([X_syn, t_syn])
     Y_sem = np.zeros(n_samples, dtype=int)
-    Y_inst = y_syn + 1 # Instance ID > 0
+    Y_inst = y_syn + 1 
     Time_idx = (t_syn / DT_SCALE).astype(int)
     X_clustering = X_4d if not APPLY_BEV else X_4d[:, [0, 1, 3]]
+    SEMANTIC_MODE = "None"
     print(f"Données synthétiques générées: {X_clustering.shape}")""", title="-7bzecQb1O2Q")
 
 # -----------------------------------------------------------------------------
