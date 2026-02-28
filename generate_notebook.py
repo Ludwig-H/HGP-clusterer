@@ -356,7 +356,7 @@ import numpy as np
 
 START_FRAME = 0 # @param {type:"integer"}
 NUM_FRAMES = 10 # @param {type:"integer"}
-DT_SCALE = 5.0  # @param {type:"number"}
+DT_SCALE = 0.5  # @param {type:"number"}
 APPLY_BEV = True # @param {type:"boolean"}
 
 # Initialisation des variables pour éviter les NameError
