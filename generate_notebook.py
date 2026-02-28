@@ -513,6 +513,7 @@ else:
 clusterer = HGPClusterer(
     K=K, min_cluster_size=MIN_CLUSTER_SIZE, min_samples=K+1,
     splitting=split_func,
+    backend=BACKEND,
     cgal_root=os.environ.get("CGALDELAUNAY_ROOT"),
     verbose=True
 )
