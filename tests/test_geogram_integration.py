@@ -8,7 +8,7 @@ def test_backend_cgal_default():
     X = np.random.rand(20, 2)
     # Just checking initialization and basic fit attempt
     # If CGAL is compiled, this should run.
-    clusterer = HGPClusterer(min_cluster_size=5, backend='cgal', verbose=True)
+    clusterer = HGPClusterer(min_cluster_size=5, backend='geogram', verbose=True)
     try:
         clusterer.fit(X)
         print("CGAL backend fit success")

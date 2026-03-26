@@ -74,7 +74,7 @@ py::tuple compute_delaunay(
     int K_max,
     std::string precision = "safe",
     bool verbose = false,
-    std::string backend = "cgal"
+    std::string backend = "geogram"
 ) {
     // 1. Parse Input
     py::buffer_info buf = input_points.request();
