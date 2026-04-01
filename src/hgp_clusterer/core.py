@@ -278,10 +278,10 @@ class HGPClusterer(BaseEstimator, ClusterMixin):
             Z = comp['Z']
             faces_cc = comp['faces_cc']
             uniques = comp['uniques_map']
-            
+            S_faces_cc = self.S_faces_[uniques]
+
             # Extract
-            res = GetClusters(Z, method, splitting=splitting, Face_to_points=faces_cc, verbose=self.verbose)
-            
+            res = GetClusters(Z, method, splitting=splitting, Face_to_points=faces_cc, S_faces=S_faces_cc, verbose=self.verbose)            
             # Assign labels to faces
             for i, nodes in enumerate(res['clusters']):
                 global_face_indices = uniques[nodes]

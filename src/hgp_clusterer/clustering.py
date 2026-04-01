@@ -326,7 +326,7 @@ def _build_dfs_structure(Z: Dict[str, Any]) -> Tuple[np.ndarray, np.ndarray, np.
         return np.arange(len(initial_membership), dtype=np.int32), np.zeros(n_clusters, dtype=np.int32), np.zeros(n_clusters, dtype=np.int32)
 
 
-def GetClusters(Z: Dict[str, Any], method, splitting=None, points=None, Face_to_points=None, verbose: bool = False) -> Dict[str, Any]:
+def GetClusters(Z: Dict[str, Any], method, splitting=None, points=None, Face_to_points=None, S_faces=None, verbose: bool = False) -> Dict[str, Any]:
     """Return clusters as lists of point indices according to a selection method and optional recursive splitting.
 
     Parameters
@@ -408,9 +408,9 @@ def GetClusters(Z: Dict[str, Any], method, splitting=None, points=None, Face_to_
         if Face_to_points is None:
             raise ValueError("Splitting requires 'Face_to_points'.")
         
-        # --- OPTIMIZATION: Pre-compute Leaf Points ---
-        # Instead of mapping Faces -> Points at every node (expensive),
-        # we map Leaves -> Points once, then merge sets bottom-up.
+        # --- OPTIMIZATION: Pre-compute Leaf Points and Weights ---
+        # We compute the weighted presence of points at the leaf level,
+        # then merge them bottom-up, and finally use a local ArgMax for splitting.
         
         initial_membership = Z.get('initial_membership')
         if initial_membership is None:
@@ -422,7 +422,10 @@ def GetClusters(Z: Dict[str, Any], method, splitting=None, points=None, Face_to_
         
         from functools import lru_cache
         
-        # 1. Map Leaf ID -> Array of Points
+        if S_faces is None:
+            S_faces = np.ones(Face_to_points.shape[0], dtype=np.float32)
+            
+        # 1. Map Leaf ID -> Tuple(Array of Points, Array of Weights)
         # initial_membership aligns with Face_to_points (N faces)
         # We group Face_to_points by initial_membership
         
@@ -430,41 +433,52 @@ def GetClusters(Z: Dict[str, Any], method, splitting=None, points=None, Face_to_
         valid_mask = initial_membership != -1
         valid_faces = Face_to_points[valid_mask]
         valid_labels = initial_membership[valid_mask]
+        valid_S_faces = S_faces[valid_mask]
         
         # Sort by label to allow efficient grouping
         order = np.argsort(valid_labels)
         sorted_faces = valid_faces[order]
         sorted_labels = valid_labels[order]
+        sorted_S_faces = valid_S_faces[order]
         
         # Find split indices
         unique_labels, split_indices = np.unique(sorted_labels, return_index=True)
         
         # Store in a dict or list (if labels are dense 0..n_leaves-1)
         # Labels are cluster IDs, they are dense 0..n_clusters-1, but not all are leaves.
-        leaf_points_map = {}
+        leaf_states_map = {}
         
         # np.split is slow on many splits. Iterating slices is better.
         # split_indices[i] is start of unique_labels[i]
         n_groups = len(unique_labels)
+        n_vertices_per_face = Face_to_points.shape[1]
+        
         for i in range(n_groups):
             lbl = unique_labels[i]
             start = split_indices[i]
             end = split_indices[i+1] if i + 1 < n_groups else len(sorted_labels)
             
-            # Extract faces for this leaf
+            # Extract faces and weights for this leaf
             faces_in_leaf = sorted_faces[start:end]
+            S_faces_in_leaf = sorted_S_faces[start:end]
             
-            # Flatten and Unique
-            pts = np.unique(faces_in_leaf)
-            if pts.size > 0 and pts[0] < 0: # Remove padding/noise -1 if present
-                 pts = pts[pts >= 0]
+            points_concat = faces_in_leaf.flatten()
+            weights_concat = np.repeat(S_faces_in_leaf, n_vertices_per_face)
+            
+            valid_pts_mask = points_concat >= 0
+            if not valid_pts_mask.all():
+                 points_concat = points_concat[valid_pts_mask]
+                 weights_concat = weights_concat[valid_pts_mask]
                  
-            leaf_points_map[lbl] = pts.astype(np.int32)
+            if len(points_concat) > 0:
+                P_leaf, inverse = np.unique(points_concat, return_inverse=True)
+                W_leaf = np.bincount(inverse, weights=weights_concat).astype(np.float32)
+                leaf_states_map[lbl] = (P_leaf.astype(np.int32), W_leaf)
 
         @lru_cache(maxsize=None)
-        def _get_points_idx(cid: int) -> np.ndarray:
+        def _get_points_and_weights(cid: int):
             """
-            Returns the set of unique points belonging to cluster `cid`.
+            Returns (P, W) where P is sorted array of unique points, and W are their accumulated weights.
             Recursive bottom-up construction.
             """
             # Check if leaf in our pre-computed map
@@ -475,20 +489,22 @@ def GetClusters(Z: Dict[str, Any], method, splitting=None, points=None, Face_to_
             # If it is a leaf in the tree:
             ch = children[cid]
             if not ch:
-                return leaf_points_map.get(cid, np.array([], dtype=np.int32))
+                return leaf_states_map.get(cid, (np.array([], dtype=np.int32), np.array([], dtype=np.float32)))
             
-            # Internal node: Union of children
-            child_point_arrays = [_get_points_idx(c) for c in ch]
+            # Internal node: Union of children and addition of weights
+            child_states = [_get_points_and_weights(c) for c in ch]
             
-            # Fast Union of sorted arrays (np.unique returns sorted)
-            # standard np.union1d for 2, but for N?
-            # recursive reduce or concatenating all then unique.
-            # Concatenate + Unique is usually faster than N unions
-            if not child_point_arrays:
-                return np.array([], dtype=np.int32)
+            child_states = [s for s in child_states if len(s[0]) > 0]
+            if not child_states:
+                return np.array([], dtype=np.int32), np.array([], dtype=np.float32)
                 
-            merged = np.concatenate(child_point_arrays)
-            return np.unique(merged)
+            P_all = np.concatenate([s[0] for s in child_states])
+            W_all = np.concatenate([s[1] for s in child_states])
+            
+            P_parent, inverse = np.unique(P_all, return_inverse=True)
+            W_parent = np.bincount(inverse, weights=W_all).astype(np.float32)
+            
+            return P_parent, W_parent
 
         def _recursive_decision(cid: int) -> List[np.ndarray]:
             ch = children[cid]
@@ -497,17 +513,43 @@ def GetClusters(Z: Dict[str, Any], method, splitting=None, points=None, Face_to_
                 return [get_nodes(cid)]
             
             # Prepare data for splitting function
-            # Parent points
-            parent_pts_idx = _get_points_idx(cid)
+            # Parent points and weights
+            parent_pts, parent_weights = _get_points_and_weights(cid)
             
-            # Children points
-            children_pts_idx_list = []
-            for child in ch:
-                c_pts_idx = _get_points_idx(child)
-                children_pts_idx_list.append(c_pts_idx)
+            if len(parent_pts) == 0:
+                return [get_nodes(cid)]
+            
+            # Children states
+            children_states = [_get_points_and_weights(child) for child in ch]
+            
+            # Argmax Local
+            best_child_idx = np.zeros(len(parent_pts), dtype=int)
+            max_weights = np.full(len(parent_pts), -1.0, dtype=np.float32)
+            
+            for i, (P_c, W_c) in enumerate(children_states):
+                if len(P_c) == 0:
+                    continue
+                # searchsorted is fast because parent_pts and P_c are sorted
+                idx_in_parent = np.searchsorted(parent_pts, P_c)
+                
+                # Check for out of bounds (should not happen mathematically, but safe)
+                valid_idx_mask = (idx_in_parent < len(parent_pts)) & (parent_pts[idx_in_parent] == P_c)
+                
+                idx_in_parent = idx_in_parent[valid_idx_mask]
+                W_c_valid = W_c[valid_idx_mask]
+                
+                mask_better = W_c_valid > max_weights[idx_in_parent]
+                
+                best_child_idx[idx_in_parent[mask_better]] = i
+                max_weights[idx_in_parent[mask_better]] = W_c_valid[mask_better]
+
+            # Generate strict partition
+            children_pts_list_disjoints = [
+                parent_pts[best_child_idx == i] for i in range(len(ch))
+            ]
             
             # Call user function
-            should_split = splitting(parent_pts_idx, children_pts_idx_list)
+            should_split = splitting(parent_pts, children_pts_list_disjoints)
             
             if should_split:
                 result = []
