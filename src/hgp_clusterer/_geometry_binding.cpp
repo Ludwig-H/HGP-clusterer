@@ -129,13 +129,12 @@ py::tuple compute_delaunay(
         #ifdef HGP_WITH_GEOGRAM
         kernel = std::make_unique<GeogramDelaunayImpl>();
         if (verbose) std::cout << "[Backend] Using Geogram" << std::endl;
-        
-        // Configure Geogram Threads
-        GEO::Process::set_max_threads(nthreads);
-        if (verbose) std::cout << "[Geogram] Max threads set to: " << nthreads << std::endl;
-        
-        #else
-        throw std::runtime_error("Geogram backend not compiled (HGP_WITH_GEOGRAM not defined).");
+
+        // Configure Geogram Threads (commented out due to undefined symbol in some libgeogram builds)
+        // GEO::Process::set_max_threads(nthreads);
+        // if (verbose) std::cout << "[Geogram] Max threads set to: " << nthreads << std::endl;
+
+        #else        throw std::runtime_error("Geogram backend not compiled (HGP_WITH_GEOGRAM not defined).");
         #endif
         }
     } else {
