@@ -143,7 +143,7 @@ class CoarseToFineUOTTracker:
             b_f = torch.ones(m_pts, device=self.device) / m_pts
             
             P_micro = solve_uot_sinkhorn_gpu(C_micro, a_f, b_f, epsilon=0.05, tau1=0.5, tau2=0.5)
-            score = uot_cost_kl_gpu(P_micro, C_micro, a_f, b_f, tau1=0.5, tau2=0.5).item()
+            score = uot_cost_kl_gpu(P_micro, C_micro, a_f, b_f, tau1=0.5, tau2=0.5)
             
             C_final[i, j] = score
             if self.verbose and score < 2.0: # Log seulement si relativement proche
