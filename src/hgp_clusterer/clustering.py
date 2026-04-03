@@ -401,8 +401,12 @@ def GetClusters(Z: Dict[str, Any], method, splitting=None, points=None, Face_to_
 
     if splitting is None:
         for cid in selected_cids:
-            clusters_nodes.append(get_nodes(cid))
-            clusters_cids.append(cid)
+            nodes = get_nodes(cid)
+            if isinstance(method, (float, int)) and not isinstance(method, bool) and 'join_r' in Z:
+                nodes = nodes[Z['join_r'][nodes] <= float(method)]
+            if len(nodes) > 0:
+                clusters_nodes.append(nodes)
+                clusters_cids.append(cid)
     else:
         # Splitting logic reused efficiently
         if Face_to_points is None:
@@ -431,6 +435,9 @@ def GetClusters(Z: Dict[str, Any], method, splitting=None, points=None, Face_to_
         
         # Filter noise (-1)
         valid_mask = initial_membership != -1
+        if isinstance(method, (float, int)) and not isinstance(method, bool) and 'join_r' in Z:
+            valid_mask &= (Z['join_r'] <= float(method))
+
         valid_faces = Face_to_points[valid_mask]
         valid_labels = initial_membership[valid_mask]
         valid_S_faces = S_faces[valid_mask]

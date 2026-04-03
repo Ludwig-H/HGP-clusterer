@@ -134,7 +134,8 @@ py::tuple compute_delaunay(
         // GEO::Process::set_max_threads(nthreads);
         // if (verbose) std::cout << "[Geogram] Max threads set to: " << nthreads << std::endl;
 
-        #else        throw std::runtime_error("Geogram backend not compiled (HGP_WITH_GEOGRAM not defined).");
+        #else
+        throw std::runtime_error("Geogram backend not compiled (HGP_WITH_GEOGRAM not defined).");
         #endif
         }
     } else {

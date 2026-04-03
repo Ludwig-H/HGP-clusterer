@@ -369,6 +369,8 @@ def condense_tree_cython(
 
     # Map each point to the FIRST cluster (leaf) it enters.
     cdef np.ndarray[ITYPE_t, ndim=1] initial_membership = np.full(N, -1, dtype=np.int32)
+    # Track the distance r at which each point joins its cluster
+    cdef np.ndarray[np.float32_t, ndim=1] join_r = np.full(N, np.inf, dtype=np.float32)
 
     cdef double EPS = 1e-12
     cdef ITYPE_t u, v, ru, rv, cid, node_idx
@@ -485,6 +487,7 @@ def condense_tree_cython(
                     for j_node in range(comp_nodes[ru].size()):
                         node_idx = comp_nodes[ru][j_node]
                         initial_membership[node_idx] = cid
+                        join_r[node_idx] = r
                     comp_nodes[ru].clear()
                     
                     comp_cid[ru] = cid
@@ -502,6 +505,7 @@ def condense_tree_cython(
                         for j_node in range(comp_nodes[ru].size()):
                             node_idx = comp_nodes[ru][j_node]
                             initial_membership[node_idx] = cid
+                            join_r[node_idx] = r
                             added_weight += W_nodes[node_idx]
                         comp_nodes[ru].clear()
                         
@@ -538,6 +542,7 @@ def condense_tree_cython(
                         for j_node in range(comp_nodes[ru].size()):
                             node_idx = comp_nodes[ru][j_node]
                             initial_membership[node_idx] = cid_new
+                            join_r[node_idx] = r
                             added_weight += W_nodes[node_idx]
                         comp_nodes[ru].clear()
                         
@@ -578,6 +583,7 @@ def condense_tree_cython(
         'r': np.asarray(birth_r, dtype=np.float32),
         'stability': np.asarray(stability, dtype=np.float32),
         'initial_membership': initial_membership,
+        'join_r': join_r,
         'size': np.asarray(size_at_birth, dtype=np.float32),
         'lambda_birth': lambda_birth_arr,
         'lambda_death': lambda_death_arr,
