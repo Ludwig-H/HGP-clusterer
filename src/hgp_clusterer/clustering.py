@@ -355,7 +355,10 @@ def GetClusters(Z: Dict[str, Any], method, splitting=None, points=None, Face_to_
 
     def get_nodes(cid: int) -> np.ndarray:
         s, e = c_start[cid], c_end[cid]
-        return nodes_ordered[s:e]
+        nodes = nodes_ordered[s:e]
+        if isinstance(method, (float, int)) and not isinstance(method, bool) and 'join_r' in Z:
+            nodes = nodes[Z['join_r'][nodes] <= float(method)]
+        return nodes
 
     selected_cids: List[int] = []
 
@@ -402,8 +405,6 @@ def GetClusters(Z: Dict[str, Any], method, splitting=None, points=None, Face_to_
     if splitting is None:
         for cid in selected_cids:
             nodes = get_nodes(cid)
-            if isinstance(method, (float, int)) and not isinstance(method, bool) and 'join_r' in Z:
-                nodes = nodes[Z['join_r'][nodes] <= float(method)]
             if len(nodes) > 0:
                 clusters_nodes.append(nodes)
                 clusters_cids.append(cid)
