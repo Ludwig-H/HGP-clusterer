@@ -236,21 +236,14 @@ class CoarseToFineUOTTracker:
         for r, det_idx in matches_unconf:
             tr = unconfirmed_tracks[r]
             tr.update(detections[det_idx], self.dt)
-            
-            # Confirmation après 3 hits (frames) consécutifs/totaux
-            if tr.state == "Unconfirmed" and tr.hits >= 3:
-                tr.state = "Confirmed"
-                tr.track_id = self.next_id
-                if self.verbose: print(f"    *** Track {tr.track_id} devient OFFICIELLEMENT Track {tr.track_id} ! ***")
-                self.next_id += 1
-                
             assigned_ids[det_idx] = tr.track_id
             
         # --- Stage 3: Nouvelles pistes ---
         for j in unmatch_det_2:
-            if self.verbose: print(f"    * NOUVELLE PISTE : Det {j} devient Track_int {self.next_internal_id} (Unconfirmed)")
-            new_tr = Track(self.next_internal_id, semantic_class, detections[j], self.device)
-            self.next_internal_id += 1
+            if self.verbose: print(f"    * NOUVELLE PISTE : Det {j} devient Track {self.next_id}")
+            new_tr = Track(self.next_id, semantic_class, detections[j], self.device)
+            assigned_ids[j] = new_tr.track_id
+            self.next_id += 1
             self.tracks.append(new_tr)
             
         if self.verbose:
