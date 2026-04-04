@@ -131,10 +131,12 @@ class CoarseToFineUOTTracker:
         if N == 0 or M == 0:
             return [], list(range(N)), det_indices
             
-        obs_mu = torch.tensor([detections[j]["centroid"][:2] for j in det_indices], device=self.device, dtype=torch.float32)
+        obs_mu_np = np.array([detections[j]["centroid"][:2] for j in det_indices])
+        obs_mu = torch.tensor(obs_mu_np, device=self.device, dtype=torch.float32)
         if obs_mu.dim() == 1: obs_mu = obs_mu.unsqueeze(0)
         
-        pred_mu = torch.tensor([tr.x[:2] for tr in tracks_subset], device=self.device, dtype=torch.float32)
+        pred_mu_np = np.array([tr.x[:2] for tr in tracks_subset])
+        pred_mu = torch.tensor(pred_mu_np, device=self.device, dtype=torch.float32)
         if pred_mu.dim() == 1: pred_mu = pred_mu.unsqueeze(0)
         
         # Coarse Gating on 2D BEV plane (XY) to avoid vertical bounding box noise
