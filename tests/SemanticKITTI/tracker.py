@@ -102,6 +102,10 @@ class CoarseToFineUOTTracker:
         if N == 0:
             if self.verbose and M > 0: print(f"  [Classe {semantic_class}] Initialisation de {M} nouvelles pistes.")
             return self._spawn_new(detections, semantic_class)
+            
+        if M == 0:
+            if self.verbose: print(f"  [Classe {semantic_class}] Résumé: 0 matches, 0 naissances, {N} disparitions temporaires.")
+            return []
 
         # ==========================================================
         # 1. ÉTAPE COARSE : UOT SUR CENTROÏDES
