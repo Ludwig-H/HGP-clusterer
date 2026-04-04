@@ -131,17 +131,19 @@ class CoarseToFineUOTTracker:
         if N == 0 or M == 0:
             return [], list(range(N)), det_indices
             
-        obs_mu = torch.tensor([detections[j]["centroid"][:3] for j in det_indices], device=self.device, dtype=torch.float32)
+        obs_mu = torch.tensor([detections[j]["centroid"][:2] for j in det_indices], device=self.device, dtype=torch.float32)
         if obs_mu.dim() == 1: obs_mu = obs_mu.unsqueeze(0)
         
-        pred_mu = torch.tensor([tr.x[:3] for tr in tracks_subset], device=self.device, dtype=torch.float32)
+        pred_mu = torch.tensor([tr.x[:2] for tr in tracks_subset], device=self.device, dtype=torch.float32)
         if pred_mu.dim() == 1: pred_mu = pred_mu.unsqueeze(0)
         
+        # Coarse Gating on 2D BEV plane (XY) to avoid vertical bounding box noise
         C_macro = torch.cdist(pred_mu, obs_mu, p=2)**2
         
-        gate_dist = max(2.0, prior.get("max_speed", 20.0) * self.dt * 1.5)
-        gate = gate_dist**2
-        mask_gated = C_macro > gate
+        # Scaling gate distance dynamically with occlusion age to prevent losing tracking during occlusions
+        ages = torch.tensor([max(1, tr.age_occlusion) for tr in tracks_subset], device=self.device, dtype=torch.float32).unsqueeze(1)
+        gate_dists = torch.clamp(prior.get("max_speed", 20.0) * self.dt * 1.5 * ages, min=2.0)
+        mask_gated = C_macro > (gate_dists**2)
         C_macro[mask_gated] = float('inf')
         
         if self.verbose:
