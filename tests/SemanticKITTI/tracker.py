@@ -114,7 +114,8 @@ class CoarseToFineUOTTracker:
         if pred_mu.dim() == 1:
             pred_mu = pred_mu.unsqueeze(0)
 
-        C_macro = torch.cdist(pred_mu, obs_mu, p=2)**2        
+        C_macro = torch.cdist(pred_mu, obs_mu, p=2)**2
+
         gate = (prior["max_speed"] * self.dt * 1.5)**2
         mask_gated = C_macro > gate
         C_macro[mask_gated] = float('inf')
@@ -124,14 +125,13 @@ class CoarseToFineUOTTracker:
             print(f"    - Coarse Gating : {n_gated}/{N*M} paires éliminées (v > {prior['max_speed']} m/s)")
         
         a, b = torch.ones(N, device=self.device), torch.ones(M, device=self.device)
-        P_macro = solve_uot_sinkhorn_gpu(C_macro, a, b, epsilon=1.0, tau1=12.5, tau2=12.5)
-        
+
         # ==========================================================
         # 2. ÉTAPE FINE : UOT POINT-À-POINT
         # ==========================================================
         C_final = np.full((N, M), 1e6)
-        pairs = torch.where(P_macro > 0.05)
-        
+        # Simply use the gated mask instead of full UOT at the macro level
+        pairs = torch.where(~mask_gated)        
         if self.verbose:
             print(f"    - Fine Matching : Analyse géométrique de {len(pairs[0])} paires potentielles...")
 
