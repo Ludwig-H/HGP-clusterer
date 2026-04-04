@@ -29,6 +29,7 @@ class Track:
         # 2. Attributs géométriques (Hors Kalman)
         self.L, self.W, self.H_dim = dim[0], dim[1], dim[2]
         self.yaw = yaw
+        self.yaw_rate = 0.0
         
         # 3. Mémoire de nuage de points GPU
         self.last_points_gpu = det["points_gpu"].clone() 
@@ -44,12 +45,48 @@ class Track:
         self.P = F @ self.P @ F.T + self.Q
         
         v_tensor = torch.tensor(self.x[3:6], device=self.device, dtype=torch.float32)
-        self.pred_points_gpu = self.last_points_gpu + v_tensor * dt
+        
+        # --- Rotation Géométrique GPU (Yaw Rate) ---
+        theta = self.yaw_rate * dt
+        if np.abs(theta) > 1e-4:
+            cos_t = np.cos(theta)
+            sin_t = np.sin(theta)
+            
+            # Matrice de rotation 2D sur l'axe Z (Tensor GPU)
+            R = torch.tensor([[cos_t, -sin_t, 0],
+                              [sin_t,  cos_t, 0],
+                              [0,      0,     1]], device=self.device, dtype=torch.float32)
+            
+            # On recentre le nuage sur l'origine (centroïde actuel)
+            c_tensor = torch.tensor(self.x[:3], device=self.device, dtype=torch.float32)
+            centered_points = self.last_points_gpu - c_tensor
+            
+            # On pivote, puis on re-décale
+            rotated_points = torch.matmul(centered_points, R.T) + c_tensor
+        else:
+            rotated_points = self.last_points_gpu
+            
+        # --- Extrapolation Linéaire ---
+        self.pred_points_gpu = rotated_points + v_tensor * dt
         self.age_occlusion += 1
 
-    def update(self, det: Dict):
-        """Mise à jour Kalman + EMA Géométrique."""
+    def update(self, det: Dict, dt: float = 0.1):
+        """Mise à jour Kalman + EMA Géométrique + Yaw Rate."""
         c, dim, yaw = det["centroid"], det["dimensions"], det["yaw"]
+        
+        # --- Calcul de la vitesse angulaire discrète (yaw_rate) ---
+        dyaw = np.arctan2(np.sin(yaw - self.yaw), np.cos(yaw - self.yaw))
+        
+        # Heuristique Anti-Saut (PCA ambiguity)
+        # Si la rotation semble > 90°, c'est la PCA qui a inversé ses axes. On rabat.
+        if np.abs(dyaw) > np.pi / 2:
+            dyaw = dyaw - np.sign(dyaw) * np.pi
+            
+        measured_yaw_rate = dyaw / dt
+        
+        # EMA plus lente (0.15) pour lisser le bruit angulaire du LiDAR
+        alpha_yaw_rate = 0.15
+        self.yaw_rate = (1 - alpha_yaw_rate) * self.yaw_rate + alpha_yaw_rate * measured_yaw_rate
         
         z = np.array([c[0], c[1], c[2]])
         S = self.H @ self.P @ self.H.T + self.R
@@ -188,14 +225,14 @@ class CoarseToFineUOTTracker:
         matches_conf, _, unmatch_det_1 = self._match_stage(confirmed_tracks, det_indices, detections, prior, stage=1)
         for r, det_idx in matches_conf:
             tr = confirmed_tracks[r]
-            tr.update(detections[det_idx])
+            tr.update(detections[det_idx], self.dt)
             assigned_ids[det_idx] = tr.track_id
             
         # --- Stage 2: Pistes Non-Confirmées ---
         matches_unconf, _, unmatch_det_2 = self._match_stage(unconfirmed_tracks, unmatch_det_1, detections, prior, stage=2)
         for r, det_idx in matches_unconf:
             tr = unconfirmed_tracks[r]
-            tr.update(detections[det_idx])
+            tr.update(detections[det_idx], self.dt)
             
             # Confirmation après 3 hits (frames) consécutifs/totaux
             if tr.state == "Unconfirmed" and tr.hits >= 3:
