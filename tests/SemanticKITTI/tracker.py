@@ -106,11 +106,15 @@ class CoarseToFineUOTTracker:
         # ==========================================================
         # 1. ÉTAPE COARSE : UOT SUR CENTROÏDES
         # ==========================================================
-        pred_mu = torch.tensor([tr.x[:3] for tr in cl_tracks], device=self.device, dtype=torch.float32)
         obs_mu = torch.tensor([det["centroid"][:3] for det in detections], device=self.device, dtype=torch.float32)
-        
-        C_macro = torch.cdist(pred_mu, obs_mu, p=2)**2
-        
+        if obs_mu.dim() == 1:
+            obs_mu = obs_mu.unsqueeze(0)
+
+        pred_mu = torch.tensor([tr.x[:3] for tr in cl_tracks], device=self.device, dtype=torch.float32)
+        if pred_mu.dim() == 1:
+            pred_mu = pred_mu.unsqueeze(0)
+
+        C_macro = torch.cdist(pred_mu, obs_mu, p=2)**2        
         gate = (prior["max_speed"] * self.dt * 1.5)**2
         mask_gated = C_macro > gate
         C_macro[mask_gated] = float('inf')
