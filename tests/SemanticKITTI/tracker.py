@@ -78,6 +78,9 @@ class Track:
         c, dim, yaw = det["centroid"], det["dimensions"], det["yaw"]
         
         # --- Calcul de la vitesse angulaire discrète (yaw_rate) ---
+        elapsed_t = self.age_occlusion * dt
+        if elapsed_t <= 0: elapsed_t = dt
+        
         dyaw = np.arctan2(np.sin(yaw - self.yaw), np.cos(yaw - self.yaw))
         
         # Heuristique Anti-Saut (PCA ambiguity)
@@ -85,7 +88,7 @@ class Track:
         if np.abs(dyaw) > np.pi / 2:
             dyaw = dyaw - np.sign(dyaw) * np.pi
             
-        measured_yaw_rate = dyaw / dt
+        measured_yaw_rate = dyaw / elapsed_t
         
         # EMA plus lente (0.15) pour lisser le bruit angulaire du LiDAR
         alpha_yaw_rate = 0.15
@@ -102,9 +105,8 @@ class Track:
         self.W = (1 - alpha) * self.W + alpha * dim[1]
         self.H_dim = (1 - alpha) * self.H_dim + alpha * dim[2]
         
-        s_y = (1 - alpha) * np.sin(self.yaw) + alpha * np.sin(yaw)
-        c_y = (1 - alpha) * np.cos(self.yaw) + alpha * np.cos(yaw)
-        self.yaw = np.arctan2(s_y, c_y)
+        # Stockage de l'angle brut pour la frame suivante (pas d'EMA pour éviter les instabilités aux sauts de 180°)
+        self.yaw = yaw
         
         self.last_points_gpu = det["points_gpu"].clone()
         self.age_occlusion = 0
