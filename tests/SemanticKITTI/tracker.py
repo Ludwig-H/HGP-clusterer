@@ -153,8 +153,9 @@ class CoarseToFineUOTTracker:
             a_f = torch.ones(n_pts, device=self.device)
             b_f = torch.ones(m_pts, device=self.device)
             
-            P_micro = solve_uot_sinkhorn_gpu(C_micro, a_f, b_f, epsilon=0.05, tau1=0.5, tau2=0.5)
-            raw_score = uot_cost_kl_gpu(P_micro, C_micro, a_f, b_f, tau1=0.5, tau2=0.5)
+            tau = prior.get("tau", 0.5)
+            P_micro = solve_uot_sinkhorn_gpu(C_micro, a_f, b_f, epsilon=0.05, tau1=tau, tau2=tau)
+            raw_score = uot_cost_kl_gpu(P_micro, C_micro, a_f, b_f, tau1=tau, tau2=tau)
             
             # Normalize after the fact by the average number of points
             score = raw_score / ((n_pts + m_pts) / 2.0)
