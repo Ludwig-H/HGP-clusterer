@@ -5,11 +5,13 @@ from typing import List, Dict, Optional
 from uot_sinkhorn import solve_uot_sinkhorn_gpu, uot_cost_kl_gpu
 
 class Track:
-    def __init__(self, track_id: int, semantic_class: int, det: Dict, device: str = 'cuda'):
-        self.track_id = track_id
+    def __init__(self, internal_id: int, semantic_class: int, det: Dict, device: str = 'cuda'):
+        self.internal_id = internal_id
+        self.track_id = -1  # ID officiel assigné uniquement quand Confirmé
         self.semantic_class = semantic_class
         self.device = device
         
+        self.state = "Unconfirmed"
         self.hits = 1
         
         c, dim, yaw = det["centroid"], det["dimensions"], det["yaw"]
@@ -114,6 +116,7 @@ class CoarseToFineUOTTracker:
     def __init__(self, dt: float = 0.1, max_age: int = 5, device: str = 'cuda', verbose: bool = False):
         self.tracks: List[Track] = []
         self.next_id = 1
+        self.next_internal_id = 1
         self.dt = dt
         self.max_age = max_age
         self.device = device
@@ -180,7 +183,8 @@ class CoarseToFineUOTTracker:
             
             match_threshold = prior.get("match_threshold", 1.0)
             if self.verbose and score < match_threshold * 2.0:
-                 print(f"      * Track {tr.track_id} <-> Det {det_idx}: Score UOT = {score:.4f} ({n_pts} pts vs {m_pts} pts)")
+                 name = f"Track {tr.track_id}" if tr.state == "Confirmed" else f"Track_int {tr.internal_id}"
+                 print(f"      * {name} <-> Det {det_idx}: Score UOT = {score:.4f} ({n_pts} pts vs {m_pts} pts)")
                  
         rows, cols = linear_sum_assignment(C_final)
         
@@ -197,7 +201,8 @@ class CoarseToFineUOTTracker:
                 unmatched_tracks.remove(r)
                 unmatched_dets.remove(det_idx)
                 if self.verbose:
-                    print(f"    => MATCH VALIDE (Stage {stage}) : Track {tracks_subset[r].track_id} assignée à Det {det_idx} (Score: {C_final[r,c]:.4f})")
+                    name = f"Track {tracks_subset[r].track_id}" if tracks_subset[r].state == "Confirmed" else f"Track_int {tracks_subset[r].internal_id}"
+                    print(f"    => MATCH VALIDE (Stage {stage}) : {name} assignée à Det {det_idx} (Score: {C_final[r,c]:.4f})")
                     
         return matches, list(unmatched_tracks), list(unmatched_dets)
 
@@ -210,11 +215,20 @@ class CoarseToFineUOTTracker:
         if self.verbose:
             print(f"\n  [Classe {semantic_class}] Association: {N} pistes existantes vs {M} nouvelles détections.")
 
+        min_hits = prior.get("min_hits", 3)
+
         if N == 0:
-            if self.verbose and M > 0: print(f"  [Classe {semantic_class}] Initialisation de {M} nouvelles pistes.")
+            if self.verbose and M > 0: print(f"  [Classe {semantic_class}] Initialisation de {M} nouvelles pistes (Unconfirmed).")
             for j, det in enumerate(detections):
-                new_tr = Track(self.next_id, semantic_class, det, self.device)
-                self.next_id += 1
+                new_tr = Track(self.next_internal_id, semantic_class, det, self.device)
+                
+                # Check for immediate confirmation
+                if new_tr.hits >= min_hits:
+                    new_tr.state = "Confirmed"
+                    new_tr.track_id = self.next_id
+                    self.next_id += 1
+                
+                self.next_internal_id += 1
                 self.tracks.append(new_tr)
                 assigned_ids[j] = new_tr.track_id
             return assigned_ids
@@ -223,8 +237,8 @@ class CoarseToFineUOTTracker:
             if self.verbose: print(f"  [Classe {semantic_class}] Résumé: 0 matches, 0 naissances, {N} disparitions potentielles.")
             return assigned_ids
 
-        confirmed_tracks = [tr for tr in cl_tracks if tr.hits >= 2]
-        unconfirmed_tracks = [tr for tr in cl_tracks if tr.hits < 2]
+        confirmed_tracks = [tr for tr in cl_tracks if tr.state == "Confirmed"]
+        unconfirmed_tracks = [tr for tr in cl_tracks if tr.state == "Unconfirmed"]
         
         det_indices = list(range(M))
         
@@ -240,14 +254,28 @@ class CoarseToFineUOTTracker:
         for r, det_idx in matches_unconf:
             tr = unconfirmed_tracks[r]
             tr.update(detections[det_idx], self.dt)
+            
+            # Confirmation
+            if tr.state == "Unconfirmed" and tr.hits >= min_hits:
+                tr.state = "Confirmed"
+                tr.track_id = self.next_id
+                if self.verbose: print(f"    *** Track_int {tr.internal_id} devient OFFICIELLEMENT Track {tr.track_id} ! ***")
+                self.next_id += 1
+                
             assigned_ids[det_idx] = tr.track_id
             
         # --- Stage 3: Nouvelles pistes ---
         for j in unmatch_det_2:
-            if self.verbose: print(f"    * NOUVELLE PISTE : Det {j} devient Track {self.next_id}")
-            new_tr = Track(self.next_id, semantic_class, detections[j], self.device)
+            if self.verbose: print(f"    * NOUVELLE PISTE : Det {j} devient Track_int {self.next_internal_id} (Unconfirmed)")
+            new_tr = Track(self.next_internal_id, semantic_class, detections[j], self.device)
+            
+            if new_tr.hits >= min_hits:
+                new_tr.state = "Confirmed"
+                new_tr.track_id = self.next_id
+                self.next_id += 1
+                
             assigned_ids[j] = new_tr.track_id
-            self.next_id += 1
+            self.next_internal_id += 1
             self.tracks.append(new_tr)
             
         if self.verbose:
@@ -265,13 +293,13 @@ class CoarseToFineUOTTracker:
                 tr.last_points_gpu = tr.pred_points_gpu.clone()
         
         # Filtre de survie :
-        # - Les pistes Confirmées (hits >= 2) ont droit au Coasting (max_age)
-        # - Les pistes Non-Confirmées (hits < 2) ont 1 frame de grâce (age_occlusion <= 1)
+        # - Les pistes Confirmées ont droit au Coasting (max_age)
+        # - Les pistes Non-Confirmées meurent IMMÉDIATEMENT (age_occlusion == 0)
         alive_tracks = []
         for tr in self.tracks:
-            if tr.hits >= 2 and tr.age_occlusion <= self.max_age:
+            if tr.state == "Confirmed" and tr.age_occlusion <= self.max_age:
                 alive_tracks.append(tr)
-            elif tr.hits < 2 and tr.age_occlusion <= 1:
+            elif tr.state == "Unconfirmed" and tr.age_occlusion == 0:
                 alive_tracks.append(tr)
                 
         self.tracks = alive_tracks
