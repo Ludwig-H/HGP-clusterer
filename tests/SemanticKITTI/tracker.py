@@ -39,6 +39,9 @@ class Track:
 
     def predict(self, dt: float):
         """Prédiction Kalman et extrapolation géométrique GPU."""
+        # On sauvegarde l'ancienne position pour pivoter autour du bon centre
+        old_x = self.x.copy()
+        
         F = np.eye(6)
         F[0, 3], F[1, 4], F[2, 5] = dt, dt, dt
         self.x = F @ self.x
@@ -57,8 +60,8 @@ class Track:
                               [sin_t,  cos_t, 0],
                               [0,      0,     1]], device=self.device, dtype=torch.float32)
             
-            # On recentre le nuage sur l'origine (centroïde actuel)
-            c_tensor = torch.tensor(self.x[:3], device=self.device, dtype=torch.float32)
+            # On recentre le nuage sur l'origine (ANCIEN centroïde)
+            c_tensor = torch.tensor(old_x[:3], device=self.device, dtype=torch.float32)
             centered_points = self.last_points_gpu - c_tensor
             
             # On pivote, puis on re-décale
