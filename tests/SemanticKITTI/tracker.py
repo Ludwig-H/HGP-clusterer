@@ -149,14 +149,22 @@ class CoarseToFineUOTTracker:
             C_micro = torch.cdist(p_tr, p_det, p=2)**2
             
             n_pts, m_pts = p_tr.shape[0], p_det.shape[0]
-            a_f = torch.ones(n_pts, device=self.device) / n_pts
-            b_f = torch.ones(m_pts, device=self.device) / m_pts
+            # UOT without pre-normalization to penalize cardinality mismatch
+            a_f = torch.ones(n_pts, device=self.device)
+            b_f = torch.ones(m_pts, device=self.device)
             
             P_micro = solve_uot_sinkhorn_gpu(C_micro, a_f, b_f, epsilon=0.05, tau1=0.5, tau2=0.5)
-            score = uot_cost_kl_gpu(P_micro, C_micro, a_f, b_f, tau1=0.5, tau2=0.5)
+            raw_score = uot_cost_kl_gpu(P_micro, C_micro, a_f, b_f, tau1=0.5, tau2=0.5)
+            
+            # Normalize after the fact by the average number of points
+            score = raw_score / ((n_pts + m_pts) / 2.0)
             
             C_final[i, j] = score
-            if self.verbose and score < 2.0: # Log seulement si relativement proche
+            
+            # Prior-dependent threshold: defined in prior, defaults to 1.0
+            match_threshold = prior.get("match_threshold", 1.0)
+            
+            if self.verbose and score < match_threshold * 2.0: # Log seulement si relativement proche
                  print(f"      * Track {tr.track_id} <-> Det {j}: Score UOT = {score:.4f} ({n_pts} pts vs {m_pts} pts)")
 
         # ==========================================================
@@ -166,8 +174,10 @@ class CoarseToFineUOTTracker:
         matched_tr, matched_det = set(), set()
         assigned_ids = [-1] * M
         
+        match_threshold = prior.get("match_threshold", 1.0)
+        
         for r, c in zip(rows, cols):
-            if C_final[r, c] < 1.0: # Seuil géométrique de validation
+            if C_final[r, c] < match_threshold: # Seuil géométrique basé sur la classe
                 tr_id = cl_tracks[r].track_id
                 if self.verbose: print(f"    => MATCH VALIDE : Track {tr_id} assignée à Det {c} (Score: {C_final[r,c]:.4f})")
                 cl_tracks[r].update(detections[c])
