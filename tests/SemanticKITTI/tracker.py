@@ -116,7 +116,9 @@ class CoarseToFineUOTTracker:
 
         C_macro = torch.cdist(pred_mu, obs_mu, p=2)**2
 
-        gate = (prior["max_speed"] * self.dt * 1.5)**2
+        # Minimum search radius of 2.0m to account for object centroid shifts and LiDAR sparsity
+        gate_dist = max(2.0, prior["max_speed"] * self.dt * 1.5)
+        gate = gate_dist**2
         mask_gated = C_macro > gate
         C_macro[mask_gated] = float('inf')
         
@@ -138,8 +140,9 @@ class CoarseToFineUOTTracker:
         for i, j in zip(pairs[0].tolist(), pairs[1].tolist()):
             tr, det = cl_tracks[i], detections[j]
             
-            p_tr = tr.pred_points_gpu
-            p_det = det["points_gpu"]
+            # Centering to perform pure shape matching (structural deformation only)
+            p_tr = tr.pred_points_gpu - tr.pred_points_gpu.mean(dim=0)
+            p_det = det["points_gpu"] - det["points_gpu"].mean(dim=0)
             C_micro = torch.cdist(p_tr, p_det, p=2)**2
             
             n_pts, m_pts = p_tr.shape[0], p_det.shape[0]
