@@ -140,9 +140,8 @@ class CoarseToFineUOTTracker:
         for i, j in zip(pairs[0].tolist(), pairs[1].tolist()):
             tr, det = cl_tracks[i], detections[j]
             
-            # Centering to perform pure shape matching (structural deformation only)
-            p_tr = tr.pred_points_gpu - tr.pred_points_gpu.mean(dim=0)
-            p_det = det["points_gpu"] - det["points_gpu"].mean(dim=0)
+            p_tr = tr.pred_points_gpu
+            p_det = det["points_gpu"]
             C_micro = torch.cdist(p_tr, p_det, p=2)**2
             
             n_pts, m_pts = p_tr.shape[0], p_det.shape[0]
