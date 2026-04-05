@@ -1,67 +1,50 @@
-import json
+def test_rand_index_peeling():
+    # Parent cluster: 2821 points of Car A, 16 points of Car B (Mixed cluster due to BEV bridge)
+    size_A = 2821
+    size_B = 16
+    parent_size = size_A + size_B
+    
+    # The Single Linkage tree proposes to peel off 4 points of Car B
+    shed_B = 4
+    
+    # 1. Calculate 'a' (Pairs of same GT in parent)
+    a = (size_A * (size_A - 1) // 2) + (size_B * (size_B - 1) // 2)
+    
+    # 2. Calculate 'a_prime' (Pairs of same GT in children)
+    child1_A = size_A
+    child1_B = size_B - shed_B
+    child2_A = 0
+    child2_B = shed_B
+    
+    a_prime = (child1_A * (child1_A - 1) // 2) + (child1_B * (child1_B - 1) // 2) + (child2_B * (child2_B - 1) // 2)
+    
+    # 3. Calculate P_diff (Total pairs broken by the split)
+    child1_size = child1_A + child1_B
+    child2_size = child2_A + child2_B
+    
+    total_parent_pairs = parent_size * (parent_size - 1) // 2
+    kept_pairs = (child1_size * (child1_size - 1) // 2) + (child2_size * (child2_size - 1) // 2)
+    P_diff = total_parent_pairs - kept_pairs
+    
+    # 4. Oracle Decision
+    decision = P_diff > 2 * (a - a_prime)
+    
+    print(f"--- PREUVE MATHÉMATIQUE DU GREEDY PEELING ---")
+    print(f"Parent : {size_A} pts (Car A) + {size_B} pts (Car B)")
+    print(f"Split proposé : Détacher {shed_B} pts (Car B)")
+    print(f"Total paires brisées (P_diff) : {P_diff}")
+    print(f"Paires de même instance brisées (a - a_prime) : {a - a_prime}")
+    print(f"Condition Oracle : {P_diff} > {2 * (a - a_prime)}")
+    print(f"Décision Oracle : {'ACCEPTER' if decision else 'REFUSER'}")
+    
+    # Explication des Vrais Négatifs vs Faux Négatifs
+    TN_gained = P_diff - (a - a_prime) # Paires A-B brisées (Vrais Négatifs gagnés)
+    TP_lost = a - a_prime              # Paires B-B brisées (Vrais Positifs perdus)
+    
+    print(f"\nPourquoi l'Oracle accepte ?")
+    print(f"Vrais Négatifs gagnés (Paires A-B détruites) : {TN_gained}")
+    print(f"Vrais Positifs perdus (Paires B-B détruites) : {TP_lost}")
+    print(f"Puisque {TN_gained} > {TP_lost}, le Rand Index global AUGMENTE.")
+    print(f"L'Oracle SACRIFIE mathématiquement la petite instance pour purifier la grosse !")
 
-with open("tests/SemanticKITTI/HGP_SemanticKITTI_4D_Panoptic.ipynb", "r") as f:
-    nb = json.load(f)
-
-for cell in nb["cells"]:
-    if cell["cell_type"] == "code":
-        if cell["source"] and "4.1 HGP Clustering" in cell["source"][0]:
-            new_source = []
-            for line in cell["source"]:
-                if 'def oracle_Gini(parent_pts_idx, children_pts_idx_list):' in line:
-                    new_source.append('CURRENT_GT_INSTANCES = None\n')
-                    new_source.append('\n')
-                    new_source.append('def oracle_Gini(parent_pts_idx, children_pts_idx_list):\n')
-                    new_source.append('    """\n')
-                    new_source.append('    Splitting basé sur l\'index de Gini (Oracle).\n')
-                    new_source.append('    Utilise CURRENT_GT_INSTANCES qui doit être mis à jour avant le fit.\n')
-                    new_source.append('    """\n')
-                    new_source.append('    global CURRENT_GT_INSTANCES\n')
-                    new_source.append('    if CURRENT_GT_INSTANCES is None or len(parent_pts_idx) == 0: return False\n')
-                    new_source.append('    \n')
-                    new_source.append('    def get_gini(indices):\n')
-                    new_source.append('        if len(indices) == 0: return 0.0\n')
-                    new_source.append('        labels = CURRENT_GT_INSTANCES[indices] # Utilisation des labels locaux à la classe\n')
-                    new_source.append('        if len(labels) == 0: return 0.0\n')
-                    new_source.append('        _, counts = np.unique(labels, return_counts=True)\n')
-                    new_source.append('        probs = counts / len(labels)\n')
-                    new_source.append('        return 1.0 - np.sum(probs**2)\n')
-                    new_source.append('    \n')
-                    new_source.append('    gini_p = get_gini(parent_pts_idx)\n')
-                    new_source.append('    if gini_p < 1e-6: return False # Déjà pur\n')
-                    new_source.append('    \n')
-                    new_source.append('    n_total = len(parent_pts_idx)\n')
-                    new_source.append('    gini_c_weighted = 0.0\n')
-                    new_source.append('    for c_pts in children_pts_idx_list:\n')
-                    new_source.append('        if len(c_pts) == 0: continue\n')
-                    new_source.append('        gini_c_weighted += (len(c_pts) / n_total) * get_gini(c_pts)\n')
-                    new_source.append('    \n')
-                    new_source.append('    # On split si l\'impureté diminue de façon notable\n')
-                    new_source.append('    return gini_c_weighted < (gini_p - 1e-6)\n')
-                    # On saute les lignes de l'ancienne version
-                    continue
-                
-                # Ignorer les lignes de l'ancienne implémentation jusqu'à SPLITTING_REGISTRY
-                if 'if Y_inst is None' in line or 'labels = Y_inst' in line or 'gini_p = get_gini' in line or 'gini_c_weighted < gini_p' in line:
-                    continue
-                if 'Splitting basé sur l\'index de Gini' in line or 'Divise si l\'impureté' in line:
-                    continue
-                if 'def get_gini' in line or 'probs = counts' in line or 'return 1.0 - np.sum' in line:
-                    continue
-
-                # Mise à jour de la boucle de clustering pour définir CURRENT_GT_INSTANCES
-                if 'X_class = X_clustering[class_mask]' in line:
-                    new_source.append(line)
-                    new_source.append('    Y_inst_class = Y_inst[class_mask]\n')
-                    new_source.append('    CURRENT_GT_INSTANCES = Y_inst_class # Mise à jour pour oracle_Gini\n')
-                elif 'Y_inst_class = Y_inst[class_mask] # Utile si Oracle Split' in line:
-                    continue # On l'a déjà ajouté juste au dessus
-                
-                else:
-                    new_source.append(line)
-            cell["source"] = new_source
-
-with open("tests/SemanticKITTI/HGP_SemanticKITTI_4D_Panoptic.ipynb", "w") as f:
-    json.dump(nb, f, indent=2)
-
-print("Notebook corrected: oracle_Gini now uses local class labels.")
+test_rand_index_peeling()
