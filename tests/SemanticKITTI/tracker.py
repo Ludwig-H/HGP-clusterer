@@ -206,7 +206,7 @@ class CoarseToFineUOTTracker:
                 assigned_tracks_this_step.append(tr)
                 
         # --- PHASE 2: COLD-START REPECHAGE (Shape Matching for age_total == 1) ---
-        newborn_tracks = [tr for tr in active_tracks if tr.age_total == 1 and tr not in [t for t in assigned_tracks_this_step if t.age_occlusion == 0]]
+        newborn_tracks = [tr for c, tr in enumerate(active_tracks) if tr.age_total == 1 and c not in assigned_track_indices]
         
         if len(newborn_tracks) > 0 and len(unassigned_dets) > 0:
             unassigned_list = list(unassigned_dets)
