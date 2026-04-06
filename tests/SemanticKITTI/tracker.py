@@ -1,7 +1,7 @@
 import numpy as np
 import torch
 from scipy.optimize import linear_sum_assignment
-from typing import List, Dict, Optional
+from typing import List, Dict, Optional, Tuple
 from uot_sinkhorn import solve_uot_sinkhorn_gpu, uot_cost_kl_gpu
 
 class Track:
@@ -33,7 +33,7 @@ class Track:
         
         # 3. Mémoire de nuage de points GPU
         self.last_points_gpu = det["points_gpu"].clone() 
-        self.pred_points_gpu = None
+        self.pred_points_gpu = self.last_points_gpu.clone() # Initialisé
         
         self.age_occlusion = 0
 
@@ -78,13 +78,11 @@ class Track:
         c, dim, yaw = det["centroid"], det["dimensions"], det["yaw"]
         
         # --- Calcul de la vitesse angulaire discrète (yaw_rate) ---
-        elapsed_t = self.age_occlusion * dt
-        if elapsed_t <= 0: elapsed_t = dt
+        elapsed_t = max(self.age_occlusion * dt, dt)
         
         dyaw = np.arctan2(np.sin(yaw - self.yaw), np.cos(yaw - self.yaw))
         
         # Heuristique Anti-Saut (PCA ambiguity)
-        # Si la rotation semble > 90°, c'est la PCA qui a inversé ses axes. On rabat.
         if np.abs(dyaw) > np.pi / 2:
             dyaw = dyaw - np.sign(dyaw) * np.pi
             
@@ -109,6 +107,7 @@ class Track:
         self.yaw = yaw
         
         self.last_points_gpu = det["points_gpu"].clone()
+        self.pred_points_gpu = self.last_points_gpu.clone() # Synchronise
         self.age_occlusion = 0
         self.hits += 1
 
@@ -124,182 +123,190 @@ class CoarseToFineUOTTracker:
 
     def predict_all(self):
         if self.verbose and len(self.tracks) > 0:
-            print(f"\n[Tracker] Prédiction : {len(self.tracks)} pistes actives extrapolées.")
+            print(f"\\n[Tracker] Prédiction : {len(self.tracks)} pistes actives extrapolées.")
         for tr in self.tracks:
             tr.predict(self.dt)
 
-    def _match_stage(self, tracks_subset: List[Track], det_indices: List[int], detections: List[Dict], prior: Dict, stage: int = 1):
-        N = len(tracks_subset)
-        M = len(det_indices)
-        if N == 0 or M == 0:
-            return [], list(range(N)), det_indices
-            
-        obs_mu_np = np.array([detections[j]["centroid"][:2] for j in det_indices])
-        obs_mu = torch.tensor(obs_mu_np, device=self.device, dtype=torch.float32)
-        if obs_mu.dim() == 1: obs_mu = obs_mu.unsqueeze(0)
-        
-        pred_mu_np = np.array([tr.x[:2] for tr in tracks_subset])
-        pred_mu = torch.tensor(pred_mu_np, device=self.device, dtype=torch.float32)
-        if pred_mu.dim() == 1: pred_mu = pred_mu.unsqueeze(0)
-        
-        # Coarse Gating on 2D BEV plane (XY) to avoid vertical bounding box noise
-        C_macro = torch.cdist(pred_mu, obs_mu, p=2)**2
-        
-        # Scaling gate distance dynamically with occlusion age to prevent losing tracking during occlusions
-        ages = torch.tensor([max(1, tr.age_occlusion) for tr in tracks_subset], device=self.device, dtype=torch.float32).unsqueeze(1)
-        gate_dists = torch.clamp(prior.get("max_speed", 20.0) * self.dt * 1.5 * ages, min=2.0)
-        mask_gated = C_macro > (gate_dists**2)
-        C_macro[mask_gated] = float('inf')
-        
-        if self.verbose:
-            n_gated = torch.sum(mask_gated).item()
-            print(f"    - Stage {stage} Coarse Gating : {n_gated}/{N*M} paires éliminées (v > {prior.get('max_speed', 20.0)} m/s)")
-            
-        C_final = np.full((N, M), 1e6)
-        pairs = torch.where(~mask_gated)
-        
-        if self.verbose:
-            print(f"    - Stage {stage} Fine Matching : Analyse géométrique de {len(pairs[0])} paires potentielles...")
-            
-        for i, j in zip(pairs[0].tolist(), pairs[1].tolist()):
-            tr = tracks_subset[i]
-            det_idx = det_indices[j]
-            det = detections[det_idx]
-            
-            p_tr = tr.pred_points_gpu
-            p_det = det["points_gpu"]
-            C_micro = torch.cdist(p_tr, p_det, p=2)**2
-            
-            n_pts, m_pts = p_tr.shape[0], p_det.shape[0]
-            a_f = torch.ones(n_pts, device=self.device)
-            b_f = torch.ones(m_pts, device=self.device)
-            
-            tau = prior.get("tau", 0.5)
-            P_micro = solve_uot_sinkhorn_gpu(C_micro, a_f, b_f, epsilon=0.05, tau1=tau, tau2=tau)
-            raw_score = uot_cost_kl_gpu(P_micro, C_micro, a_f, b_f, tau1=tau, tau2=tau)
-            
-            score = raw_score / ((n_pts + m_pts) / 2.0)
-            C_final[i, j] = score
-            
-            match_threshold = prior.get("match_threshold", 1.0)
-            if self.verbose and score < match_threshold * 2.0:
-                 name = f"Track {tr.track_id}" if tr.state == "Confirmed" else f"Track_int {tr.internal_id}"
-                 print(f"      * {name} <-> Det {det_idx}: Score UOT = {score:.4f} ({n_pts} pts vs {m_pts} pts)")
-                 
-        rows, cols = linear_sum_assignment(C_final)
-        
-        matches = []
-        unmatched_tracks = set(range(N))
-        unmatched_dets = set(det_indices)
-        
-        match_threshold = prior.get("match_threshold", 1.0)
-        
-        for r, c in zip(rows, cols):
-            if C_final[r, c] < match_threshold:
-                det_idx = det_indices[c]
-                matches.append((r, det_idx))
-                unmatched_tracks.remove(r)
-                unmatched_dets.remove(det_idx)
-                if self.verbose:
-                    name = f"Track {tracks_subset[r].track_id}" if tracks_subset[r].state == "Confirmed" else f"Track_int {tracks_subset[r].internal_id}"
-                    print(f"    => MATCH VALIDE (Stage {stage}) : {name} assignée à Det {det_idx} (Score: {C_final[r,c]:.4f})")
-                    
-        return matches, list(unmatched_tracks), list(unmatched_dets)
-
-    def step(self, detections: List[Dict], semantic_class: int, prior: Dict):
+    def compute_massive_uot(self, current_points_gpu: torch.Tensor, semantic_class: int, prior: Dict) -> Tuple[Optional[np.ndarray], List[Track], List[Track]]:
+        """
+        Phase 1 : Calcule l'UOT massif entre tous les points de la classe (frame t) 
+        et tous les points des pistes actives extrapolées (frame t-1).
+        Renvoie la matrice V (N_points, M_actives + 1), les pistes actives, et les pistes fantômes.
+        """
         cl_tracks = [tr for tr in self.tracks if tr.semantic_class == semantic_class]
+        active_tracks = [tr for tr in cl_tracks if tr.age_occlusion == 1] # 1 car predict_all() a été appelé juste avant
+        ghost_tracks = [tr for tr in cl_tracks if tr.age_occlusion > 1]
         
-        N, M = len(cl_tracks), len(detections)
-        assigned_ids = [-1] * M
+        M = len(active_tracks)
+        N = current_points_gpu.shape[0]
+        
+        if M == 0 or N == 0:
+            V = np.zeros((N, M + 1), dtype=np.float32)
+            if N > 0: V[:, M] = 1.0 # 100% NEW
+            return V, active_tracks, ghost_tracks
+            
+        pred_clouds = [tr.pred_points_gpu for tr in active_tracks]
+        lengths = [cloud.shape[0] for cloud in pred_clouds]
+        mega_pred_cloud = torch.cat(pred_clouds, dim=0)
+        
+        K_total = mega_pred_cloud.shape[0]
+        
+        C_matrix = torch.cdist(current_points_gpu, mega_pred_cloud, p=2)**2
+        
+        # Gating pour forcer les connexions impossibles à zéro dans K (via K = exp(-C/eps) et C=inf)
+        gate_dist = prior.get("max_speed", 20.0) * self.dt * 2.0
+        C_matrix[C_matrix > gate_dist**2] = float('inf')
+        
+        a_f = torch.ones(N, device=self.device) / N
+        b_f = torch.ones(K_total, device=self.device) / K_total
+        
+        tau = prior.get("tau", 0.5)
+        P_micro = solve_uot_sinkhorn_gpu(C_matrix, a_f, b_f, epsilon=0.05, tau1=tau, tau2=tau)
+        
+        P_micro_cpu = P_micro.cpu().numpy()
+        
+        V = np.zeros((N, M + 1), dtype=np.float32)
+        start_idx = 0
+        for m, length in enumerate(lengths):
+            # La somme de la masse UOT venant du point i (de N) vers tous les points de la piste m
+            V[:, m] = np.sum(P_micro_cpu[:, start_idx:start_idx+length], axis=1)
+            start_idx += length
+            
+        # Un point i "distribue" au mieux la masse 1/N. S'il y a des pertes, c'est NEW.
+        sum_V = np.sum(V[:, :M], axis=1)
+        V[:, M] = np.maximum(0.0, (1.0 / N) - sum_V)
+        
+        # Normalisation pour que chaque ligne somme à 1.0 (Vecteur de probabilité d'appartenance)
+        row_sums = np.sum(V, axis=1, keepdims=True)
+        row_sums[row_sums == 0] = 1e-12
+        V = V / row_sums
         
         if self.verbose:
-            print(f"\n  [Classe {semantic_class}] Association: {N} pistes existantes vs {M} nouvelles détections.")
+             print(f"  [UOT Massif] Classe {semantic_class} : {N} pts(t) vs {K_total} pts(t-1) dans {M} pistes.")
+             
+        return V, active_tracks, ghost_tracks
 
+    def step_assign(self, detections: List[Dict], active_tracks: List[Track], ghost_tracks: List[Track], V: np.ndarray, semantic_class: int, prior: Dict):
+        """
+        Phase 3 : Assignation Stratifiée à 3 Tours (Actifs -> Fantômes -> Nouveaux).
+        """
+        M = len(active_tracks)
+        assigned_ids = [-1] * len(detections)
+        unassigned_det_indices = list(range(len(detections)))
+        
         min_hits = prior.get("min_hits", 3)
-
-        if N == 0:
-            if self.verbose and M > 0: print(f"  [Classe {semantic_class}] Initialisation de {M} nouvelles pistes (Unconfirmed).")
-            for j, det in enumerate(detections):
-                new_tr = Track(self.next_internal_id, semantic_class, det, self.device)
-                
-                # Check for immediate confirmation
-                if new_tr.hits >= min_hits:
-                    new_tr.state = "Confirmed"
-                    new_tr.track_id = self.next_id
-                    self.next_id += 1
-                
-                self.next_internal_id += 1
-                self.tracks.append(new_tr)
-                assigned_ids[j] = new_tr.track_id
-            return assigned_ids
-            
-        if M == 0:
-            if self.verbose: print(f"  [Classe {semantic_class}] Résumé: 0 matches, 0 naissances, {N} disparitions potentielles.")
-            return assigned_ids
-
-        confirmed_tracks = [tr for tr in cl_tracks if tr.state == "Confirmed"]
-        unconfirmed_tracks = [tr for tr in cl_tracks if tr.state == "Unconfirmed"]
         
-        det_indices = list(range(M))
-        
-        # --- Stage 1: Pistes Confirmées (Priorité VIP) ---
-        matches_conf, _, unmatch_det_1 = self._match_stage(confirmed_tracks, det_indices, detections, prior, stage=1)
-        for r, det_idx in matches_conf:
-            tr = confirmed_tracks[r]
-            tr.update(detections[det_idx], self.dt)
-            assigned_ids[det_idx] = tr.track_id
+        if self.verbose:
+            print(f"  [Assignation] Classe {semantic_class} : {len(detections)} clusters, {M} actifs, {len(ghost_tracks)} fantômes.")
             
-        # --- Stage 2: Pistes Non-Confirmées ---
-        matches_unconf, _, unmatch_det_2 = self._match_stage(unconfirmed_tracks, unmatch_det_1, detections, prior, stage=2)
-        for r, det_idx in matches_unconf:
-            tr = unconfirmed_tracks[r]
-            tr.update(detections[det_idx], self.dt)
+        # =======================================================
+        # TOUR 1 : Assignation Évidente aux Actifs (Via le Tenseur V)
+        # =======================================================
+        if M > 0 and V is not None and len(unassigned_det_indices) > 0:
+            scores = np.zeros((len(detections), M))
             
-            # Confirmation
-            if tr.state == "Unconfirmed" and tr.hits >= min_hits:
-                tr.state = "Confirmed"
-                tr.track_id = self.next_id
-                if self.verbose: print(f"    *** Track_int {tr.internal_id} devient OFFICIELLEMENT Track {tr.track_id} ! ***")
-                self.next_id += 1
+            for i in unassigned_det_indices:
+                mask_local = detections[i]["mask_local"]
+                if np.sum(mask_local) == 0: continue
                 
-            assigned_ids[det_idx] = tr.track_id
-            
-        # --- Stage 3: Nouvelles pistes ---
-        for j in unmatch_det_2:
-            if self.verbose: print(f"    * NOUVELLE PISTE : Det {j} devient Track_int {self.next_internal_id} (Unconfirmed)")
-            new_tr = Track(self.next_internal_id, semantic_class, detections[j], self.device)
+                V_cluster = V[mask_local] # (N_c, M+1)
+                mean_V = np.mean(V_cluster, axis=0) # (M+1,)
+                
+                # Le score de la piste m pour ce cluster est sa proba moyenne.
+                for m in range(M):
+                    # On veut que le vote soit majoritairement pour m, et qu'il batte NEW
+                    if mean_V[m] > mean_V[M] and mean_V[m] > 0.3: # Exige un minimum de 30% de certitude
+                        scores[i, m] = mean_V[m]
+                        
+            # Algorithme Hongrois pour maximiser la somme des probabilités
+            if np.max(scores) > 0:
+                cost_matrix = -scores
+                rows, cols = linear_sum_assignment(cost_matrix)
+                
+                for r, c in zip(rows, cols):
+                    if scores[r, c] > 0:
+                        tr = active_tracks[c]
+                        tr.update(detections[r], self.dt)
+                        assigned_ids[r] = tr.track_id
+                        unassigned_det_indices.remove(r)
+                        if self.verbose:
+                            name = f"Track {tr.track_id}" if tr.state == "Confirmed" else f"Track_int {tr.internal_id}"
+                            print(f"    -> TOUR 1 (Actifs) : Cluster {r} -> {name} (Confiance UOT: {scores[r, c]:.2%})")
+
+        # =======================================================
+        # TOUR 2 : Recherche des Fantômes (UOT Local Point-à-Point)
+        # =======================================================
+        if len(unassigned_det_indices) > 0 and len(ghost_tracks) > 0:
+            for i in unassigned_det_indices.copy():
+                det = detections[i]
+                p_det = det["points_gpu"]
+                
+                best_score = float('inf')
+                best_ghost_idx = -1
+                
+                for j, ghost_tr in enumerate(ghost_tracks):
+                    p_tr = ghost_tr.pred_points_gpu
+                    
+                    # Coarse Gating Euclidien (Centres)
+                    dist_centers = torch.norm(torch.tensor(det["centroid"][:2], device=self.device) - torch.tensor(ghost_tr.x[:2], device=self.device, dtype=torch.float32))
+                    gate = prior.get("max_speed", 20.0) * self.dt * 1.5 * max(1, ghost_tr.age_occlusion)
+                    if dist_centers > gate:
+                        continue
+                        
+                    C_micro = torch.cdist(p_tr, p_det, p=2)**2
+                    n_pts, m_pts = p_tr.shape[0], p_det.shape[0]
+                    a_f = torch.ones(n_pts, device=self.device)
+                    b_f = torch.ones(m_pts, device=self.device)
+                    tau = prior.get("tau", 0.5)
+                    
+                    P_micro = solve_uot_sinkhorn_gpu(C_micro, a_f, b_f, epsilon=0.05, tau1=tau, tau2=tau)
+                    raw_score = uot_cost_kl_gpu(P_micro, C_micro, a_f, b_f, tau1=tau, tau2=tau)
+                    score = raw_score / ((n_pts + m_pts) / 2.0)
+                    
+                    if score < best_score:
+                        best_score = score
+                        best_ghost_idx = j
+                        
+                match_threshold = prior.get("match_threshold", 1.0)
+                if best_score < match_threshold * 2.0:
+                    ghost_tr = ghost_tracks[best_ghost_idx]
+                    ghost_tr.update(det, self.dt)
+                    assigned_ids[i] = ghost_tr.track_id
+                    unassigned_det_indices.remove(i)
+                    ghost_tracks.pop(best_ghost_idx) # Empêche qu'un fantôme soit repris
+                    if self.verbose: 
+                        name = f"Track {ghost_tr.track_id}" if ghost_tr.state == "Confirmed" else f"Track_int {ghost_tr.internal_id}"
+                        print(f"    -> TOUR 2 (Fantômes) : Cluster {i} -> {name} RESSUSCITÉ (Score UOT: {best_score:.2f})")
+                        
+        # =======================================================
+        # TOUR 3 : Naissances (Nouvelles Instances)
+        # =======================================================
+        for i in unassigned_det_indices:
+            det = detections[i]
+            new_tr = Track(self.next_internal_id, semantic_class, det, self.device)
             
             if new_tr.hits >= min_hits:
                 new_tr.state = "Confirmed"
                 new_tr.track_id = self.next_id
                 self.next_id += 1
                 
-            assigned_ids[j] = new_tr.track_id
             self.next_internal_id += 1
             self.tracks.append(new_tr)
-            
-        if self.verbose:
-            n_matches = len(matches_conf) + len(matches_unconf)
-            n_new = len(unmatch_det_2)
-            n_lost = len(cl_tracks) - n_matches
-            print(f"  [Classe {semantic_class}] Résumé: {n_matches} matches, {n_new} naissances (non-conf), {n_lost} non-matchés.")
-            
+            assigned_ids[i] = new_tr.track_id
+            if self.verbose: print(f"    -> TOUR 3 (Naissances) : Cluster {i} -> Nouvelle instance (Interne {new_tr.internal_id})")
+
         return assigned_ids
 
     def cleanup(self):
         """Supprime les pistes mortes et gère le coasting (fantômes)."""
-        for tr in self.tracks:
-            if tr.age_occlusion > 0:
-                tr.last_points_gpu = tr.pred_points_gpu.clone()
-        
         # Filtre de survie :
         # - Les pistes Confirmées ont droit au Coasting (max_age)
-        # - Les pistes Non-Confirmées meurent IMMÉDIATEMENT (age_occlusion == 0)
+        # - Les pistes Non-Confirmées meurent IMMÉDIATEMENT (age_occlusion == 1)
         alive_tracks = []
         for tr in self.tracks:
             if tr.state == "Confirmed" and tr.age_occlusion <= self.max_age:
                 alive_tracks.append(tr)
-            elif tr.state == "Unconfirmed" and tr.age_occlusion == 0:
+            elif tr.state == "Unconfirmed" and tr.age_occlusion <= 1:
                 alive_tracks.append(tr)
                 
         self.tracks = alive_tracks
