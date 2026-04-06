@@ -12,6 +12,7 @@ class Track:
         self.device = device
         
         self.age_occlusion = 0
+        self.age_total = 0
         c, dim, yaw = det["centroid"], det["dimensions"], det["yaw"]
         
         self.x = np.array([c[0], c[1], c[2], 0.0, 0.0, 0.0], dtype=float)
@@ -32,6 +33,7 @@ class Track:
 
     def predict(self, dt: float):
         self.age_occlusion += 1
+        self.age_total += 1
         
         F = np.eye(6)
         F[0, 3], F[1, 4], F[2, 5] = dt, dt, dt
@@ -59,6 +61,7 @@ class Track:
     def update(self, det: Dict, dt: float = 0.1):
         elapsed_t = dt * max(1, self.age_occlusion)
         self.age_occlusion = 0
+        self.age_total = 0
         c, dim, yaw = det["centroid"], det["dimensions"], det["yaw"]
         
         dyaw = np.arctan2(np.sin(yaw - self.yaw), np.cos(yaw - self.yaw))
@@ -201,7 +204,70 @@ class CoarseToFineUOTTracker:
         for c, tr in enumerate(active_tracks):
             if c not in assigned_track_indices:
                 assigned_tracks_this_step.append(tr)
+                
+        # --- PHASE 2: COLD-START REPECHAGE (Shape Matching for age_total == 1) ---
+        newborn_tracks = [tr for tr in active_tracks if tr.age_total == 1 and tr not in [t for t in assigned_tracks_this_step if t.age_occlusion == 0]]
         
+        if len(newborn_tracks) > 0 and len(unassigned_dets) > 0:
+            unassigned_list = list(unassigned_dets)
+            repechage_cost = np.full((len(unassigned_list), len(newborn_tracks)), float('inf'), dtype=np.float32)
+            
+            max_speed = prior.get("max_speed", 20.0)
+            tau_shape = 1.0 # Strict shape matching
+            
+            for i_idx, r in enumerate(unassigned_list):
+                det = detections[r]
+                c_det = torch.tensor(det["centroid"][:3], device=self.device, dtype=torch.float32)
+                p_det = det["points_gpu"]
+                n_pts = p_det.shape[0]
+                if n_pts == 0: continue
+                
+                a_f = torch.ones(n_pts, device=self.device)
+                
+                for j_idx, tr in enumerate(newborn_tracks):
+                    c_tr = torch.tensor(tr.x[:3], device=self.device, dtype=torch.float32)
+                    dist_centers = torch.norm(c_det - c_tr).item()
+                    
+                    if dist_centers > max_speed * self.dt * 1.5: # 50% margin for cold start
+                        continue
+                        
+                    # Shape alignment: translate track points to det centroid
+                    translation = c_det - c_tr
+                    p_tr_aligned = tr.last_points_gpu + translation
+                    m_pts = p_tr_aligned.shape[0]
+                    if m_pts == 0: continue
+                    
+                    b_f = torch.ones(m_pts, device=self.device)
+                    C_micro = torch.cdist(p_tr_aligned, p_det, p=2)**2
+                    
+                    P_micro = solve_uot_sinkhorn_gpu(C_micro, a_f, b_f, epsilon=0.05, tau1=tau_shape, tau2=tau_shape)
+                    raw_score = uot_cost_kl_gpu(P_micro, C_micro, a_f, b_f, tau1=tau_shape, tau2=tau_shape)
+                    score = raw_score / max(1.0, (n_pts + m_pts) / 2.0)
+                    
+                    if score < prior.get("match_threshold", 3.0):
+                        repechage_cost[i_idx, j_idx] = score
+                        
+            from scipy.optimize import linear_sum_assignment
+            # Replace inf with large number for Hungarian
+            valid_cost = np.where(repechage_cost == float('inf'), 1e6, repechage_cost)
+            rows_rep, cols_rep = linear_sum_assignment(valid_cost)
+            
+            for r_idx, c_idx in zip(rows_rep, cols_rep):
+                if repechage_cost[r_idx, c_idx] != float('inf'):
+                    r = unassigned_list[r_idx]
+                    tr = newborn_tracks[c_idx]
+                    
+                    # Swap the track state from unassigned to assigned
+                    assigned_tracks_this_step.remove(tr) # Remove the un-updated version
+                    tr.update(detections[r], self.dt)
+                    assigned_ids[r] = tr.track_id
+                    assigned_tracks_this_step.append(tr) # Add the updated version
+                    unassigned_dets.remove(r)
+                    
+                    if self.verbose:
+                         print(f"    -> Repêchage (Cold-Start) : Cluster {r} -> Track {tr.track_id} (Shape Score: {repechage_cost[r_idx, c_idx]:.2f})")
+
+        # --- PHASE 3: BIRTH (NEW) ---
         for r in unassigned_dets:
             if r >= len(all_W_C): continue
             W_C = all_W_C[r]
