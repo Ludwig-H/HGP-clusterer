@@ -155,15 +155,17 @@ class CoarseToFineUOTTracker:
              
         return V, active_tracks
 
-    def step_assign_confirmed(self, detections: List[Dict], confirmed_tracks: List[Track], V_conf: np.ndarray, semantic_class: int, prior: Dict) -> Tuple[List[int], List[Track], List[int]]:
+    def step_assign_confirmed(self, detections: List[Dict], confirmed_tracks: List[Track], V_conf: np.ndarray, semantic_class: int, prior: Dict) -> Tuple[List[int], List[Track], List[int], List[np.ndarray]]:
         M_conf = len(confirmed_tracks)
         assigned_ids = [-1] * len(detections)
         assigned_tracks_this_step = []
         unassigned_dets = set(range(len(detections)))
         assigned_track_indices = set()
         
+        all_W_C = []
         if M_conf == 0:
-            return assigned_ids, assigned_tracks_this_step, list(unassigned_dets)
+            all_W_C = [np.array([1.0]) for _ in range(len(detections))]
+            return assigned_ids, assigned_tracks_this_step, list(unassigned_dets), all_W_C
             
         cost_matrix = np.zeros((len(detections), M_conf), dtype=np.float32)
         
@@ -205,9 +207,9 @@ class CoarseToFineUOTTracker:
             if c not in assigned_track_indices:
                 assigned_tracks_this_step.append(tr)
                 
-        return assigned_ids, assigned_tracks_this_step, list(unassigned_dets)
+        return assigned_ids, assigned_tracks_this_step, list(unassigned_dets), all_W_C
 
-    def step_assign_unconfirmed_and_births(self, detections: List[Dict], unassigned_dets: List[int], unconfirmed_tracks: List[Track], assigned_ids: List[int], assigned_tracks_this_step: List[Track], semantic_class: int, prior: Dict) -> List[int]:
+    def step_assign_unconfirmed_and_births(self, detections: List[Dict], unassigned_dets: List[int], unconfirmed_tracks: List[Track], assigned_ids: List[int], assigned_tracks_this_step: List[Track], semantic_class: int, prior: Dict, all_W_C: List[np.ndarray]) -> List[int]:
         unassigned_set = set(unassigned_dets)
         
         # --- PHASE 2: Shape Matching for ALL Unconfirmed tracks ---
@@ -278,12 +280,18 @@ class CoarseToFineUOTTracker:
         # --- PHASE 3: BIRTH (NEW) with NMS ---
         birth_candidates = []
         for r in unassigned_set:
-            # We don't have W_C for unconfirmed, so any remaining unassigned cluster is 100% NEW
-            birth_candidates.append({
-                'r': r,
-                'score': 1.0, # It survived both phases, it is fully NEW
-                'centroid': detections[r]["centroid"][:3]
-            })
+            if r >= len(all_W_C): continue
+            W_C = all_W_C[r]
+            
+            # W_C contains M_conf + 1 elements. The last one is the NEW probability (not assigned to any CONFIRMED track)
+            new_prob = W_C[-1]
+            
+            if new_prob >= 0.9:
+                birth_candidates.append({
+                    'r': r,
+                    'score': new_prob,
+                    'centroid': detections[r]["centroid"][:3]
+                })
                 
         birth_candidates.sort(key=lambda x: x['score'], reverse=True)
         min_dist = prior.get("W", 1.0)
