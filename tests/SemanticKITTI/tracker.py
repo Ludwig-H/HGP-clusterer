@@ -32,7 +32,6 @@ class Track:
 
     def predict(self, dt: float):
         self.age_occlusion += 1
-        old_x = self.x.copy()
         
         F = np.eye(6)
         F[0, 3], F[1, 4], F[2, 5] = dt, dt, dt
@@ -40,26 +39,27 @@ class Track:
         self.P = F @ self.P @ F.T + self.Q
         
         v_tensor = torch.tensor(self.x[3:6], device=self.device, dtype=torch.float32)
+        total_dt = dt * self.age_occlusion
         
-        theta = self.yaw_rate * dt
+        theta = self.yaw_rate * total_dt
         if np.abs(theta) > 1e-4:
             cos_t = np.cos(theta)
             sin_t = np.sin(theta)
             R = torch.tensor([[cos_t, -sin_t, 0],
                               [sin_t,  cos_t, 0],
                               [0,      0,     1]], device=self.device, dtype=torch.float32)
-            c_tensor = torch.tensor(old_x[:3], device=self.device, dtype=torch.float32)
+            c_tensor = torch.mean(self.last_points_gpu, dim=0)
             centered_points = self.last_points_gpu - c_tensor
             rotated_points = torch.matmul(centered_points, R.T) + c_tensor
         else:
             rotated_points = self.last_points_gpu
             
-        self.pred_points_gpu = rotated_points + v_tensor * dt
+        self.pred_points_gpu = rotated_points + v_tensor * total_dt
 
     def update(self, det: Dict, dt: float = 0.1):
+        elapsed_t = dt * max(1, self.age_occlusion)
         self.age_occlusion = 0
         c, dim, yaw = det["centroid"], det["dimensions"], det["yaw"]
-        elapsed_t = dt
         
         dyaw = np.arctan2(np.sin(yaw - self.yaw), np.cos(yaw - self.yaw))
         if np.abs(dyaw) > np.pi / 2:
