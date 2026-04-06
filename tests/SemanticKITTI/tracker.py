@@ -61,7 +61,6 @@ class Track:
     def update(self, det: Dict, dt: float = 0.1):
         elapsed_t = dt * max(1, self.age_occlusion)
         self.age_occlusion = 0
-        self.age_total = 0
         c, dim, yaw = det["centroid"], det["dimensions"], det["yaw"]
         
         dyaw = np.arctan2(np.sin(yaw - self.yaw), np.cos(yaw - self.yaw))
