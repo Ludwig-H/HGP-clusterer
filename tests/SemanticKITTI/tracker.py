@@ -104,9 +104,9 @@ class CoarseToFineUOTTracker:
     def predict_all(self):
         alive_tracks = []
         for tr in self.tracks:
-            if tr.state == "Confirmed" and tr.age_occlusion <= 5:
+            if tr.state == "Confirmed" and tr.age_occlusion < 5:
                 alive_tracks.append(tr)
-            elif tr.state == "Unconfirmed" and tr.age_occlusion <= 1:
+            elif tr.state == "Unconfirmed" and tr.age_occlusion < 1:
                 alive_tracks.append(tr)
                 
         self.tracks = alive_tracks
