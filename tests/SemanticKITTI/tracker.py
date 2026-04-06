@@ -180,6 +180,7 @@ class CoarseToFineUOTTracker:
                     cost_matrix[i, m] = -W_C[m]
 
         assigned_tracks_this_step = []
+        assigned_track_indices = set()
         unassigned_dets = set(range(len(detections)))
         
         if M > 0:
@@ -192,9 +193,14 @@ class CoarseToFineUOTTracker:
                     tr.update(detections[r], self.dt)
                     assigned_ids[r] = tr.track_id
                     assigned_tracks_this_step.append(tr)
+                    assigned_track_indices.add(c)
                     unassigned_dets.remove(r)
                     if self.verbose:
                         print(f"    -> Assignation : Cluster {r} -> Track {tr.track_id} (Score: {score:.2f})")
+                        
+        for c, tr in enumerate(active_tracks):
+            if c not in assigned_track_indices:
+                assigned_tracks_this_step.append(tr)
         
         for r in unassigned_dets:
             if r >= len(all_W_C): continue
