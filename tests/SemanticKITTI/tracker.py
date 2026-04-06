@@ -238,7 +238,7 @@ class CoarseToFineUOTTracker:
                     if m_pts == 0: continue
                     
                     b_f = torch.ones(m_pts, device=self.device)
-                    C_micro = torch.cdist(p_tr_aligned, p_det, p=2)**2
+                    C_micro = torch.cdist(p_det, p_tr_aligned, p=2)**2
                     
                     P_micro = solve_uot_sinkhorn_gpu(C_micro, a_f, b_f, epsilon=0.05, tau1=tau_shape, tau2=tau_shape)
                     raw_score = uot_cost_kl_gpu(P_micro, C_micro, a_f, b_f, tau1=tau_shape, tau2=tau_shape)
