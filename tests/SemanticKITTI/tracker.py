@@ -97,7 +97,7 @@ class CoarseToFineUOTTracker:
         self.verbose = verbose
 
     def predict_all(self):
-        self.tracks = [tr for tr in self.tracks if getattr(tr, "age_occlusion", 0) <= 3]
+        self.tracks = [tr for tr in self.tracks if getattr(tr, "age_occlusion", 0) <= 5]
         if self.verbose and len(self.tracks) > 0:
             print(f"\\n[Tracker] Prédiction : {len(self.tracks)} pistes actives extrapolées.")
         for tr in self.tracks:
@@ -268,11 +268,38 @@ class CoarseToFineUOTTracker:
                         if self.verbose:
                              print(f"    -> Repêchage (Cold-Start) : Cluster {r} -> Track {tr.track_id} (Shape Score: {repechage_cost[r_idx, c_idx]:.2f})")
 
-        # --- PHASE 3: BIRTH (NEW) ---
+        # --- PHASE 3: BIRTH (NEW) with NMS ---
+        birth_candidates = []
         for r in unassigned_dets:
             if r >= len(all_W_C): continue
             W_C = all_W_C[r]
-            if np.argmax(W_C) == M and W_C[M] >= 0.8:
+            if np.argmax(W_C) == M and W_C[M] >= 0.9:
+                birth_candidates.append({
+                    'r': r,
+                    'score': W_C[M],
+                    'centroid': detections[r]["centroid"][:3]
+                })
+                
+        # Sort candidates by novelty score descending
+        birth_candidates.sort(key=lambda x: x['score'], reverse=True)
+        
+        min_dist = prior.get("W", 1.0) # Minimum distance is the width of the class
+        accepted_births = []
+        
+        for cand in birth_candidates:
+            c1 = np.array(cand['centroid'])
+            too_close = False
+            
+            for acc in accepted_births:
+                c2 = np.array(acc['centroid'])
+                dist = np.linalg.norm(c1 - c2)
+                if dist < min_dist:
+                    too_close = True
+                    break
+                    
+            if not too_close:
+                accepted_births.append(cand)
+                r = cand['r']
                 new_tr = Track(self.next_internal_id, semantic_class, detections[r], self.device)
                 new_tr.track_id = self.next_id
                 self.next_id += 1
@@ -280,7 +307,7 @@ class CoarseToFineUOTTracker:
                 assigned_ids[r] = new_tr.track_id
                 assigned_tracks_this_step.append(new_tr)
                 if self.verbose:
-                    print(f"    -> Naissance : Cluster {r} -> Nouvelle Track {new_tr.track_id} (Score: {W_C[M]:.2f})")
+                    print(f"    -> Naissance : Cluster {r} -> Nouvelle Track {new_tr.track_id} (Score: {cand['score']:.2f})")
 
         other_class_tracks = [tr for tr in self.tracks if tr.semantic_class != semantic_class]
         self.tracks = other_class_tracks + assigned_tracks_this_step
