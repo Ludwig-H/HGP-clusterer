@@ -149,15 +149,14 @@ class CoarseToFineUOTTracker:
             if M > 0 and V is not None:
                 S_C = np.sum(V[mask], axis=0)
                 W_C = np.zeros(M + 1)
+                N_c = np.sum(mask)
                 for m, tr in enumerate(active_tracks):
-                    W_C[m] = S_C[m] / max(1, tr.last_points_gpu.shape[0])
+                    N_tr = max(1, tr.last_points_gpu.shape[0])
+                    iou = S_C[m] / max(1.0, N_c + N_tr - S_C[m])
+                    W_C[m] = min(1.0, max(0.0, float(iou)))
                 
-                sum_W = np.sum(W_C[:-1])
-                if sum_W > 1.0:
-                    W_C[:-1] /= sum_W
-                    W_C[-1] = 0.0
-                else:
-                    W_C[-1] = 1.0 - sum_W
+                sum_S_C = np.sum(S_C)
+                W_C[-1] = max(0.0, min(1.0, 1.0 - float(sum_S_C) / max(1.0, float(N_c))))
             else:
                 W_C = np.zeros(M + 1)
                 W_C[-1] = 1.0
