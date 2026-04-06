@@ -287,10 +287,11 @@ class CoarseToFineUOTTracker:
                              print(f"    -> Repêchage (Unconfirmed) : Cluster {r} -> Track {tr.track_id} (Shape Score: {repechage_cost[r_idx, c_idx]:.2f})")
                              
             if self.verbose:
-                assigned_rows_set2 = set(rows_rep)
                 for i_idx, r in enumerate(unassigned_list):
-                    if i_idx not in assigned_rows_set2:
-                        print(f"    -> Orphelin (Unconfirmed) : Cluster {r} ignoré par l'algorithme Hongrois de repêchage (compétition perdue)")
+                    if r in unassigned_set:
+                        # If it had at least one valid track but wasn't assigned, it lost the competition
+                        if np.any(repechage_cost[i_idx] != float('inf')):
+                            print(f"    -> Orphelin (Unconfirmed) : Cluster {r} ignoré par l'algorithme Hongrois de repêchage (compétition perdue)")
                         
             for c, tr in enumerate(unconfirmed_tracks):
                 if c not in assigned_unconfirmed_indices:
