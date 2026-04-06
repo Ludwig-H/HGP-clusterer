@@ -11,7 +11,7 @@ class Track:
         self.semantic_class = semantic_class
         self.device = device
         
-        self.active = True
+        self.age_occlusion = 0
         c, dim, yaw = det["centroid"], det["dimensions"], det["yaw"]
         
         self.x = np.array([c[0], c[1], c[2], 0.0, 0.0, 0.0], dtype=float)
@@ -31,7 +31,7 @@ class Track:
         self.pred_points_gpu = self.last_points_gpu.clone()
 
     def predict(self, dt: float):
-        self.active = False
+        self.age_occlusion += 1
         old_x = self.x.copy()
         
         F = np.eye(6)
@@ -57,7 +57,7 @@ class Track:
         self.pred_points_gpu = rotated_points + v_tensor * dt
 
     def update(self, det: Dict, dt: float = 0.1):
-        self.active = True
+        self.age_occlusion = 0
         c, dim, yaw = det["centroid"], det["dimensions"], det["yaw"]
         elapsed_t = dt
         
@@ -94,7 +94,7 @@ class CoarseToFineUOTTracker:
         self.verbose = verbose
 
     def predict_all(self):
-        self.tracks = [tr for tr in self.tracks if getattr(tr, "active", True)]
+        self.tracks = [tr for tr in self.tracks if getattr(tr, "age_occlusion", 0) <= 3]
         if self.verbose and len(self.tracks) > 0:
             print(f"\\n[Tracker] Prédiction : {len(self.tracks)} pistes actives extrapolées.")
         for tr in self.tracks:
@@ -199,7 +199,7 @@ class CoarseToFineUOTTracker:
         for r in unassigned_dets:
             if r >= len(all_W_C): continue
             W_C = all_W_C[r]
-            if np.argmax(W_C) == M and W_C[M] >= 0.7:
+            if np.argmax(W_C) == M and W_C[M] >= 0.8:
                 new_tr = Track(self.next_internal_id, semantic_class, detections[r], self.device)
                 new_tr.track_id = self.next_id
                 self.next_id += 1
