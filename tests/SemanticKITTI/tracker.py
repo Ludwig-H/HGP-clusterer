@@ -23,6 +23,7 @@ class Track:
         self.H[0:3, 0:3] = np.eye(3)
         self.R = np.eye(3) * 0.1
         self.Q = np.eye(6) * 0.05
+        self.Q[3:6, 3:6] = 1.0  # High uncertainty for velocity (acceleration/braking)
         
         self.L, self.W, self.H_dim = dim[0], dim[1], dim[2]
         self.yaw = yaw
@@ -68,7 +69,7 @@ class Track:
             dyaw = dyaw - np.sign(dyaw) * np.pi
             
         measured_yaw_rate = dyaw / elapsed_t
-        alpha_yaw_rate = 0.15
+        alpha_yaw_rate = 0.25
         self.yaw_rate = (1 - alpha_yaw_rate) * self.yaw_rate + alpha_yaw_rate * measured_yaw_rate
         
         z = np.array([c[0], c[1], c[2]])
