@@ -331,7 +331,7 @@ class CoarseToFineUOTTracker:
                 assigned_ids[r] = new_tr.track_id
                 assigned_tracks_this_step.append(new_tr)
                 if self.verbose:
-                    print(f"    -> Naissance : Cluster {r} -> Nouvelle Track {new_tr.track_id} (Score: 1.00)")
+                    print(f"    -> Naissance : Cluster {r} -> Nouvelle Track {new_tr.track_id} (Score: {cand['score']:.2f})")
 
         other_class_tracks = [tr for tr in self.tracks if tr.semantic_class != semantic_class]
         self.tracks = other_class_tracks + assigned_tracks_this_step
