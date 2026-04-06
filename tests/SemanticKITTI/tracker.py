@@ -286,7 +286,7 @@ class CoarseToFineUOTTracker:
             # W_C contains M_conf + 1 elements. The last one is the NEW probability (not assigned to any CONFIRMED track)
             new_prob = W_C[-1]
             
-            if new_prob >= 0.9:
+            if new_prob >= 0.7:
                 birth_candidates.append({
                     'r': r,
                     'score': new_prob,
