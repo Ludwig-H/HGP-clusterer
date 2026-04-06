@@ -257,15 +257,16 @@ class CoarseToFineUOTTracker:
                     r = unassigned_list[r_idx]
                     tr = newborn_tracks[c_idx]
                     
-                    # Swap the track state from unassigned to assigned
-                    assigned_tracks_this_step.remove(tr) # Remove the un-updated version
-                    tr.update(detections[r], self.dt)
-                    assigned_ids[r] = tr.track_id
-                    assigned_tracks_this_step.append(tr) # Add the updated version
-                    unassigned_dets.remove(r)
-                    
-                    if self.verbose:
-                         print(f"    -> Repêchage (Cold-Start) : Cluster {r} -> Track {tr.track_id} (Shape Score: {repechage_cost[r_idx, c_idx]:.2f})")
+                    if r in unassigned_dets:
+                        # Swap the track state from unassigned to assigned
+                        assigned_tracks_this_step.remove(tr) # Remove the un-updated version
+                        tr.update(detections[r], self.dt)
+                        assigned_ids[r] = tr.track_id
+                        assigned_tracks_this_step.append(tr) # Add the updated version
+                        unassigned_dets.remove(r)
+                        
+                        if self.verbose:
+                             print(f"    -> Repêchage (Cold-Start) : Cluster {r} -> Track {tr.track_id} (Shape Score: {repechage_cost[r_idx, c_idx]:.2f})")
 
         # --- PHASE 3: BIRTH (NEW) ---
         for r in unassigned_dets:
