@@ -119,8 +119,8 @@ class CoarseToFineUOTTracker:
         a_f = torch.ones(N, device=self.device)
         b_f = torch.ones(K_total, device=self.device)
         
-        max_dist = prior.get("max_speed", 20.0) * self.dt
-        tau = (max_dist ** 2) * 0.5
+        tau_min = prior.get("tau", 1.5)
+        tau = tau_min + prior.get("max_speed", 20.0) * self.dt
         P_micro = solve_uot_sinkhorn_gpu(C_matrix, a_f, b_f, epsilon=0.05, tau1=tau, tau2=tau)
         
         P_micro_cpu = P_micro.cpu().numpy()
