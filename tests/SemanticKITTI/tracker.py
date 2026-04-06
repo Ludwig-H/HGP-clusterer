@@ -119,7 +119,7 @@ class CoarseToFineUOTTracker:
         a_f = torch.ones(N, device=self.device)
         b_f = torch.ones(K_total, device=self.device)
         
-        tau_min = prior.get("tau", 1.5)
+        tau_min = prior.get("tau", 1.0)
         tau = tau_min + prior.get("max_speed", 20.0) * self.dt
         P_micro = solve_uot_sinkhorn_gpu(C_matrix, a_f, b_f, epsilon=0.05, tau1=tau, tau2=tau)
         
@@ -140,11 +140,18 @@ class CoarseToFineUOTTracker:
         M = len(active_tracks)
         assigned_ids = [-1] * len(detections)
         
-        cost_matrix = np.zeros((len(detections), M + len(detections)), dtype=np.float32)
+        if M > 0:
+            cost_matrix = np.zeros((len(detections), M), dtype=np.float32)
+        else:
+            cost_matrix = np.zeros((len(detections), 1), dtype=np.float32) # Dummy for safety
+            
+        all_W_C = []
         
         for i, det in enumerate(detections):
             mask = det["mask_local"]
-            if np.sum(mask) == 0: continue
+            if np.sum(mask) == 0: 
+                all_W_C.append(np.zeros(M + 1))
+                continue
             
             if M > 0 and V is not None:
                 S_C = np.sum(V[mask], axis=0)
@@ -163,33 +170,40 @@ class CoarseToFineUOTTracker:
                 W_C = np.zeros(M + 1)
                 W_C[-1] = 1.0
                 
-            for m in range(M):
-                cost_matrix[i, m] = -W_C[m]
-            for j in range(len(detections)):
-                cost_matrix[i, M + j] = -W_C[-1]
+            all_W_C.append(W_C)
+            if M > 0:
+                for m in range(M):
+                    cost_matrix[i, m] = -W_C[m]
 
-        rows, cols = linear_sum_assignment(cost_matrix)
-        
         assigned_tracks_this_step = []
+        unassigned_dets = set(range(len(detections)))
         
-        for r, c in zip(rows, cols):
-            det = detections[r]
-            if c < M:
-                tr = active_tracks[c]
-                tr.update(det, self.dt)
-                assigned_ids[r] = tr.track_id
-                assigned_tracks_this_step.append(tr)
-                if self.verbose:
-                    print(f"    -> Assignation : Cluster {r} -> Track {tr.track_id} (Score: {-cost_matrix[r,c]:.2f})")
-            else:
-                new_tr = Track(self.next_internal_id, semantic_class, det, self.device)
+        if M > 0:
+            from scipy.optimize import linear_sum_assignment
+            rows, cols = linear_sum_assignment(cost_matrix)
+            for r, c in zip(rows, cols):
+                score = -cost_matrix[r, c]
+                if score >= 0.1:
+                    tr = active_tracks[c]
+                    tr.update(detections[r], self.dt)
+                    assigned_ids[r] = tr.track_id
+                    assigned_tracks_this_step.append(tr)
+                    unassigned_dets.remove(r)
+                    if self.verbose:
+                        print(f"    -> Assignation : Cluster {r} -> Track {tr.track_id} (Score: {score:.2f})")
+        
+        for r in unassigned_dets:
+            if r >= len(all_W_C): continue
+            W_C = all_W_C[r]
+            if np.argmax(W_C) == M and W_C[M] >= 0.7:
+                new_tr = Track(self.next_internal_id, semantic_class, detections[r], self.device)
                 new_tr.track_id = self.next_id
                 self.next_id += 1
                 self.next_internal_id += 1
                 assigned_ids[r] = new_tr.track_id
                 assigned_tracks_this_step.append(new_tr)
                 if self.verbose:
-                    print(f"    -> Naissance : Cluster {r} -> Nouvelle Track {new_tr.track_id} (Score: {-cost_matrix[r,c]:.2f})")
+                    print(f"    -> Naissance : Cluster {r} -> Nouvelle Track {new_tr.track_id} (Score: {W_C[M]:.2f})")
 
         other_class_tracks = [tr for tr in self.tracks if tr.semantic_class != semantic_class]
         self.tracks = other_class_tracks + assigned_tracks_this_step
