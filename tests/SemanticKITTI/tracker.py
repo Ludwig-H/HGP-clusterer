@@ -207,6 +207,12 @@ class CoarseToFineUOTTracker:
                     tr = confirmed_tracks[c]
                     print(f"    -> Rejet (Confirmé) : Cluster {r} non-assigné à Track {tr.track_id} (Score: {score:.2f} < 0.10)")
                     
+        if self.verbose:
+            assigned_rows_set = set(rows)
+            for r in range(len(detections)):
+                if r not in assigned_rows_set:
+                    print(f"    -> Orphelin (Confirmé) : Cluster {r} ignoré par l'algorithme Hongrois (compétition perdue)")
+                    
         for c, tr in enumerate(confirmed_tracks):
             if c not in assigned_track_indices:
                 assigned_tracks_this_step.append(tr)
@@ -235,7 +241,7 @@ class CoarseToFineUOTTracker:
                 
                 for j_idx, tr in enumerate(unconfirmed_tracks):
                     c_tr = torch.tensor(tr.x[:3], device=self.device, dtype=torch.float32)
-                    dist_centers = torch.norm(c_det - c_tr).item()
+                    dist_centers = torch.norm(c_det[:2] - c_tr[:2]).item()
                     
                     if dist_centers > max_speed * self.dt * 1.5:
                         if self.verbose:
@@ -280,6 +286,12 @@ class CoarseToFineUOTTracker:
                         if self.verbose:
                              print(f"    -> Repêchage (Unconfirmed) : Cluster {r} -> Track {tr.track_id} (Shape Score: {repechage_cost[r_idx, c_idx]:.2f})")
                              
+            if self.verbose:
+                assigned_rows_set2 = set(rows_rep)
+                for i_idx, r in enumerate(unassigned_list):
+                    if i_idx not in assigned_rows_set2:
+                        print(f"    -> Orphelin (Unconfirmed) : Cluster {r} ignoré par l'algorithme Hongrois de repêchage")
+                        
             for c, tr in enumerate(unconfirmed_tracks):
                 if c not in assigned_unconfirmed_indices:
                     assigned_tracks_this_step.append(tr)
