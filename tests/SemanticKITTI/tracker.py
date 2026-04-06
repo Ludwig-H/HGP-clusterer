@@ -171,7 +171,9 @@ class CoarseToFineUOTTracker:
         
         for i, det in enumerate(detections):
             mask = det["mask_local"]
-            if np.sum(mask) == 0: continue
+            if np.sum(mask) == 0: 
+                all_W_C.append(np.zeros(M_conf + 1))
+                continue
             
             S_C = np.sum(V_conf[mask], axis=0) if V_conf is not None else np.zeros(M_conf)
             W_C = np.zeros(M_conf + 1)
@@ -186,6 +188,7 @@ class CoarseToFineUOTTracker:
             else:
                 W_C[-1] = 1.0 - sum_W
                 
+            all_W_C.append(W_C)
             for m in range(M_conf):
                 cost_matrix[i, m] = -W_C[m]
                 
