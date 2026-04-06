@@ -211,7 +211,7 @@ class CoarseToFineUOTTracker:
             assigned_rows_set = set(rows)
             for r in range(len(detections)):
                 if r not in assigned_rows_set:
-                    print(f"    -> Orphelin (Confirmé) : Cluster {r} ignoré par l'algorithme Hongrois (compétition perdue)")
+                    print(f"    -> Orphelin (Confirmé) : Cluster {r} ignoré par l'algorithme Hongrois (compétition perdue contre d'autres clusters)")
                     
         for c, tr in enumerate(confirmed_tracks):
             if c not in assigned_track_indices:
@@ -290,7 +290,7 @@ class CoarseToFineUOTTracker:
                 assigned_rows_set2 = set(rows_rep)
                 for i_idx, r in enumerate(unassigned_list):
                     if i_idx not in assigned_rows_set2:
-                        print(f"    -> Orphelin (Unconfirmed) : Cluster {r} ignoré par l'algorithme Hongrois de repêchage")
+                        print(f"    -> Orphelin (Unconfirmed) : Cluster {r} ignoré par l'algorithme Hongrois de repêchage (compétition perdue)")
                         
             for c, tr in enumerate(unconfirmed_tracks):
                 if c not in assigned_unconfirmed_indices:
