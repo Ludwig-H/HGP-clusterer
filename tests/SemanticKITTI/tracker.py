@@ -23,7 +23,7 @@ class Track:
         self.H[0:3, 0:3] = np.eye(3)
         self.R = np.eye(3) * 0.1
         self.Q = np.eye(6) * 0.05
-        self.Q[3:6, 3:6] = 1.0  # High uncertainty for velocity (acceleration/braking)
+        self.Q[3:6, 3:6] = np.eye(3) * 1.0  # High uncertainty for velocity (acceleration/braking)
         
         self.L, self.W, self.H_dim = dim[0], dim[1], dim[2]
         self.yaw = yaw
