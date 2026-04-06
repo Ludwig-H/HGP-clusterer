@@ -202,6 +202,10 @@ class CoarseToFineUOTTracker:
                 unassigned_dets.remove(r)
                 if self.verbose:
                     print(f"    -> Assignation : Cluster {r} -> Track {tr.track_id} (Score: {score:.2f})")
+            else:
+                if self.verbose:
+                    tr = confirmed_tracks[c]
+                    print(f"    -> Rejet (Confirmé) : Cluster {r} non-assigné à Track {tr.track_id} (Score: {score:.2f} < 0.10)")
                     
         for c, tr in enumerate(confirmed_tracks):
             if c not in assigned_track_indices:
@@ -234,6 +238,8 @@ class CoarseToFineUOTTracker:
                     dist_centers = torch.norm(c_det - c_tr).item()
                     
                     if dist_centers > max_speed * self.dt * 1.5:
+                        if self.verbose:
+                            print(f"    -> Rejet (Gating Cinématique) : Cluster {r} trop éloigné de Track {tr.track_id} (Dist: {dist_centers:.2f}m > Max: {max_speed * self.dt * 1.5:.2f}m)")
                         continue
                         
                     translation = c_det - c_tr
@@ -250,6 +256,9 @@ class CoarseToFineUOTTracker:
                     
                     if score < prior.get("match_threshold", 3.0):
                         repechage_cost[i_idx, j_idx] = score
+                    else:
+                        if self.verbose:
+                            print(f"    -> Rejet (Déformation) : Cluster {r} vs Track {tr.track_id} (Score UOT: {score:.2f} >= Seuil: {prior.get('match_threshold', 3.0):.2f})")
                         
             from scipy.optimize import linear_sum_assignment
             valid_cost = np.where(repechage_cost == float('inf'), 1e6, repechage_cost)
@@ -292,6 +301,9 @@ class CoarseToFineUOTTracker:
                     'score': new_prob,
                     'centroid': detections[r]["centroid"][:3]
                 })
+            else:
+                if self.verbose:
+                    print(f"    -> Rejet (Nouveauté) : Cluster {r} refusé comme naissance (Score NEW: {new_prob:.2f} < 0.70)")
                 
         birth_candidates.sort(key=lambda x: x['score'], reverse=True)
         min_dist = prior.get("W", 1.0)
@@ -305,6 +317,8 @@ class CoarseToFineUOTTracker:
                 dist = np.linalg.norm(c1 - c2)
                 if dist < min_dist:
                     too_close = True
+                    if self.verbose:
+                        print(f"    -> Rejet (NMS Spatial) : Cluster {cand['r']} supprimé car trop proche d'une autre naissance (Dist: {dist:.2f}m < {min_dist:.2f}m)")
                     break
                     
             if not too_close:
