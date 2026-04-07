@@ -89,6 +89,8 @@ class CoarseToFineUOTTracker2:
     def predict_all(self):
         alive_tracks = [tr for tr in self.tracks if (tr.state == "Confirmed" and tr.age_occlusion < 5) or (tr.state == "Unconfirmed" and tr.age_occlusion < 1)]
         self.tracks = alive_tracks
+        if self.verbose and len(self.tracks) > 0:
+            print(f"\\n[Tracker] Prédiction : {len(self.tracks)} pistes actives extrapolées.")
         for tr in self.tracks: tr.predict(self.dt)
 
     def compute_massive_uot(self, current_points_gpu: torch.Tensor, semantic_class: int, prior: Dict) -> Tuple[Optional[np.ndarray], List[Track]]:
@@ -99,6 +101,7 @@ class CoarseToFineUOTTracker2:
         pred_clouds = [tr.pred_points_gpu for tr in active_tracks]
         lengths = [c.shape[0] for c in pred_clouds]
         mega_pred_cloud = torch.cat(pred_clouds, dim=0)
+        K_total = mega_pred_cloud.shape[0]
         
         C = torch.cdist(current_points_gpu, mega_pred_cloud, p=2)**2
         gate = (prior.get("max_speed", 20.0) * self.dt * 2.0)**2
@@ -113,6 +116,10 @@ class CoarseToFineUOTTracker2:
         for m, l in enumerate(lengths):
             V[:, m] = np.sum(P_cpu[:, idx:idx+l], axis=1)
             idx += l
+            
+        if self.verbose:
+             print(f"  [UOT Massif] Classe {semantic_class} : {N} pts(t) vs {K_total} pts(t-1) dans {M} pistes.")
+             
         return V, active_tracks
 
     def step(self, detections: List[Dict], semantic_class: int, prior: Dict) -> List[int]:
@@ -141,13 +148,26 @@ class CoarseToFineUOTTracker2:
                 
             rows, cols = linear_sum_assignment(cost_matrix)
             for r, c in zip(rows, cols):
-                if -cost_matrix[r, c] >= 0.1:
+                score = -cost_matrix[r, c]
+                if score >= 0.1:
                     tr = confirmed_tracks[c]
                     tr.update(detections[r], self.dt)
                     assigned_ids[r] = tr.track_id
                     assigned_track_indices.add(c)
                     unassigned_dets.remove(r)
-        
+                    if self.verbose:
+                        print(f"    -> Assignation : Cluster {r} -> Track {tr.track_id} (Score: {score:.2f})")
+                else:
+                    if self.verbose:
+                        tr = confirmed_tracks[c]
+                        print(f"    -> Rejet (Confirmé) : Cluster {r} non-assigné à Track {tr.track_id} (Score: {score:.2f} < 0.10)")
+            
+            if self.verbose:
+                assigned_rows_set = set(rows)
+                for r in range(len(detections)):
+                    if r not in assigned_rows_set:
+                        print(f"    -> Orphelin (Confirmé) : Cluster {r} ignoré par l'algorithme Hongrois (compétition perdue contre d'autres clusters)")
+
         updated_tracks = [tr for i, tr in enumerate(confirmed_tracks) if i in assigned_track_indices]
         orphan_tracks = [tr for i, tr in enumerate(confirmed_tracks) if i not in assigned_track_indices]
         
@@ -173,15 +193,32 @@ class CoarseToFineUOTTracker2:
                         assigned_ids[r] = tr.track_id
                         updated_tracks.append(tr)
                         unassigned_dets.remove(r)
+                        if self.verbose:
+                             print(f"    -> Repêchage (Unconfirmed) : Cluster {r} -> Track {tr.track_id} (Dist: {cost_unconf[r_idx, c_idx]:.2f})")
+                else:
+                    if self.verbose and cost_unconf[r_idx, c_idx] != 1e6:
+                        r = U_dets[r_idx]
+                        tr = unconfirmed[c_idx]
+                        print(f"    -> Rejet (Unconfirmed) : Cluster {r} -> Track {tr.track_id} (Dist: {cost_unconf[r_idx, c_idx]:.2f} >= Max: {max_dist:.2f})")
+            
+            if self.verbose:
+                assigned_rows_set = set(r_u)
+                for i_idx, r in enumerate(U_dets):
+                    if i_idx not in assigned_rows_set and r in unassigned_dets:
+                        if np.any(cost_unconf[i_idx] != 1e6):
+                            print(f"    -> Orphelin (Unconfirmed) : Cluster {r} ignoré par l'algorithme Hongrois de repêchage")
                         
         orphan_tracks.extend([tr for tr in unconfirmed if tr not in updated_tracks])
         
-        for r in unassigned_dets:
+        for r in list(unassigned_dets):
             tr = Track(self.next_id, semantic_class, detections[r], self.device)
             tr.track_id = self.next_id
             self.next_id += 1
             assigned_ids[r] = tr.track_id
             updated_tracks.append(tr)
+            unassigned_dets.remove(r)
+            if self.verbose:
+                print(f"    -> Naissance : Cluster {r} -> Nouvelle Track {tr.track_id}")
             
         other_class_tracks = [tr for tr in self.tracks if tr.semantic_class != semantic_class]
         self.tracks = other_class_tracks + updated_tracks + orphan_tracks
