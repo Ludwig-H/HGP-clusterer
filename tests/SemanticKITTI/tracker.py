@@ -168,16 +168,17 @@ class CoarseToFineUOTTracker:
             return assigned_ids, assigned_tracks_this_step, list(unassigned_dets), all_W_C
             
         cost_matrix = np.zeros((len(detections), M_conf), dtype=np.float32)
-        
+
+        offset = 0
         for i, det in enumerate(detections):
-            mask = det["mask_local"]
-            if np.sum(mask) == 0: 
+            n_points = det["points_gpu"].shape[0]
+            if n_points == 0:
                 all_W_C.append(np.zeros(M_conf + 1))
                 continue
-            
-            S_C = np.sum(V_conf[mask], axis=0) if V_conf is not None else np.zeros(M_conf)
-            W_C = np.zeros(M_conf + 1)
-            
+
+            S_C = np.sum(V_conf[offset : offset + n_points], axis=0) if V_conf is not None else np.zeros(M_conf)
+            offset += n_points
+            W_C = np.zeros(M_conf + 1)            
             for m, tr in enumerate(confirmed_tracks):
                 W_C[m] = S_C[m] / max(1, tr.last_points_gpu.shape[0])
             

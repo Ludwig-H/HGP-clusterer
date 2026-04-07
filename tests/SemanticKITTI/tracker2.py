@@ -128,10 +128,12 @@ class CoarseToFineUOTTracker2:
         
         if M_conf > 0:
             cost_matrix = np.zeros((len(detections), M_conf), dtype=np.float32)
+            offset = 0
             for i, det in enumerate(detections):
-                mask = det["mask_local"]
-                if np.sum(mask) == 0: continue
-                S_C = np.sum(V[mask], axis=0)
+                n_points = det["points_gpu"].shape[0]
+                if n_points == 0: continue
+                S_C = np.sum(V[offset : offset + n_points], axis=0)
+                offset += n_points
                 W_C = S_C / np.array([max(1, tr.last_points_gpu.shape[0]) for tr in confirmed_tracks])
                 sum_W = np.sum(W_C)
                 if sum_W > 1.0: W_C /= sum_W
