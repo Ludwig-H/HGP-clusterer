@@ -545,9 +545,9 @@ def GetClusters(Z: Dict[str, Any], method, splitting=None, points=None, Face_to_
                     W_c = node_wgs[c]
                     if len(P_c) > 0:
                         idx_in_parent = np.searchsorted(P_parent, P_c)
-                        valid_mask = (idx_in_parent < len(P_parent)) & (P_parent[idx_in_parent] == P_c)
-                        W_mat[idx_in_parent[valid_mask], i] = W_c[valid_mask]
-                
+                        valid_mask = idx_in_parent < len(P_parent)
+                        valid_mask[valid_mask] &= (P_parent[idx_in_parent[valid_mask]] == P_c[valid_mask])
+                        W_mat[idx_in_parent[valid_mask], i] = W_c[valid_mask]                
                 best_ch_idx = np.argmax(W_mat, axis=1)
                 max_w = np.max(W_mat, axis=1)
                 
