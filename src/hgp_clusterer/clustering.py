@@ -326,7 +326,7 @@ def _build_dfs_structure(Z: Dict[str, Any]) -> Tuple[np.ndarray, np.ndarray, np.
         return np.arange(len(initial_membership), dtype=np.int32), np.zeros(n_clusters, dtype=np.int32), np.zeros(n_clusters, dtype=np.int32)
 
 
-def GetClusters(Z: Dict[str, Any], method, splitting=None, points=None, Face_to_points=None, S_faces=None, verbose: bool = False) -> Dict[str, Any]:
+def GetClusters(Z: Dict[str, Any], method, splitting=None, points=None, Face_to_points=None, S_faces=None, verbose: bool = False, whole_tree: bool = False) -> Dict[str, Any]:
     """Return clusters as lists of point indices according to a selection method and optional recursive splitting.
 
     Parameters
@@ -339,13 +339,15 @@ def GetClusters(Z: Dict[str, Any], method, splitting=None, points=None, Face_to_
         Optional decision function f(parent_idx: np.ndarray, children_idx_list: list[np.ndarray]) -> bool.
         Return True to split (descend), False to keep parent.
     verbose : bool
+    whole_tree : bool
+        If True, returns a property graph of the entire subtree rooted at the selected clusters,
+        using highly optimized contiguous NumPy arrays.
 
     Returns
     -------
     dict with keys:
-      - 'clusters': List[np.ndarray] of node indices (int32)
-      - 'cids': List[Optional[int]] cluster ids in Z
-      - 'method': echoed method
+      - If whole_tree=False: 'clusters', 'cids', 'method'
+      - If whole_tree=True: 'tree_nodes', 'tree_parents', 'all_points', 'node_to_points_start', 'node_to_points_end', ...
     """
     N = int(Z['N'])
     children = Z['children']
@@ -374,7 +376,7 @@ def GetClusters(Z: Dict[str, Any], method, splitting=None, points=None, Face_to_
     elif isinstance(method, (float, int)) and not isinstance(method, bool):
         # DBSCAN-like Cut using the hierarchy
         r_cut = float(method)
-        lambda_cut = 1.0 / (r_cut + EPS) if r_cut > 0 else 1e20
+        lambda_cut = 1.0 / (r_cut + 1e-12) if r_cut > 0 else 1e20
         
         n_clusters = len(children)
         parent_map = np.full(n_clusters, -1, dtype=np.int32)
@@ -398,6 +400,231 @@ def GetClusters(Z: Dict[str, Any], method, splitting=None, points=None, Face_to_
     else:
         raise ValueError("Invalid method parameter")
 
+    # -------------------------------------------------------------------------
+    # NEW OPTIMIZED PIPELINE: Data-Oriented "whole_tree"
+    # -------------------------------------------------------------------------
+    if whole_tree:
+        if Face_to_points is None:
+            raise ValueError("whole_tree requires 'Face_to_points'.")
+        
+        initial_membership = Z.get('initial_membership')
+        if initial_membership is None:
+            raise ValueError("Z must contain 'initial_membership' for whole_tree.")
+        
+        N_nodes = len(children)
+        if S_faces is None:
+            S_faces = np.ones(Face_to_points.shape[0], dtype=np.float32)
+            
+        # --- OPTIMIZATION: Only process selected subtrees ---
+        # We only care about nodes that are descendants of `selected_cids`.
+        valid_nodes_set = set()
+        # Iterative DFS to avoid RecursionError on deep trees
+        stack = list(selected_cids)
+        while stack:
+            curr = stack.pop()
+            if curr not in valid_nodes_set:
+                valid_nodes_set.add(curr)
+                stack.extend(children[curr])
+
+        # --- Phase 1: Direct Points & Weights ---
+        valid_mask = initial_membership != -1
+        if isinstance(method, (float, int)) and not isinstance(method, bool) and 'join_r' in Z:
+            valid_mask &= (Z['join_r'] <= float(method))
+            
+        # EXTRA OPTIMIZATION: Filter down strictly to the subtrees
+        valid_nodes_arr = np.array(list(valid_nodes_set), dtype=np.int32)
+        if len(valid_nodes_arr) > 0:
+            # np.isin is extremely fast and drops millions of irrelevant faces before memory allocation
+            valid_mask &= np.isin(initial_membership, valid_nodes_arr)
+        else:
+            valid_mask[:] = False
+
+        valid_faces = Face_to_points[valid_mask]
+        valid_labels = initial_membership[valid_mask]
+        valid_weights = S_faces[valid_mask]
+        
+        n_vertices = valid_faces.shape[1]
+        direct_points = valid_faces.flatten()
+        direct_labels = np.repeat(valid_labels, n_vertices)
+        direct_weights = np.repeat(valid_weights, n_vertices)
+        
+        # Filter invalid vertices
+        v_mask = direct_points >= 0
+        direct_points = direct_points[v_mask]
+        direct_labels = direct_labels[v_mask]
+        direct_weights = direct_weights[v_mask]
+        
+        # Group by label (cid)
+        order = np.argsort(direct_labels)
+        direct_labels = direct_labels[order]
+        direct_points = direct_points[order]
+        direct_weights = direct_weights[order]
+        
+        unique_labels, split_indices = np.unique(direct_labels, return_index=True)
+        split_indices = np.append(split_indices, len(direct_labels))
+        
+            
+        # Prepare arrays for nodes
+        # We use python lists of numpy arrays because arrays have variable length.
+        # This is still 100% vectorized per node.
+        node_pts = [np.array([], dtype=np.int32) for _ in range(N_nodes)]
+        node_wgs = [np.array([], dtype=np.float32) for _ in range(N_nodes)]
+        
+        # Assign direct points and compute local unique weights
+        for i, lbl in enumerate(unique_labels):
+            if lbl not in valid_nodes_set:
+                continue
+            start = split_indices[i]
+            end = split_indices[i+1]
+            pts = direct_points[start:end]
+            wgs = direct_weights[start:end]
+            
+            # Aggregate direct duplicates
+            u_pts, inv = np.unique(pts, return_inverse=True)
+            u_wgs = np.bincount(inv, weights=wgs).astype(np.float32)
+            node_pts[lbl] = u_pts
+            node_wgs[lbl] = u_wgs
+            
+        # --- Phase 2: Bottom-Up Weights Propagation ---
+        # We still iterate 0 to N_nodes to guarantee topological order (bottom-up),
+        # but we ONLY compute for valid_nodes.
+        for cid in range(N_nodes):
+            if cid not in valid_nodes_set:
+                continue
+            ch = children[cid]
+            if len(ch) > 0:
+                pts_list = [node_pts[cid]] + [node_pts[c] for c in ch]
+                wgs_list = [node_wgs[cid]] + [node_wgs[c] for c in ch]
+                
+                cat_pts = np.concatenate(pts_list)
+                cat_wgs = np.concatenate(wgs_list)
+                
+                if len(cat_pts) > 0:
+                    order_pts = np.argsort(cat_pts)
+                    cat_pts = cat_pts[order_pts]
+                    cat_wgs = cat_wgs[order_pts]
+                    
+                    u_pts, inv = np.unique(cat_pts, return_inverse=True)
+                    u_wgs = np.bincount(inv, weights=cat_wgs).astype(np.float32)
+                    
+                    node_pts[cid] = u_pts
+                    node_wgs[cid] = u_wgs
+
+        # --- Phase 3: Top-Down Strict Partition (Argmax) ---
+        exclusive_pts = [np.array([], dtype=np.int32) for _ in range(N_nodes)]
+        
+        tree_nodes_list = []
+        tree_parents_list = []
+        
+        # Iterative distribution and topology traversal
+        for root_cid in selected_cids:
+            stack = [(root_cid, -1, node_pts[root_cid])]
+            
+            while stack:
+                cid, parent_id, P_parent = stack.pop()
+                
+                tree_nodes_list.append(cid)
+                tree_parents_list.append(parent_id)
+                
+                ch = children[cid]
+                if len(ch) == 0:
+                    exclusive_pts[cid] = P_parent
+                    continue
+                    
+                if len(P_parent) == 0:
+                    # Still need to traverse topology even if points are empty
+                    for c in reversed(ch):
+                        stack.append((c, cid, np.array([], dtype=np.int32)))
+                    continue
+                    
+                n_ch = len(ch)
+                W_mat = np.zeros((len(P_parent), n_ch), dtype=np.float32)
+                
+                for i, c in enumerate(ch):
+                    P_c = node_pts[c]
+                    W_c = node_wgs[c]
+                    if len(P_c) > 0:
+                        idx_in_parent = np.searchsorted(P_parent, P_c)
+                        valid_mask = (idx_in_parent < len(P_parent)) & (P_parent[idx_in_parent] == P_c)
+                        W_mat[idx_in_parent[valid_mask], i] = W_c[valid_mask]
+                
+                best_ch_idx = np.argmax(W_mat, axis=1)
+                max_w = np.max(W_mat, axis=1)
+                
+                parent_excl_mask = max_w == 0
+                exclusive_pts[cid] = P_parent[parent_excl_mask]
+                
+                # Reverse to maintain original left-to-right order in DFS
+                for i in reversed(range(len(ch))):
+                    c = ch[i]
+                    ch_mask = (best_ch_idx == i) & (~parent_excl_mask)
+                    stack.append((c, cid, P_parent[ch_mask]))
+            
+        tree_nodes = np.array(tree_nodes_list, dtype=np.int32)
+        tree_parents_cids = np.array(tree_parents_list, dtype=np.int32)
+        
+        # --- Phase 4: Contiguous Memory Layout (DFS) ---
+        total_pts = sum(len(exclusive_pts[cid]) for cid in tree_nodes)
+        all_points = np.empty(total_pts, dtype=np.int32)
+        
+        node_start = np.zeros(N_nodes, dtype=np.int32)
+        node_end = np.zeros(N_nodes, dtype=np.int32)
+        node_excl_start = np.zeros(N_nodes, dtype=np.int32)
+        node_excl_end = np.zeros(N_nodes, dtype=np.int32)
+        
+        # Iterative Post-Order DFS for layout
+        current_offset = 0
+        for root_cid in selected_cids:
+            stack = [(root_cid, False)]
+            while stack:
+                cid, is_post = stack.pop()
+                if not is_post:
+                    # Pre-visit: Write exclusive points
+                    excl = exclusive_pts[cid]
+                    n_excl = len(excl)
+                    node_excl_start[cid] = current_offset
+                    if n_excl > 0:
+                        all_points[current_offset : current_offset + n_excl] = excl
+                    current_offset += n_excl
+                    node_excl_end[cid] = current_offset
+                    node_start[cid] = node_excl_start[cid]
+                    
+                    # Push post-visit marker
+                    stack.append((cid, True))
+                    # Push children
+                    for c in reversed(children[cid]):
+                        stack.append((c, False))
+                else:
+                    # Post-visit: update end offset
+                    node_end[cid] = current_offset
+            
+        # Map back to compact arrays matching `tree_nodes`
+        node_to_idx = {cid: i for i, cid in enumerate(tree_nodes)}
+        tree_parents_local = np.array([node_to_idx[p] if p != -1 else -1 for p in tree_parents_cids], dtype=np.int32)
+        
+        tree_node_start = np.array([node_start[cid] for cid in tree_nodes], dtype=np.int32)
+        tree_node_end = np.array([node_end[cid] for cid in tree_nodes], dtype=np.int32)
+        tree_node_excl_start = np.array([node_excl_start[cid] for cid in tree_nodes], dtype=np.int32)
+        tree_node_excl_end = np.array([node_excl_end[cid] for cid in tree_nodes], dtype=np.int32)
+
+        if verbose:
+            print(f"[GetClusters] whole_tree=True -> {len(tree_nodes)} total tree nodes, {len(all_points)} total points.")
+            
+        return {
+            "tree_nodes": tree_nodes,
+            "tree_parents": tree_parents_local, 
+            "tree_parents_cids": tree_parents_cids,
+            "all_points": all_points,
+            "node_to_points_start": tree_node_start,
+            "node_to_points_end": tree_node_end,
+            "node_exclusive_start": tree_node_excl_start,
+            "node_exclusive_end": tree_node_excl_end,
+            "method": method
+        }
+
+    # -------------------------------------------------------------------------
+    # ORIGINAL PIPELINE (whole_tree=False)
+    # -------------------------------------------------------------------------
     # 3. Extract & Split
     clusters_nodes = []
     clusters_cids = []
@@ -413,28 +640,15 @@ def GetClusters(Z: Dict[str, Any], method, splitting=None, points=None, Face_to_
         if Face_to_points is None:
             raise ValueError("Splitting requires 'Face_to_points'.")
         
-        # --- OPTIMIZATION: Pre-compute Leaf Points and Weights ---
-        # We compute the weighted presence of points at the leaf level,
-        # then merge them bottom-up, and finally use a local ArgMax for splitting.
-        
         initial_membership = Z.get('initial_membership')
         if initial_membership is None:
             raise ValueError("Z must contain 'initial_membership' for splitting optimization.")
             
-        # Identify all leaves involved in the hierarchy
-        # We only need to compute points for leaves that are descendants of selected_cids
-        # But computing for all leaves is likely fast enough and simpler.
-        
         from functools import lru_cache
         
         if S_faces is None:
             S_faces = np.ones(Face_to_points.shape[0], dtype=np.float32)
             
-        # 1. Map Leaf ID -> Tuple(Array of Points, Array of Weights)
-        # initial_membership aligns with Face_to_points (N faces)
-        # We group Face_to_points by initial_membership
-        
-        # Filter noise (-1)
         valid_mask = initial_membership != -1
         if isinstance(method, (float, int)) and not isinstance(method, bool) and 'join_r' in Z:
             valid_mask &= (Z['join_r'] <= float(method))
@@ -443,21 +657,14 @@ def GetClusters(Z: Dict[str, Any], method, splitting=None, points=None, Face_to_
         valid_labels = initial_membership[valid_mask]
         valid_S_faces = S_faces[valid_mask]
         
-        # Sort by label to allow efficient grouping
         order = np.argsort(valid_labels)
         sorted_faces = valid_faces[order]
         sorted_labels = valid_labels[order]
         sorted_S_faces = valid_S_faces[order]
         
-        # Find split indices
         unique_labels, split_indices = np.unique(sorted_labels, return_index=True)
         
-        # Store in a dict or list (if labels are dense 0..n_leaves-1)
-        # Labels are cluster IDs, they are dense 0..n_clusters-1, but not all are leaves.
         leaf_states_map = {}
-        
-        # np.split is slow on many splits. Iterating slices is better.
-        # split_indices[i] is start of unique_labels[i]
         n_groups = len(unique_labels)
         n_vertices_per_face = Face_to_points.shape[1]
         
@@ -466,7 +673,6 @@ def GetClusters(Z: Dict[str, Any], method, splitting=None, points=None, Face_to_
             start = split_indices[i]
             end = split_indices[i+1] if i + 1 < n_groups else len(sorted_labels)
             
-            # Extract faces and weights for this leaf
             faces_in_leaf = sorted_faces[start:end]
             S_faces_in_leaf = sorted_S_faces[start:end]
             
@@ -485,23 +691,11 @@ def GetClusters(Z: Dict[str, Any], method, splitting=None, points=None, Face_to_
 
         @lru_cache(maxsize=None)
         def _get_points_and_weights(cid: int):
-            """
-            Returns (P, W) where P is sorted array of unique points, and W are their accumulated weights.
-            Recursive bottom-up construction.
-            """
-            # Check if leaf in our pre-computed map
-            # Note: A node in Z might be a 'leaf' in the tree structure (no children)
-            # but might not have any faces assigned to it in initial_membership if it was transient?
-            # Or it should be there.
-            
-            # If it is a leaf in the tree:
             ch = children[cid]
             if not ch:
                 return leaf_states_map.get(cid, (np.array([], dtype=np.int32), np.array([], dtype=np.float32)))
             
-            # Internal node: Union of children and addition of weights
             child_states = [_get_points_and_weights(c) for c in ch]
-            
             child_states = [s for s in child_states if len(s[0]) > 0]
             if not child_states:
                 return np.array([], dtype=np.int32), np.array([], dtype=np.float32)
@@ -517,30 +711,22 @@ def GetClusters(Z: Dict[str, Any], method, splitting=None, points=None, Face_to_
         def _recursive_decision(cid: int) -> List[np.ndarray]:
             ch = children[cid]
             if not ch:
-                # Leaf: cannot split further
                 return [get_nodes(cid)]
             
-            # Prepare data for splitting function
-            # Parent points and weights
             parent_pts, parent_weights = _get_points_and_weights(cid)
             
             if len(parent_pts) == 0:
                 return [get_nodes(cid)]
             
-            # Children states
             children_states = [_get_points_and_weights(child) for child in ch]
             
-            # Argmax Local
             best_child_idx = np.zeros(len(parent_pts), dtype=int)
             max_weights = np.full(len(parent_pts), -1.0, dtype=np.float32)
             
             for i, (P_c, W_c) in enumerate(children_states):
                 if len(P_c) == 0:
                     continue
-                # searchsorted is fast because parent_pts and P_c are sorted
                 idx_in_parent = np.searchsorted(parent_pts, P_c)
-                
-                # Check for out of bounds (should not happen mathematically, but safe)
                 valid_idx_mask = (idx_in_parent < len(parent_pts)) & (parent_pts[idx_in_parent] == P_c)
                 
                 idx_in_parent = idx_in_parent[valid_idx_mask]
@@ -551,12 +737,10 @@ def GetClusters(Z: Dict[str, Any], method, splitting=None, points=None, Face_to_
                 best_child_idx[idx_in_parent[mask_better]] = i
                 max_weights[idx_in_parent[mask_better]] = W_c_valid[mask_better]
 
-            # Generate strict partition
             children_pts_list_disjoints = [
                 parent_pts[best_child_idx == i] for i in range(len(ch))
             ]
             
-            # Call user function
             should_split = splitting(parent_pts, children_pts_list_disjoints)
             
             if should_split:
@@ -568,15 +752,12 @@ def GetClusters(Z: Dict[str, Any], method, splitting=None, points=None, Face_to_
                 return [get_nodes(cid)]
 
         for cid in selected_cids:
-            # We treat each selected cluster as a root for potential splitting
             final_nodes_list = _recursive_decision(cid)
             for nd in final_nodes_list:
                 clusters_nodes.append(nd)
-                clusters_cids.append(None) # ID lost after splitting
+                clusters_cids.append(None) 
 
     if verbose:
         print(f"[GetClusters] method={method} -> {len(clusters_nodes)} clusters")
 
     return {'clusters': clusters_nodes, 'cids': clusters_cids, 'method': method}
-
-
