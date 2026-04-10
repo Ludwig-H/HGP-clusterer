@@ -656,56 +656,26 @@ def optimal_flat_clustering_cvx(parents, f_scores, points_dict, M):
             if hull.geom_type in ['Point', 'LineString']: hull = hull.buffer(1e-5)
             node_hulls[v] = hull
 
-    overlap_found = True
-    max_iters = 10
-    it = 0
-    while overlap_found and it < max_iters:
-        overlap_found = False
-        it += 1
-        
-        valid_nodes = [v for v in V_opt if v in node_hulls]
-        if len(valid_nodes) < 2: break
-        
+    # FAST CONFLICT RESOLUTION (O(1) without tree shatter)
+    valid_nodes = [v for v in V_opt if v in node_hulls]
+    if len(valid_nodes) >= 2:
         geoms = [node_hulls[v] for v in valid_nodes]
         tree = STRtree(geoms)
         left, right = tree.query(geoms, predicate="intersects")
         
+        conflicts = set()
         for i, j in zip(left, right):
             if i >= j: continue
             u, v = valid_nodes[i], valid_nodes[j]
             
-            can_split_u = len(children[u]) > 0
-            can_split_v = len(children[v]) > 0
+            if labels_opt[u] == labels_opt[v]:
+                continue # Same track, no conflict
             
-            if can_split_u and can_split_v:
-                loss_u = dp_val[u] - sum(dp_val[c] for c in children[u])
-                loss_v = dp_val[v] - sum(dp_val[c] for c in children[v])
-                if loss_u < loss_v:
-                    is_leaf_cut[u] = False
-                else:
-                    is_leaf_cut[v] = False
-            elif can_split_u:
-                is_leaf_cut[u] = False
-            elif can_split_v:
-                is_leaf_cut[v] = False
-            else:
-                continue
-                
-            overlap_found = True
-            break
+            conflicts.add(u)
+            conflicts.add(v)
             
-        if overlap_found:
-            V_opt = []
-            labels_opt = {}
-            for r in roots:
-                retrieve(r)
-            for v in V_opt:
-                if v not in node_hulls:
-                    pts = points_dict.get(v, np.empty((0, 3)))
-                    if len(pts) >= 3:
-                        hull = MultiPoint(pts[:, :2]).convex_hull
-                        if hull.geom_type in ['Point', 'LineString']: hull = hull.buffer(1e-5)
-                        node_hulls[v] = hull
+        for v in conflicts:
+            labels_opt[v] = 0 # Trim conflicting nodes (they go to Passe 2)
 
     return V_opt, labels_opt
 
@@ -1045,6 +1015,13 @@ for t in frames:
                         if len(subtree_labels) == 1 and 0 in subtree_labels:
                             pass # Pur bruit, on laisse pour Unconfirmed
                         else:
+                            # L'arbre entier a reçu au moins un label > 0.
+                            # On l'ignore *intégralement* pour la Passe 2.
+                            start_root = res_tree['node_to_points_start'][r]
+                            end_root = res_tree['node_to_points_end'][r]
+                            pts_idx_tree = res_tree['all_points'][start_root:end_root]
+                            assigned_points_conf.update(pts_idx_tree.tolist())
+                            
                             tree_assignments_m = defaultdict(list)
                             for v in v_opt_in_tree:
                                 m = labels_opt[v]
@@ -1056,7 +1033,7 @@ for t in frames:
                                 if m > 0:
                                     tree_assignments_m[m].append(pts_idx)
                                 elif m == 0:
-                                    pass # Laisse à la Passe 2
+                                    pass # Deja ajoute
                                     
                             for m, list_of_pts in tree_assignments_m.items():
                                 all_pts_m = np.concatenate(list_of_pts)
@@ -1204,8 +1181,7 @@ for t in frames:
                                 if m > 0:
                                     tree_assignments_m[m].append(pts_idx_local)
                                 elif m == 0:
-                                    vol_prior = prior["L"] * prior["W"] * (1.0 if APPLY_BEV else prior.get("H", 1.5)) * 0.8
-                                    perform_volume_clustering(v, parents, points_dict, res_tree, vol_prior, APPLY_BEV, global_cl_indices[points_idx_unconf], CURRENT_POINTS_3D_UNCONF, sem_cl)
+                                    pass # Ignored due to conflict
 
                             for m, list_of_pts in tree_assignments_m.items():
                                 all_pts_m_local = np.concatenate(list_of_pts)
