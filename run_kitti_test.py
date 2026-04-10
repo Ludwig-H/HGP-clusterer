@@ -420,7 +420,7 @@ except ImportError:
 
 # --- Paramètres ---
 K = 3 # @param {type:"integer"}
-MIN_CLUSTER_SIZE = 15 # @param {type:"integer"}
+MIN_CLUSTER_SIZE = 10 # @param {type:"integer"}
 DBSCAN_FACTOR = 0.5 # @param {type:"number"}
 EXP_Z = 1 # @param {type:"number"}
 TRACKING_VERBOSE = True # @param {type:"boolean"}
