@@ -1,14 +1,134 @@
-BACKEND = "cgal"
+try:
+    from google.colab import output
+    output.enable_custom_widget_manager()
+except ImportError:
+    pass
+# @title 0. Montage Google Drive (Si exécution sur Colab)
+import os
+try:
+    from google.colab import drive
+    drive.mount('/workspaces/drive')
+    print("Google Drive monté avec succès !")
+except ImportError:
+    print("Environnement hors Colab détecté. Montage Drive ignoré.")
+
+
+try:
+    from google.colab import output
+    output.enable_custom_widget_manager()
+except ImportError:
+    pass
+# @title 1.1 Choix du Backend Géométrique
+# 'geogram' est recommandé pour la vitesse (headless). 'cgal' est plus lent mais exact.
+BACKEND = 'cgal'  # @param ['geogram', 'cgal']
+print(f"Backend sélectionné : {BACKEND}")
+
+# @title 1.2 Installation des dépendances système
+# os.system('apt-get update -qq')
+# os.system('apt-get install -y -qq build-essential cmake git libeigen3-dev libomp-dev')
+
+if BACKEND == 'cgal':
+    # libboost-all-dev est souvent nécessaire pour que CMake détecte correctement CGAL
+# os.system('apt-get install -y -qq libcgal-dev libtbb-dev libtbbmalloc2 libgmp-dev libmpfr-dev libboost-all-dev')
+
+# @title 1.3 Installation des dépendances Python
+# os.system('pip install -q --upgrade pip setuptools wheel Cython cmake jedi gdown pybind11 mip shapely POT')
+# os.system('pip install -q numpy scipy scikit-learn plotly tqdm joblib open3d plyfile hdbscan pandas matplotlib pyyaml shapely mip shapely POT')
+
+
+%%bash
+# @title 1.4 Installation de HGP-clusterer et SemanticKITTI-API
+set -euo pipefail
+WORKDIR="/content"
+mkdir -p "${WORKDIR}"
+cd "${WORKDIR}"
+
+# HGP-clusterer
+if [ -d HGP-clusterer ]; then
+    git -C HGP-clusterer pull --ff-only
+else
+    git clone https://github.com/Ludwig-H/HGP-clusterer.git
+fi
+
+# SemanticKITTI API (pour l'évaluation)
+if [ -d semantic-kitti-api ]; then
+    git -C semantic-kitti-api pull --ff-only
+else
+    git clone https://github.com/PRBonn/semantic-kitti-api.git
+fi
+
+try:
+    from google.colab import output
+    output.enable_custom_widget_manager()
+except ImportError:
+    pass
+# @title 1.5 Compilation de HGP
+import os
+import sys
+import subprocess
+
+WORKDIR = "/content"
+os.chdir(WORKDIR)
+
+if BACKEND == 'geogram':
+    if not os.path.exists('geogram'):
+        print("Clonage de Geogram...")
+# os.system('git clone --recursive https://github.com/BrunoLevy/geogram.git')
+    
+    print("Compilation de Geogram (Headless)...")
+# os.system('cmake -S geogram -B geogram/build -DCMAKE_BUILD_TYPE=Release -DGEOGRAM_WITH_GRAPHICS=OFF -DGEOGRAM_WITH_LUA=OFF -DGEOGRAM_WITH_GARGANTUA=OFF')
+# os.system('cmake --build geogram/build --config Release --parallel 4')
+# os.system('cmake --install geogram/build --prefix /usr/local')
+    os.environ['GEOGRAM_INSTALL_PREFIX'] = '/usr/local'
+
+elif BACKEND == 'cgal':
+    print("Configuration CGAL...")
+    
+    # -- FIX: Add CGAL path to environment for setup_cgal.py --
+    cgal_prefix = "/usr/lib/x86_64-linux-gnu/cmake/CGAL"
+    current_cpp = os.environ.get("CMAKE_PREFIX_PATH", "")
+    os.environ["CMAKE_PREFIX_PATH"] = f"{current_cpp}:{cgal_prefix}" if current_cpp else cgal_prefix
+    # ---------------------------------------------------------
+
+    # On tente de construire l'outil CGAL, mais on continue même en cas d'erreur
+    # car le setup.py principal pourrait réussir autrement.
+    try:
+        subprocess.run(["python3", f"{WORKDIR}/HGP-clusterer/scripts/setup_cgal.py"], check=True)
+    except subprocess.CalledProcessError:
+        print("⚠️ Attention: Echec du script setup_cgal.py. Tentative de continuation avec le build principal...")
+
+os.chdir(f"{WORKDIR}/HGP-clusterer")
+# os.system('rm -rf build dist *.egg-info')
+
+install_cmd = "pip install --no-build-isolation -v --no-deps ."
+if BACKEND == 'geogram':
+    install_cmd = f"GEOGRAM_INSTALL_PREFIX=/usr/local {install_cmd}"
+elif BACKEND == 'cgal':
+    # Ajout du chemin système pour CGAL (Debian/Ubuntu/Colab)
+    # Note: On le passe aussi explicitement ici pour être sûr
+    install_cmd = f"CGALDELAUNAY_ROOT={WORKDIR}/HGP-clusterer/CGALDelaunay CMAKE_PREFIX_PATH={WORKDIR}/HGP-clusterer:{cgal_prefix} {install_cmd}"
+
+print(f"Exécution : {install_cmd}")
+# os.system('{install_cmd}')
+
+os.environ["CGALDELAUNAY_ROOT"] = f"{WORKDIR}/HGP-clusterer/CGALDelaunay"
+
+try:
+    from hgp_clusterer import HGPClusterer
+    print("✅ HGPClusterer installé.")
+except ImportError as e:
+    print(f"❌ Erreur import HGP: {e}")
+
 # @title 2.1 Configuration Séquence et Téléchargement
 # IMPORTANT : Si vous ne voulez tester qu'une seule séquence, lancez cette cellule.
 # Le téléchargement via gdown --folder récupère tout le dossier si on ne filtre pas.
 # Ici, on télécharge tout le dataset SemanticKITTI (partiel) fourni via le lien Drive.
 
 SEQUENCE_TO_TEST = 8 # @param {type:"integer"}
-DOWNLOAD_DATA = False
+DOWNLOAD_DATA = True # @param {type:"boolean"}
 
 START_FRAME = 0 # @param {type:"integer"}
-NUM_FRAMES = 200
+NUM_FRAMES = 200 # @param {type:"integer"} (-1 pour toutes les frames)
 DT_SCALE = 0.1  # @param {type:"number"}
 APPLY_BEV = False # @param {type:"boolean"}
 # Mode Sémantique :
@@ -39,7 +159,7 @@ if DOWNLOAD_DATA:
     import shutil
     
     # Destination racine
-    base_dest = "/workspaces/HGP-clusterer/semantic_kitti_data"
+    base_dest = "/workspaces/semantic_kitti_data"
     seq_str = f"{SEQUENCE_TO_TEST:02d}"
     target_dir = os.path.join(base_dest, seq_str)
     
@@ -61,7 +181,7 @@ if DOWNLOAD_DATA:
                 zip_path = os.path.join(base_dest, "sequence.zip")
                 os.makedirs(base_dest, exist_ok=True)
                 
-                local_zip = f"/workspaces/HGP-clusterer/drive/MyDrive/Datasets/semantic_kitti/sequences_zip/{seq_str}.zip"
+                local_zip = f"/workspaces/drive/MyDrive/Datasets/semantic_kitti/sequences_zip/{seq_str}.zip"
                 success_local = False
                 
                 # Tentative 1: Drive local prioritaire
@@ -72,8 +192,10 @@ if DOWNLOAD_DATA:
                 else:
                     # Tentative de montage si on est sur Colab
                     try:
-                        if not os.path.exists('/content/drive/MyDrive'):
+                        from google.colab import drive
+                        if not os.path.exists('/workspaces/drive/MyDrive'):
                             print("Montage de Google Drive...")
+                            drive.mount('/workspaces/drive')
                         if os.path.exists(local_zip):
                             print(f"Fichier trouvé sur Drive ({local_zip}), copie en cours...")
                             shutil.copy(local_zip, zip_path)
@@ -187,6 +309,11 @@ else:
 
 print(f"Séquence cible pour le test : {SEQUENCE_TO_TEST}")
 
+try:
+    from google.colab import output
+    output.enable_custom_widget_manager()
+except ImportError:
+    pass
 # @title 2.2 Loader SemanticKITTI
 import os
 import numpy as np
@@ -320,7 +447,7 @@ Time_idx = None
 Original_Indices = None # Pour garder la trace si on filtre
 
 try:
-    loader = SemanticKITTILoader("/workspaces/HGP-clusterer/semantic_kitti_data", SEQUENCE_TO_TEST)
+    loader = SemanticKITTILoader("/workspaces/semantic_kitti_data", SEQUENCE_TO_TEST)
     points_4d, gt_sem, gt_inst, times, indices = [], [], [], [], []
     
     total_points = 0
@@ -398,6 +525,11 @@ except Exception as e:
     X_clustering = X_4d[:, :3] if not APPLY_BEV else X_4d[:, [0, 1]]
     print(f"Données synthétiques générées: {X_clustering.shape}")
 
+try:
+    from google.colab import output
+    output.enable_custom_widget_manager()
+except ImportError:
+    pass
 # @title 4.1 HGP Clustering & Optimal MILP 4D Panoptic Tracking
 import time
 import numpy as np
@@ -414,14 +546,14 @@ import mip
 try:
     from hgp_clusterer import HGPClusterer
 except ImportError:
-    if "/content/HGP-clusterer/src" not in sys.path:
-        sys.path.append("/content/HGP-clusterer/src")
+    if "/workspaces/HGP-clusterer/src" not in sys.path:
+        sys.path.append("/workspaces/HGP-clusterer/src")
     from hgp_clusterer import HGPClusterer
 
 # --- Paramètres ---
 K = 3 # @param {type:"integer"}
 MIN_CLUSTER_SIZE = 10 # @param {type:"integer"}
-DBSCAN_FACTOR = 0.5 # @param {type:"number"}
+DBSCAN_FACTOR = 0.8 # @param {type:"number"}
 EXP_Z = 1 # @param {type:"number"}
 TRACKING_VERBOSE = True # @param {type:"boolean"}
 HGP_VERBOSE = False # @param {type:"boolean"}
@@ -623,7 +755,7 @@ def optimal_flat_clustering_cvx(parents, f_scores, points_dict, M):
             best_m[v] = b_m
             is_leaf_cut[v] = True
         else:
-            if best_score_at_v >= child_sum:
+            if best_score_at_v >= child_sum - 1e-6:
                 dp_val[v] = best_score_at_v
                 best_m[v] = b_m
                 is_leaf_cut[v] = True
@@ -736,9 +868,9 @@ class Track:
 
         self.H = np.zeros((3, 6))
         self.H[0:3, 0:3] = np.eye(3)
-        self.R = np.eye(3) * 0.1
+        self.R = np.eye(3) * 0.5
         self.Q = np.eye(6) * 0.05
-        self.Q[3:6, 3:6] = np.eye(3) * 1.0  # High uncertainty for velocity (acceleration/braking)
+        self.Q[3:6, 3:6] = np.eye(3) * 0.05
 
         self.L, self.W, self.H_dim = dim[0], dim[1], dim[2]
         self.yaw = yaw
@@ -791,7 +923,7 @@ class Track:
             dyaw = dyaw - np.sign(dyaw) * np.pi
 
         measured_yaw_rate = dyaw / elapsed_t
-        alpha_yaw_rate = 0.05
+        alpha_yaw_rate = 0.25
         self.yaw_rate = (1 - alpha_yaw_rate) * self.yaw_rate + alpha_yaw_rate * measured_yaw_rate
 
         z = np.array([c[0], c[1], c[2]])
@@ -843,7 +975,7 @@ def compute_uot_matrix(tracks, cloud_pts, prior):
     
     tau_min = 1.0
     tau = tau_min + prior.get("max_speed", 20.0) * 0.1
-    P_micro = solve_uot_sinkhorn_gpu(C_matrix, a_f, b_f, epsilon=0.05, tau1=tau, tau2=tau)
+    P_micro = solve_uot_sinkhorn_gpu(C_matrix, a_f, b_f, epsilon=0.2, tau1=tau, tau2=tau)
     P_micro_cpu = P_micro.cpu().numpy()
     
     V = np.zeros((N, M), dtype=np.float32)
@@ -1279,6 +1411,13 @@ print(f"\nTracking terminé. Total IDs uniques : {next_track_id - 1}")
 
 
 
+
+
+try:
+    from google.colab import output
+    output.enable_custom_widget_manager()
+except ImportError:
+    pass
 # @title 5.1 Évaluation Officielle SemanticKITTI (PQ, SQ, RQ)
 import os
 import shutil
@@ -1288,8 +1427,8 @@ import yaml
 if X_clustering is not None and len(X_clustering) > 0:
     print("Préparation des fichiers pour l'évaluation officielle (semantic-kitti-api)...")
     
-    eval_dir = "/workspaces/HGP-clusterer/eval_data"
-    pred_dir = "/workspaces/HGP-clusterer/eval_predictions"
+    eval_dir = "/workspaces/eval_data"
+    pred_dir = "/workspaces/eval_predictions"
     seq_str = f"{SEQUENCE_TO_TEST:02d}"
     
     gt_labels_dir = os.path.join(eval_dir, "sequences", seq_str, "labels")
@@ -1303,8 +1442,8 @@ if X_clustering is not None and len(X_clustering) > 0:
     os.makedirs(pred_labels_dir, exist_ok=True)
     
     # Création d'une configuration personnalisée pour n'évaluer que cette séquence
-    custom_cfg_path = "/workspaces/HGP-clusterer/custom_eval_config.yaml"
-    with open("/workspaces/HGP-clusterer/semantic-kitti-api/config/semantic-kitti.yaml", 'r') as f:
+    custom_cfg_path = "/workspaces/custom_eval_config.yaml"
+    with open("/workspaces/semantic-kitti-api/config/semantic-kitti.yaml", 'r') as f:
         cfg = yaml.safe_load(f)
     cfg['split']['valid'] = [SEQUENCE_TO_TEST]
     with open(custom_cfg_path, 'w') as f:
@@ -1348,15 +1487,15 @@ if X_clustering is not None and len(X_clustering) > 0:
         pred_label.tofile(pred_filename)
         
     print("Fichiers de prédiction générés. Téléchargement des scripts d'évaluation 4D...")
-    os.system("wget -q https://raw.githubusercontent.com/MehmetAygun/4D-PLS/master/utils/evaluate_4dpanoptic.py -O /workspaces/HGP-clusterer/semantic-kitti-api/evaluate_4dpanoptic.py")
-    os.system("wget -q https://raw.githubusercontent.com/MehmetAygun/4D-PLS/master/utils/eval_np.py -O /workspaces/HGP-clusterer/semantic-kitti-api/auxiliary/eval_np_4d.py")
-    os.system("sed -i 's/from eval_np import Panoptic4DEval/from auxiliary.eval_np_4d import Panoptic4DEval/' /workspaces/HGP-clusterer/semantic-kitti-api/evaluate_4dpanoptic.py")
-
-    os.makedirs("/workspaces/HGP-clusterer/eval_output", exist_ok=True)
+    os.system("wget -q https://raw.githubusercontent.com/MehmetAygun/4D-PLS/master/utils/evaluate_4dpanoptic.py -O /workspaces/semantic-kitti-api/evaluate_4dpanoptic.py")
+    os.system("wget -q https://raw.githubusercontent.com/MehmetAygun/4D-PLS/master/utils/eval_np.py -O /workspaces/semantic-kitti-api/auxiliary/eval_np_4d.py")
+    os.system("sed -i 's/from eval_np import Panoptic4DEval/from auxiliary.eval_np_4d import Panoptic4DEval/' /workspaces/semantic-kitti-api/evaluate_4dpanoptic.py")
+    
+    os.makedirs("/workspaces/eval_output", exist_ok=True)
     # On lance le script officiel 4D sur ce mini-dataset de test et on capture la sortie
     import subprocess
     print("Évaluation en cours (cela peut prendre quelques minutes)...")
-    eval_cmd = f"python3 /workspaces/HGP-clusterer/semantic-kitti-api/evaluate_4dpanoptic.py --dataset {eval_dir} --predictions {pred_dir} --split valid --data_cfg {custom_cfg_path}"
+    eval_cmd = f"python3 /workspaces/semantic-kitti-api/evaluate_4dpanoptic.py --dataset {eval_dir} --predictions {pred_dir} --split valid --data_cfg {custom_cfg_path}"
     res = subprocess.run(eval_cmd, shell=True, capture_output=True, text=True)
     
     print("\n--- RÉSULTATS DE L'ÉVALUATION LSTQ (4D) ---")
@@ -1446,7 +1585,7 @@ if X_4d is not None and len(X_4d) > 0:
     print(f"-> {len(iou_map)} pistes ont été matchées parfaitement avec la Ground Truth (IoU global > 50%)")
     # -----------------------------------
     
-    max_points = 200000
+    max_points = 30000
     if len(X_4d_viz) > max_points:
         idx = np.random.choice(len(X_4d_viz), max_points, replace=False)
     else:
@@ -1683,6 +1822,178 @@ if X_4d is not None and len(X_4d) > 0:
         print(f"La frame {FRAME_TO_SHOW} n'est pas présente dans le sous-ensemble actuel.")
 else:
     print("Pas de données à afficher.")
+
+
+# @title 6.2 Visualisation Interactive 4D Panoptic & Tracking (SemanticKITTI BEV Clone)
+try:
+    from google.colab import output
+    output.enable_custom_widget_manager()
+except ImportError:
+    pass
+
+import os
+import glob
+import numpy as np
+import plotly.graph_objects as go
+import ipywidgets as widgets
+from IPython.display import display
+import matplotlib.pyplot as plt
+import matplotlib.colors as mcolors
+
+DOWNSAMPLE_FACTOR = 5
+
+def get_obb_corners(cx, cy, cz, l, w, h, yaw):
+    cos_y = np.cos(yaw)
+    sin_y = np.sin(yaw)
+    R = np.array([
+        [cos_y, -sin_y, 0],
+        [sin_y,  cos_y, 0],
+        [    0,      0, 1]
+    ])
+    x_corners = [l/2, l/2, -l/2, -l/2, l/2, l/2, -l/2, -l/2]
+    y_corners = [w/2, -w/2, -w/2, w/2, w/2, -w/2, -w/2, w/2]
+    z_corners = [h/2, h/2, h/2, h/2, -h/2, -h/2, -h/2, -h/2]
+    corners = np.vstack([x_corners, y_corners, z_corners])
+    corners_3d = np.dot(R, corners)
+    corners_3d[0, :] += cx
+    corners_3d[1, :] += cy
+    corners_3d[2, :] += cz
+    return corners_3d
+
+def compute_obb(pts):
+    if len(pts) < 3: return None
+    c = np.mean(pts, axis=0)
+    xy = pts[:, :2]
+    cov = np.cov(xy.T)
+    eigenvalues, eigenvectors = np.linalg.eigh(cov)
+    major_axis = eigenvectors[:, np.argmax(eigenvalues)]
+    yaw = np.arctan2(major_axis[1], major_axis[0])
+    cos_t, sin_t = np.cos(-yaw), np.sin(-yaw)
+    R = np.array([[cos_t, -sin_t], [sin_t, cos_t]])
+    aligned_xy = xy @ R.T
+    dim_x = np.max(aligned_xy[:, 0]) - np.min(aligned_xy[:, 0])
+    dim_y = np.max(aligned_xy[:, 1]) - np.min(aligned_xy[:, 1])
+    dim_z = np.max(pts[:, 2]) - np.min(pts[:, 2])
+    return c[0], c[1], c[2], dim_x, dim_y, dim_z, yaw
+
+def create_obb_lines(obbs):
+    x_lines, y_lines, z_lines = [], [], []
+    lines_idx = [[0,1], [1,2], [2,3], [3,0], [4,5], [5,6], [6,7], [7,4], [0,4], [1,5], [2,6], [3,7]]
+    for obb in obbs:
+        corners = get_obb_corners(*obb)
+        for idx in lines_idx:
+            x_lines.extend([corners[0, idx[0]], corners[0, idx[1]], None])
+            y_lines.extend([corners[1, idx[0]], corners[1, idx[1]], None])
+            z_lines.extend([corners[2, idx[0]], corners[2, idx[1]], None])
+    return x_lines, y_lines, z_lines
+
+seq_str = f"{SEQUENCE_TO_TEST:02d}" if 'SEQUENCE_TO_TEST' in globals() else "08"
+velo_path = loader.velo_path if 'loader' in globals() else os.path.join("semantic_kitti_data", seq_str, "velodyne")
+pred_path = pred_labels_dir if 'pred_labels_dir' in globals() else os.path.join("eval_predictions", "sequences", seq_str, "predictions")
+
+velo_files = sorted(glob.glob(os.path.join(velo_path, "*.bin")))
+pred_files = sorted(glob.glob(os.path.join(pred_path, "*.label")))
+
+if 'NUM_FRAMES' in globals() and NUM_FRAMES != -1:
+    start = globals().get('START_FRAME', 0)
+    velo_files = velo_files[start:start+NUM_FRAMES]
+    pred_files = pred_files[:NUM_FRAMES]
+
+def load_frame_data(f_idx):
+    if f_idx >= len(velo_files): return None, None, None, None, None
+    scan = np.fromfile(velo_files[f_idx], dtype=np.float32).reshape(-1, 4)
+    points = scan[:, :3]
+    if f_idx < len(pred_files):
+        labels = np.fromfile(pred_files[f_idx], dtype=np.uint32)
+        inst_labels = labels >> 16
+        sem_labels = labels & 0xFFFF
+    else:
+        inst_labels = np.zeros(len(points), dtype=np.uint32)
+        sem_labels = np.zeros(len(points), dtype=np.uint32)
+    return points[:, 0], points[:, 1], points[:, 2], inst_labels, sem_labels
+
+cmap = plt.get_cmap('tab20')
+colors = [mcolors.to_hex(cmap(i)) for i in range(20)]
+
+x_pt, y_pt, z_pt, inst, sem = load_frame_data(0)
+obbs = []
+if x_pt is not None:
+    idx = np.random.choice(len(x_pt), len(x_pt) // DOWNSAMPLE_FACTOR, replace=False)
+    c_pt = np.array(['#A9A9A9'] * len(idx))
+    inst_idx = inst[idx]
+    unique_inst = np.unique(inst[inst > 0])
+    for inst_id in unique_inst:
+        mask_all = (inst == inst_id)
+        pts = np.column_stack((x_pt[mask_all], y_pt[mask_all], z_pt[mask_all]))
+        obb = compute_obb(pts)
+        if obb: obbs.append(obb)
+    for i, inst_id in enumerate(np.unique(inst_idx[inst_idx > 0])):
+        mask = (inst_idx == inst_id)
+        c_pt[mask] = colors[inst_id % 20]
+else:
+    x_pt, y_pt, z_pt, c_pt, idx = np.array([0.0]), np.array([0.0]), np.array([0.0]), np.array(['#000000']), np.array([0])
+
+cx, cy, cz = create_obb_lines(obbs)
+
+scatter_cloud = go.Scatter3d(
+    x=x_pt[idx] if x_pt is not None else [], y=y_pt[idx] if y_pt is not None else [], z=z_pt[idx] if z_pt is not None else [],
+    mode='markers',
+    marker=dict(size=1.5, color=c_pt, line=dict(width=0)),
+    name="Predictions 4D"
+)
+scatter_obbs = go.Scatter3d(x=cx, y=cy, z=cz, mode='lines', line=dict(color='midnightblue', width=4), opacity=1.0, name="OBB Tracks")
+
+scene_config = dict(
+    xaxis=dict(showgrid=False, zeroline=False, showticklabels=False, showbackground=False, visible=False),
+    yaxis=dict(showgrid=False, zeroline=False, showticklabels=False, showbackground=False, visible=False),
+    zaxis=dict(showgrid=False, zeroline=False, showticklabels=False, showbackground=False, visible=False),
+    camera=dict(up=dict(x=0, y=0, z=1), center=dict(x=0, y=0, z=0), eye=dict(x=0, y=0, z=2.5)),
+    aspectmode='data'
+)
+
+fig = go.FigureWidget(data=[scatter_cloud, scatter_obbs])
+fig.update_layout(
+    scene=scene_config,
+    paper_bgcolor='white',
+    plot_bgcolor='white',
+    margin=dict(l=0, r=0, b=0, t=0),
+    showlegend=True,
+    height=800
+)
+
+slider = widgets.IntSlider(min=0, max=max(0, len(velo_files)-1), step=1, value=0, description='Frame:')
+
+def update_frame(change):
+    f_idx = change.new
+    x_pt, y_pt, z_pt, inst, sem = load_frame_data(f_idx)
+    if x_pt is not None:
+        idx = np.random.choice(len(x_pt), len(x_pt) // DOWNSAMPLE_FACTOR, replace=False)
+        c_pt = np.array(['#A9A9A9'] * len(idx))
+        inst_idx = inst[idx]
+        obbs = []
+        unique_inst = np.unique(inst[inst > 0])
+        for inst_id in unique_inst:
+            mask_all = (inst == inst_id)
+            pts = np.column_stack((x_pt[mask_all], y_pt[mask_all], z_pt[mask_all]))
+            obb = compute_obb(pts)
+            if obb: obbs.append(obb)
+        for i, inst_id in enumerate(np.unique(inst_idx[inst_idx > 0])):
+            mask = (inst_idx == inst_id)
+            c_pt[mask] = colors[inst_id % 20]
+        
+        cx, cy, cz = create_obb_lines(obbs)
+        
+        with fig.batch_update():
+            fig.data[0].x = x_pt[idx]
+            fig.data[0].y = y_pt[idx]
+            fig.data[0].z = z_pt[idx]
+            fig.data[0].marker.color = c_pt
+            fig.data[1].x = cx
+            fig.data[1].y = cy
+            fig.data[1].z = cz
+
+slider.observe(update_frame, names='value')
+display(widgets.VBox([slider, fig]))
 
 
 # @title 6.2 [DEBUG] Visualisation des Scores d'Association (Matrice UOT)

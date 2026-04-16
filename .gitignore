@@ -10,3 +10,4 @@ dist/
 *.log
 .DS_Store
 src/hgp_clusterer/_cython.cpp
+node_modules

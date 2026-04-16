@@ -46,7 +46,7 @@ class Track:
         v_tensor = torch.tensor(self.x[3:6], device=self.device, dtype=torch.float32)
         total_dt = dt * self.age_occlusion
         
-        theta = self.yaw_rate * total_dt
+        theta = 0.0
         if np.abs(theta) > 1e-4:
             cos_t = np.cos(theta)
             sin_t = np.sin(theta)
