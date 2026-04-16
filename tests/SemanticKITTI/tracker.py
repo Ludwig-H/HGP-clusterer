@@ -70,6 +70,10 @@ class Track:
         c, dim, yaw = det["centroid"], det["dimensions"], det["yaw"]
         
         dyaw = np.arctan2(np.sin(yaw - self.yaw), np.cos(yaw - self.yaw))
+        if dyaw > np.pi / 2:
+            dyaw -= np.pi
+        elif dyaw < -np.pi / 2:
+            dyaw += np.pi
         if np.abs(dyaw) > np.pi / 2:
             dyaw = dyaw - np.sign(dyaw) * np.pi
             
