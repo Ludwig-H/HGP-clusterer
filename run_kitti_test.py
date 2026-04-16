@@ -758,6 +758,12 @@ class Track:
         F = np.eye(6)
         F[0, 3], F[1, 4], F[2, 5] = dt, dt, dt
         self.x = F @ self.x
+        
+        # Garde-fou : Limiter la vitesse à 35 m/s max pour éviter les projections aberrantes
+        speed = np.linalg.norm(self.x[3:6])
+        if speed > 35.0:
+            self.x[3:6] = self.x[3:6] * (35.0 / speed)
+            
         self.P = F @ self.P @ F.T + self.Q
 
         v_tensor = torch.tensor(self.x[3:6], device=self.device, dtype=torch.float32)
@@ -1252,7 +1258,9 @@ for t in frames:
                 
                 if cost_matrix[i, j] < prior.get("max_speed", 20.0) * 0.1 * occ_tr.age_occlusion * 1.5: # 50% tolérance supp pour l'occlusion
                     # Transfert d'identité (Merge)
+                    saved_velocity = occ_tr.x[3:6].copy()
                     occ_tr.x = cand_tr.x
+                    occ_tr.x[3:6] = saved_velocity
                     occ_tr.P = cand_tr.P
                     occ_tr.yaw = cand_tr.yaw
                     occ_tr.yaw_rate = cand_tr.yaw_rate
@@ -1712,6 +1720,10 @@ if 'tracks_dict' in locals() and len(tracks_dict) > 0:
     for tid, tr in tracks_dict.items():
         v_norm = np.linalg.norm(tr.velocity)
         print(f"Track {tid} (Class {tr.semantic_class}, {tr.state}): Vitesse = {v_norm:.2f} m/s")
+else:
+    print("Aucune piste active à analyser.")
+
+}, {tr.state}): Vitesse = {v_norm:.2f} m/s")
 else:
     print("Aucune piste active à analyser.")
 
