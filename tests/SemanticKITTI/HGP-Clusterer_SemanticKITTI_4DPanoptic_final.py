@@ -895,8 +895,10 @@ class Track:
         v_tensor = torch.tensor(self.x[3:6], device=self.device, dtype=torch.float32)
         total_dt = dt * self.age_occlusion
 
-        theta = 0.0
-        if np.abs(theta) > 1e-4:
+        # Réintégration sécurisée de la rotation (theta)
+        # Clipping physique à +/- 0.1 rad (6° par frame) pour éviter l'instabilité
+        theta = np.clip(self.yaw_rate * dt, -0.1, 0.1)
+        if np.abs(theta) > 0.005: # Seuil minimal pour éviter le jitter (0.3°)
             cos_t = np.cos(theta)
             sin_t = np.sin(theta)
             R = torch.tensor([[cos_t, -sin_t, 0],
