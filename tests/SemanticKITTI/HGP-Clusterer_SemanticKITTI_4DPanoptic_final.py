@@ -33,8 +33,8 @@ if BACKEND == 'cgal':
 # os.system('apt-get install -y -qq libcgal-dev libtbb-dev libtbbmalloc2 libgmp-dev libmpfr-dev libboost-all-dev')
 
 # @title 1.3 Installation des dépendances Python
-# os.system('pip install -q --upgrade pip setuptools wheel Cython cmake jedi gdown pybind11 mip shapely POT')
-# os.system('pip install -q numpy scipy scikit-learn plotly tqdm joblib open3d plyfile hdbscan pandas matplotlib pyyaml shapely mip shapely POT')
+# os.system('pip install -q --upgrade pip setuptools wheel Cython cmake jedi gdown pybind11')
+# os.system('pip install -q numpy scipy scikit-learn plotly tqdm joblib open3d plyfile hdbscan pandas matplotlib pyyaml shapely mip POT')
 
 
 %%bash
@@ -545,12 +545,15 @@ from shapely.strtree import STRtree
 import mip
 
 # Import sécurisé HGP
+if "/content/HGP-clusterer/src" in sys.path:
+    sys.path.remove("/content/HGP-clusterer/src")
+if "" in sys.path:
+    sys.path.remove("")
 try:
     from hgp_clusterer import HGPClusterer
-except ImportError:
-    if "/content/HGP-clusterer/src" not in sys.path:
-        sys.path.append("/content/HGP-clusterer/src")
-    from hgp_clusterer import HGPClusterer
+except ImportError as e:
+    print(f"❌ Erreur import HGP: {e}")
+    raise
 
 # --- Paramètres ---
 K = 3 # @param {type:"integer"}
