@@ -7,7 +7,8 @@ except ImportError:
 import os
 try:
     from google.colab import drive
-    drive.mount('/workspaces/drive')
+    os.makedirs('/content/drive', exist_ok=True)
+    drive.mount('/content/drive')
     print("Google Drive monté avec succès !")
 except ImportError:
     print("Environnement hors Colab détecté. Montage Drive ignoré.")
@@ -159,7 +160,7 @@ if DOWNLOAD_DATA:
     import shutil
     
     # Destination racine
-    base_dest = "/workspaces/semantic_kitti_data"
+    base_dest = "/content/semantic_kitti_data"
     seq_str = f"{SEQUENCE_TO_TEST:02d}"
     target_dir = os.path.join(base_dest, seq_str)
     
@@ -181,7 +182,7 @@ if DOWNLOAD_DATA:
                 zip_path = os.path.join(base_dest, "sequence.zip")
                 os.makedirs(base_dest, exist_ok=True)
                 
-                local_zip = f"/workspaces/drive/MyDrive/Datasets/semantic_kitti/sequences_zip/{seq_str}.zip"
+                local_zip = f"/content/drive/MyDrive/Datasets/semantic_kitti/sequences_zip/{seq_str}.zip"
                 success_local = False
                 
                 # Tentative 1: Drive local prioritaire
@@ -193,9 +194,10 @@ if DOWNLOAD_DATA:
                     # Tentative de montage si on est sur Colab
                     try:
                         from google.colab import drive
-                        if not os.path.exists('/workspaces/drive/MyDrive'):
+                        if not os.path.exists('/content/drive/MyDrive'):
                             print("Montage de Google Drive...")
-                            drive.mount('/workspaces/drive')
+                            os.makedirs('/content/drive', exist_ok=True)
+                            drive.mount('/content/drive')
                         if os.path.exists(local_zip):
                             print(f"Fichier trouvé sur Drive ({local_zip}), copie en cours...")
                             shutil.copy(local_zip, zip_path)
@@ -447,7 +449,7 @@ Time_idx = None
 Original_Indices = None # Pour garder la trace si on filtre
 
 try:
-    loader = SemanticKITTILoader("/workspaces/semantic_kitti_data", SEQUENCE_TO_TEST)
+    loader = SemanticKITTILoader("/content/semantic_kitti_data", SEQUENCE_TO_TEST)
     points_4d, gt_sem, gt_inst, times, indices = [], [], [], [], []
     
     total_points = 0
@@ -546,8 +548,8 @@ import mip
 try:
     from hgp_clusterer import HGPClusterer
 except ImportError:
-    if "/workspaces/HGP-clusterer/src" not in sys.path:
-        sys.path.append("/workspaces/HGP-clusterer/src")
+    if "/content/HGP-clusterer/src" not in sys.path:
+        sys.path.append("/content/HGP-clusterer/src")
     from hgp_clusterer import HGPClusterer
 
 # --- Paramètres ---
@@ -789,25 +791,7 @@ def optimal_flat_clustering_cvx(parents, f_scores, points_dict, M):
             node_hulls[v] = hull
 
     # FAST CONFLICT RESOLUTION (O(1) without tree shatter)
-    valid_nodes = [v for v in V_opt if v in node_hulls]
-    if len(valid_nodes) >= 2:
-        geoms = [node_hulls[v] for v in valid_nodes]
-        tree = STRtree(geoms)
-        left, right = tree.query(geoms, predicate="intersects")
-        
-        conflicts = set()
-        for i, j in zip(left, right):
-            if i >= j: continue
-            u, v = valid_nodes[i], valid_nodes[j]
-            
-            if labels_opt[u] == labels_opt[v]:
-                continue # Same track, no conflict
-            
-            conflicts.add(u)
-            conflicts.add(v)
-            
-        for v in conflicts:
-            labels_opt[v] = 0 # Trim conflicting nodes (they go to Passe 2)
+    # block removed
 
     return V_opt, labels_opt
 
@@ -979,7 +963,7 @@ def compute_uot_matrix(tracks, cloud_pts, prior):
     K_total = mega_pred_cloud.shape[0]
     
     C_matrix = torch.cdist(cloud_pts_gpu, mega_pred_cloud, p=2)**2
-    gate_dist = prior.get("max_speed", 20.0) * 0.1 * 2.0
+    gate_dist = prior.get("match_threshold", prior.get("max_speed", 20.0) * 0.1 * 2.0)
     C_matrix[C_matrix > gate_dist**2] = float('inf')
     
     a_f = torch.ones(N, device=DEVICE)
@@ -1439,8 +1423,8 @@ import yaml
 if X_clustering is not None and len(X_clustering) > 0:
     print("Préparation des fichiers pour l'évaluation officielle (semantic-kitti-api)...")
     
-    eval_dir = "/workspaces/eval_data"
-    pred_dir = "/workspaces/eval_predictions"
+    eval_dir = "/content/eval_data"
+    pred_dir = "/content/eval_predictions"
     seq_str = f"{SEQUENCE_TO_TEST:02d}"
     
     gt_labels_dir = os.path.join(eval_dir, "sequences", seq_str, "labels")
@@ -1454,8 +1438,8 @@ if X_clustering is not None and len(X_clustering) > 0:
     os.makedirs(pred_labels_dir, exist_ok=True)
     
     # Création d'une configuration personnalisée pour n'évaluer que cette séquence
-    custom_cfg_path = "/workspaces/custom_eval_config.yaml"
-    with open("/workspaces/semantic-kitti-api/config/semantic-kitti.yaml", 'r') as f:
+    custom_cfg_path = "/content/custom_eval_config.yaml"
+    with open("/content/semantic-kitti-api/config/semantic-kitti.yaml", 'r') as f:
         cfg = yaml.safe_load(f)
     cfg['split']['valid'] = [SEQUENCE_TO_TEST]
     with open(custom_cfg_path, 'w') as f:
@@ -1499,15 +1483,15 @@ if X_clustering is not None and len(X_clustering) > 0:
         pred_label.tofile(pred_filename)
         
     print("Fichiers de prédiction générés. Téléchargement des scripts d'évaluation 4D...")
-    os.system("wget -q https://raw.githubusercontent.com/MehmetAygun/4D-PLS/master/utils/evaluate_4dpanoptic.py -O /workspaces/semantic-kitti-api/evaluate_4dpanoptic.py")
-    os.system("wget -q https://raw.githubusercontent.com/MehmetAygun/4D-PLS/master/utils/eval_np.py -O /workspaces/semantic-kitti-api/auxiliary/eval_np_4d.py")
-    os.system("sed -i 's/from eval_np import Panoptic4DEval/from auxiliary.eval_np_4d import Panoptic4DEval/' /workspaces/semantic-kitti-api/evaluate_4dpanoptic.py")
+    os.system("wget -q https://raw.githubusercontent.com/MehmetAygun/4D-PLS/master/utils/evaluate_4dpanoptic.py -O /content/semantic-kitti-api/evaluate_4dpanoptic.py")
+    os.system("wget -q https://raw.githubusercontent.com/MehmetAygun/4D-PLS/master/utils/eval_np.py -O /content/semantic-kitti-api/auxiliary/eval_np_4d.py")
+    os.system("sed -i 's/from eval_np import Panoptic4DEval/from auxiliary.eval_np_4d import Panoptic4DEval/' /content/semantic-kitti-api/evaluate_4dpanoptic.py")
     
-    os.makedirs("/workspaces/eval_output", exist_ok=True)
+    os.makedirs("/content/eval_output", exist_ok=True)
     # On lance le script officiel 4D sur ce mini-dataset de test et on capture la sortie
     import subprocess
     print("Évaluation en cours (cela peut prendre quelques minutes)...")
-    eval_cmd = f"python3 /workspaces/semantic-kitti-api/evaluate_4dpanoptic.py --dataset {eval_dir} --predictions {pred_dir} --split valid --data_cfg {custom_cfg_path}"
+    eval_cmd = f"python3 /content/semantic-kitti-api/evaluate_4dpanoptic.py --dataset {eval_dir} --predictions {pred_dir} --split valid --data_cfg {custom_cfg_path}"
     res = subprocess.run(eval_cmd, shell=True, capture_output=True, text=True)
     
     print("\n--- RÉSULTATS DE L'ÉVALUATION LSTQ (4D) ---")
@@ -2029,14 +2013,6 @@ if 'tracks_dict' in locals() and len(tracks_dict) > 0:
     for tid, tr in tracks_dict.items():
         v_norm = np.linalg.norm(tr.velocity)
         print(f"Track {tid} (Class {tr.semantic_class}, {tr.state}): Vitesse = {v_norm:.2f} m/s")
-else:
-    print("Aucune piste active à analyser.")
-
-antic_class}, {tr.state}): Vitesse = {v_norm:.2f} m/s")
-else:
-    print("Aucune piste active à analyser.")
-
-}, {tr.state}): Vitesse = {v_norm:.2f} m/s")
 else:
     print("Aucune piste active à analyser.")
 
