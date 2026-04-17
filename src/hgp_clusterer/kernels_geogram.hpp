@@ -14,6 +14,15 @@
 #ifdef HGP_WITH_GEOGRAM
 
 #include <geogram/delaunay/delaunay.h>
+
+inline bool my_cell_is_infinite(const GEO::Delaunay* delaunay, GEO::index_t c) {
+    GEO::index_t c_size = delaunay->cell_size();
+    for(GEO::index_t i=0; i<c_size; ++i) {
+        if(delaunay->cell_vertex(c, i) == GEO::index_t(-1)) return true;
+    }
+    return false;
+}
+
 #include <geogram/basic/common.h>
 #include <geogram/basic/command_line.h>
 #include <geogram/basic/command_line_args.h>
@@ -630,7 +639,7 @@ private:
             local_edges.reserve((r.end() - r.begin()) * 6);
 
             for(GEO::index_t c=r.begin(); c!=r.end(); ++c) {
-                if(delaunay->keeps_infinite() && delaunay->cell_is_infinite(c)) continue;
+                if(delaunay->keeps_infinite() && my_cell_is_infinite(delaunay.get(), c)) continue;
                 
                 for(int i=0; i<c_size; ++i) {
                     for(int j=i+1; j<c_size; ++j) {
@@ -667,7 +676,7 @@ private:
         #else
         // Sequential Fallback
         for(GEO::index_t c=0; c<n_cells; ++c) {
-            if(delaunay->keeps_infinite() && delaunay->cell_is_infinite(c)) continue;
+            if(delaunay->keeps_infinite() && my_cell_is_infinite(delaunay.get(), c)) continue;
             for(int i=0; i<c_size; ++i) {
                 for(int j=i+1; j<c_size; ++j) {
                     GEO::index_t v1 = delaunay->cell_vertex(c, i);
@@ -700,13 +709,13 @@ private:
         #else
             for(GEO::index_t c = 0; c < n_cells; ++c) {
         #endif
-            if (delaunay->keeps_infinite() && delaunay->cell_is_infinite(c)) continue;
+            if (delaunay->keeps_infinite() && my_cell_is_infinite(delaunay.get(), c)) continue;
 
             for (GEO::index_t f = 0; f < 4; ++f) {
                 GEO::index_t adj = delaunay->cell_adjacent(c, f);
                 bool is_boundary = (adj == GEO::index_t(-1));
                 if (!is_boundary && delaunay->keeps_infinite()) {
-                    if (delaunay->cell_is_infinite(adj)) is_boundary = true;
+                    if (my_cell_is_infinite(delaunay.get(), adj)) is_boundary = true;
                 }
 
                 if (is_boundary) {
@@ -772,7 +781,7 @@ private:
     ) {
         // Sequential extraction to save memory (avoid concurrent_vector copy peak)
         for (GEO::index_t c = 0; c < n_cells; ++c) {
-            if (delaunay->keeps_infinite() && delaunay->cell_is_infinite(c)) continue;
+            if (delaunay->keeps_infinite() && my_cell_is_infinite(delaunay.get(), c)) continue;
 
             // Optimization: Precompute sum of weights (lifted coordinate, index 3)
             // Cell has 5 vertices.
@@ -791,7 +800,7 @@ private:
                 GEO::index_t adj = delaunay->cell_adjacent(c, f);
                 bool is_boundary = (adj == GEO::index_t(-1));
                 if (!is_boundary && delaunay->keeps_infinite()) {
-                    if (delaunay->cell_is_infinite(adj)) is_boundary = true;
+                    if (my_cell_is_infinite(delaunay.get(), adj)) is_boundary = true;
                 }
 
                 if (is_boundary) {
@@ -850,13 +859,13 @@ private:
         #else
         for (GEO::index_t c = 0; c < n_cells; ++c) {
         #endif
-            if (delaunay->keeps_infinite() && delaunay->cell_is_infinite(c)) continue;
+            if (delaunay->keeps_infinite() && my_cell_is_infinite(delaunay.get(), c)) continue;
 
             for (GEO::index_t f = 0; f < n_facets_per_cell; ++f) {
                 GEO::index_t adj = delaunay->cell_adjacent(c, f);
                 bool is_boundary = (adj == GEO::index_t(-1));
                 if (!is_boundary && delaunay->keeps_infinite()) {
-                    if (delaunay->cell_is_infinite(adj)) is_boundary = true;
+                    if (my_cell_is_infinite(delaunay.get(), adj)) is_boundary = true;
                 }
 
                 if (is_boundary) {
