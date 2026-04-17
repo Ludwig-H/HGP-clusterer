@@ -1,0 +1,1739 @@
+=== LOG D'ERREURS ULTRA COMPLET ===
+Sequence: 8
+
+--- FRAME 0 ---
+  [SPLIT - Sur-segmentation] GT_ID: 1 divisée en preds: [3, 9] | Taille GT: 503 pts | Sévérité: 70
+  [FN - Non Détecté] GT_ID: 9 | Taille: 2 pts | Sévérité: 2
+  [SPLIT - Sur-segmentation] GT_ID: 3 divisée en preds: [1, 10] | Taille GT: 441 pts | Sévérité: 55
+  [FN - Non Détecté] GT_ID: 25 | Taille: 1 pts | Sévérité: 1
+  [MERGE - Sous-segmentation] Pred_ID: 12 fusionne les GT: [15, 0] | Taille Pred: 21 pts | Sévérité: 3
+--- FRAME 1 ---
+  [SPLIT - Sur-segmentation] GT_ID: 1 divisée en preds: [3, 9] | Taille GT: 545 pts | Sévérité: 240
+  [FN - Non Détecté] GT_ID: 9 | Taille: 1 pts | Sévérité: 1
+  [SPLIT - Sur-segmentation] GT_ID: 3 divisée en preds: [1, 10] | Taille GT: 468 pts | Sévérité: 241
+  [FN - Non Détecté] GT_ID: 25 | Taille: 1 pts | Sévérité: 1
+--- FRAME 2 ---
+  [SPLIT - Sur-segmentation] GT_ID: 1 divisée en preds: [3, 9] | Taille GT: 582 pts | Sévérité: 306
+  [FN - Non Détecté] GT_ID: 9 | Taille: 5 pts | Sévérité: 5
+  [FN - Non Détecté] GT_ID: 10 | Taille: 1 pts | Sévérité: 1
+  [SPLIT - Sur-segmentation] GT_ID: 3 divisée en preds: [1, 10] | Taille GT: 523 pts | Sévérité: 237
+--- FRAME 3 ---
+  [SPLIT - Sur-segmentation] GT_ID: 1 divisée en preds: [3, 9] | Taille GT: 638 pts | Sévérité: 459
+  [FN - Non Détecté] GT_ID: 9 | Taille: 2 pts | Sévérité: 2
+  [FN - Non Détecté] GT_ID: 10 | Taille: 1 pts | Sévérité: 1
+  [SPLIT - Sur-segmentation] GT_ID: 2 divisée en preds: [4, 11] | Taille GT: 146 pts | Sévérité: 15
+  [MERGE - Sous-segmentation] Pred_ID: 12 fusionne les GT: [15, 0] | Taille Pred: 25 pts | Sévérité: 5
+--- FRAME 4 ---
+  [FN - Faible Overlap] GT_ID: 1 | Taille: 698 pts | Max Pred ID: 9 (89 pts) | Sévérité: 609
+  [FN - Non Détecté] GT_ID: 9 | Taille: 4 pts | Sévérité: 4
+  [FN - Non Détecté] GT_ID: 10 | Taille: 1 pts | Sévérité: 1
+  [SPLIT - Sur-segmentation] GT_ID: 2 divisée en preds: [4, 11] | Taille GT: 165 pts | Sévérité: 17
+  [SPLIT - Sur-segmentation] GT_ID: 3 divisée en preds: [1, 10] | Taille GT: 584 pts | Sévérité: 379
+--- FRAME 5 ---
+  [FN - Faible Overlap] GT_ID: 1 | Taille: 747 pts | Max Pred ID: 9 (86 pts) | Sévérité: 661
+  [FN - Non Détecté] GT_ID: 9 | Taille: 6 pts | Sévérité: 6
+  [FN - Non Détecté] GT_ID: 10 | Taille: 1 pts | Sévérité: 1
+  [SPLIT - Sur-segmentation] GT_ID: 2 divisée en preds: [4, 11] | Taille GT: 159 pts | Sévérité: 18
+  [SPLIT - Sur-segmentation] GT_ID: 3 divisée en preds: [1, 10] | Taille GT: 626 pts | Sévérité: 424
+  [MERGE - Sous-segmentation] Pred_ID: 12 fusionne les GT: [15, 0] | Taille Pred: 29 pts | Sévérité: 4
+--- FRAME 6 ---
+  [FN - Faible Overlap] GT_ID: 1 | Taille: 806 pts | Max Pred ID: 9 (81 pts) | Sévérité: 725
+  [FN - Non Détecté] GT_ID: 9 | Taille: 7 pts | Sévérité: 7
+  [FN - Non Détecté] GT_ID: 10 | Taille: 1 pts | Sévérité: 1
+  [SPLIT - Sur-segmentation] GT_ID: 2 divisée en preds: [4, 11] | Taille GT: 155 pts | Sévérité: 22
+  [MERGE - Sous-segmentation] Pred_ID: 12 fusionne les GT: [15, 0] | Taille Pred: 29 pts | Sévérité: 4
+  [MERGE - Sous-segmentation] Pred_ID: 13 fusionne les GT: [199, 4] | Taille Pred: 27 pts | Sévérité: 9
+--- FRAME 7 ---
+  [FN - Non Détecté] GT_ID: 4 | Taille: 31 pts | Sévérité: 31
+  [FN - Faible Overlap] GT_ID: 1 | Taille: 824 pts | Max Pred ID: 9 (89 pts) | Sévérité: 735
+  [FN - Non Détecté] GT_ID: 9 | Taille: 8 pts | Sévérité: 8
+  [FN - Non Détecté] GT_ID: 10 | Taille: 1 pts | Sévérité: 1
+  [SPLIT - Sur-segmentation] GT_ID: 2 divisée en preds: [4, 11] | Taille GT: 173 pts | Sévérité: 26
+  [FN - Non Détecté] GT_ID: 25 | Taille: 1 pts | Sévérité: 1
+  [SPLIT - Sur-segmentation] GT_ID: 3 divisée en preds: [1, 10] | Taille GT: 654 pts | Sévérité: 75
+--- FRAME 8 ---
+  [FN - Non Détecté] GT_ID: 4 | Taille: 31 pts | Sévérité: 31
+  [FN - Faible Overlap] GT_ID: 1 | Taille: 914 pts | Max Pred ID: 9 (97 pts) | Sévérité: 817
+  [FN - Non Détecté] GT_ID: 9 | Taille: 9 pts | Sévérité: 9
+  [SPLIT - Sur-segmentation] GT_ID: 2 divisée en preds: [4, 11] | Taille GT: 170 pts | Sévérité: 24
+  [FN - Non Détecté] GT_ID: 196 | Taille: 62 pts | Sévérité: 62
+  [SPLIT - Sur-segmentation] GT_ID: 3 divisée en preds: [1, 10] | Taille GT: 728 pts | Sévérité: 419
+  [MERGE - Sous-segmentation] Pred_ID: 12 fusionne les GT: [15, 0] | Taille Pred: 37 pts | Sévérité: 5
+--- FRAME 9 ---
+  [FN - Non Détecté] GT_ID: 9 | Taille: 7 pts | Sévérité: 7
+  [SPLIT - Sur-segmentation] GT_ID: 2 divisée en preds: [4, 11] | Taille GT: 147 pts | Sévérité: 24
+  [FN - Non Détecté] GT_ID: 4 | Taille: 37 pts | Sévérité: 37
+  [FN - Non Détecté] GT_ID: 196 | Taille: 58 pts | Sévérité: 58
+  [FN - Faible Overlap] GT_ID: 1 | Taille: 970 pts | Max Pred ID: 9 (94 pts) | Sévérité: 876
+  [FN - Non Détecté] GT_ID: 25 | Taille: 1 pts | Sévérité: 1
+  [SPLIT - Sur-segmentation] GT_ID: 3 divisée en preds: [1, 10] | Taille GT: 781 pts | Sévérité: 549
+--- FRAME 10 ---
+  [FN - Non Détecté] GT_ID: 4 | Taille: 48 pts | Sévérité: 48
+  [FN - Faible Overlap] GT_ID: 1 | Taille: 1024 pts | Max Pred ID: 9 (106 pts) | Sévérité: 918
+  [FN - Non Détecté] GT_ID: 9 | Taille: 8 pts | Sévérité: 8
+  [FN - Non Détecté] GT_ID: 10 | Taille: 1 pts | Sévérité: 1
+  [SPLIT - Sur-segmentation] GT_ID: 2 divisée en preds: [4, 11] | Taille GT: 157 pts | Sévérité: 35
+  [FN - Non Détecté] GT_ID: 196 | Taille: 58 pts | Sévérité: 58
+  [FN - Non Détecté] GT_ID: 25 | Taille: 1 pts | Sévérité: 1
+  [SPLIT - Sur-segmentation] GT_ID: 3 divisée en preds: [1, 10] | Taille GT: 808 pts | Sévérité: 645
+--- FRAME 11 ---
+  [FN - Non Détecté] GT_ID: 4 | Taille: 63 pts | Sévérité: 63
+  [SPLIT - Sur-segmentation] GT_ID: 2 divisée en preds: [4, 11] | Taille GT: 157 pts | Sévérité: 40
+  [FN - Non Détecté] GT_ID: 196 | Taille: 86 pts | Sévérité: 86
+  [FN - Faible Overlap] GT_ID: 1 | Taille: 1115 pts | Max Pred ID: 9 (105 pts) | Sévérité: 1010
+  [SPLIT - Sur-segmentation] GT_ID: 3 divisée en preds: [1, 10] | Taille GT: 850 pts | Sévérité: 90
+--- FRAME 12 ---
+  [FN - Non Détecté] GT_ID: 4 | Taille: 56 pts | Sévérité: 56
+  [SPLIT - Sur-segmentation] GT_ID: 2 divisée en preds: [4, 11] | Taille GT: 157 pts | Sévérité: 41
+  [FN - Faible Overlap] GT_ID: 1 | Taille: 1165 pts | Max Pred ID: 9 (108 pts) | Sévérité: 1057
+  [FN - Non Détecté] GT_ID: 196 | Taille: 81 pts | Sévérité: 81
+  [SPLIT - Sur-segmentation] GT_ID: 3 divisée en preds: [1, 10] | Taille GT: 890 pts | Sévérité: 93
+  [FN - Faible Overlap] GT_ID: 194 | Taille: 521 pts | Max Pred ID: 5 (73 pts) | Sévérité: 448
+--- FRAME 13 ---
+  [FN - Non Détecté] GT_ID: 4 | Taille: 76 pts | Sévérité: 76
+  [FN - Non Détecté] GT_ID: 10 | Taille: 3 pts | Sévérité: 3
+  [SPLIT - Sur-segmentation] GT_ID: 2 divisée en preds: [4, 11] | Taille GT: 161 pts | Sévérité: 40
+  [FN - Non Détecté] GT_ID: 196 | Taille: 62 pts | Sévérité: 62
+  [FN - Faible Overlap] GT_ID: 1 | Taille: 1221 pts | Max Pred ID: 9 (100 pts) | Sévérité: 1121
+  [SPLIT - Sur-segmentation] GT_ID: 3 divisée en preds: [1, 10] | Taille GT: 929 pts | Sévérité: 95
+  [FN - Non Détecté] GT_ID: 25 | Taille: 2 pts | Sévérité: 2
+  [FN - Non Détecté] GT_ID: 194 | Taille: 508 pts | Sévérité: 508
+--- FRAME 14 ---
+  [FN - Non Détecté] GT_ID: 4 | Taille: 82 pts | Sévérité: 82
+  [SPLIT - Sur-segmentation] GT_ID: 2 divisée en preds: [4, 11] | Taille GT: 180 pts | Sévérité: 53
+  [FN - Non Détecté] GT_ID: 196 | Taille: 72 pts | Sévérité: 72
+  [FN - Faible Overlap] GT_ID: 1 | Taille: 1336 pts | Max Pred ID: 9 (109 pts) | Sévérité: 1227
+  [SPLIT - Sur-segmentation] GT_ID: 0 divisée en preds: [12, 4] | Taille GT: 3 pts | Sévérité: 1
+  [FN - Non Détecté] GT_ID: 194 | Taille: 526 pts | Sévérité: 526
+--- FRAME 15 ---
+  [FN - Non Détecté] GT_ID: 4 | Taille: 95 pts | Sévérité: 95
+  [FN - Non Détecté] GT_ID: 196 | Taille: 72 pts | Sévérité: 72
+  [SPLIT - Sur-segmentation] GT_ID: 2 divisée en preds: [4, 11] | Taille GT: 152 pts | Sévérité: 53
+  [FN - Faible Overlap] GT_ID: 1 | Taille: 1373 pts | Max Pred ID: 9 (105 pts) | Sévérité: 1268
+  [SPLIT - Sur-segmentation] GT_ID: 3 divisée en preds: [1, 10] | Taille GT: 1029 pts | Sévérité: 119
+  [FN - Non Détecté] GT_ID: 194 | Taille: 516 pts | Sévérité: 516
+  [MERGE - Sous-segmentation] Pred_ID: 16 fusionne les GT: [9, 10] | Taille Pred: 23 pts | Sévérité: 4
+--- FRAME 16 ---
+  [FN - Non Détecté] GT_ID: 4 | Taille: 115 pts | Sévérité: 115
+  [FN - Non Détecté] GT_ID: 196 | Taille: 65 pts | Sévérité: 65
+  [SPLIT - Sur-segmentation] GT_ID: 3 divisée en preds: [1, 10] | Taille GT: 1069 pts | Sévérité: 117
+  [FN - Faible Overlap] GT_ID: 1 | Taille: 1419 pts | Max Pred ID: 9 (101 pts) | Sévérité: 1318
+  [SPLIT - Sur-segmentation] GT_ID: 2 divisée en preds: [4, 11] | Taille GT: 137 pts | Sévérité: 49
+  [FN - Non Détecté] GT_ID: 200 | Taille: 1 pts | Sévérité: 1
+  [FN - Non Détecté] GT_ID: 25 | Taille: 3 pts | Sévérité: 3
+  [FN - Non Détecté] GT_ID: 194 | Taille: 519 pts | Sévérité: 519
+  [MERGE - Sous-segmentation] Pred_ID: 16 fusionne les GT: [9, 10] | Taille Pred: 27 pts | Sévérité: 5
+--- FRAME 17 ---
+  [FN - Non Détecté] GT_ID: 15 | Taille: 13 pts | Sévérité: 13
+  [FN - Non Détecté] GT_ID: 4 | Taille: 114 pts | Sévérité: 114
+  [FN - Non Détecté] GT_ID: 196 | Taille: 59 pts | Sévérité: 59
+  [SPLIT - Sur-segmentation] GT_ID: 2 divisée en preds: [4, 11] | Taille GT: 136 pts | Sévérité: 55
+  [FN - Faible Overlap] GT_ID: 1 | Taille: 1478 pts | Max Pred ID: 9 (90 pts) | Sévérité: 1388
+  [FN - Non Détecté] GT_ID: 200 | Taille: 1 pts | Sévérité: 1
+  [FN - Non Détecté] GT_ID: 194 | Taille: 537 pts | Sévérité: 537
+  [MERGE - Sous-segmentation] Pred_ID: 16 fusionne les GT: [9, 10] | Taille Pred: 36 pts | Sévérité: 8
+--- FRAME 18 ---
+  [FN - Non Détecté] GT_ID: 4 | Taille: 144 pts | Sévérité: 144
+  [SPLIT - Sur-segmentation] GT_ID: 2 divisée en preds: [4, 11] | Taille GT: 139 pts | Sévérité: 69
+  [FN - Non Détecté] GT_ID: 196 | Taille: 43 pts | Sévérité: 43
+  [FN - Faible Overlap] GT_ID: 1 | Taille: 1536 pts | Max Pred ID: 9 (85 pts) | Sévérité: 1451
+  [FN - Non Détecté] GT_ID: 200 | Taille: 1 pts | Sévérité: 1
+  [FN - Non Détecté] GT_ID: 25 | Taille: 3 pts | Sévérité: 3
+  [FN - Non Détecté] GT_ID: 194 | Taille: 530 pts | Sévérité: 530
+  [MERGE - Sous-segmentation] Pred_ID: 16 fusionne les GT: [9, 10] | Taille Pred: 34 pts | Sévérité: 6
+--- FRAME 19 ---
+  [FN - Faible Overlap] GT_ID: 4 | Taille: 134 pts | Max Pred ID: 4 (1 pts) | Sévérité: 133
+  [SPLIT - Sur-segmentation] GT_ID: 2 divisée en preds: [4, 11] | Taille GT: 161 pts | Sévérité: 69
+  [ID SWITCH] GT_ID: 196 | Ancien Pred: 7 -> Nouveau Pred: 34 | Taille: 37 pts | Sévérité: 37
+  [FN - Faible Overlap] GT_ID: 1 | Taille: 1571 pts | Max Pred ID: 19 (314 pts) | Sévérité: 1257
+  [SPLIT - Sur-segmentation] GT_ID: 1 divisée en preds: [19, 26] | Taille GT: 1571 pts | Sévérité: 1257
+  [FN - Non Détecté] GT_ID: 10 | Taille: 9 pts | Sévérité: 9
+  [FN - Non Détecté] GT_ID: 200 | Taille: 1 pts | Sévérité: 1
+  [FN - Non Détecté] GT_ID: 25 | Taille: 1 pts | Sévérité: 1
+  [ID SWITCH] GT_ID: 194 | Ancien Pred: 5 -> Nouveau Pred: 31 | Taille: 525 pts | Sévérité: 525
+  [MERGE - Sous-segmentation] Pred_ID: 12 fusionne les GT: [15, 0] | Taille Pred: 18 pts | Sévérité: 2
+--- FRAME 20 ---
+  [FN - Faible Overlap] GT_ID: 4 | Taille: 149 pts | Max Pred ID: 4 (1 pts) | Sévérité: 148
+  [FN - Non Détecté] GT_ID: 196 | Taille: 37 pts | Sévérité: 37
+  [FN - Faible Overlap] GT_ID: 1 | Taille: 1563 pts | Max Pred ID: 9 (76 pts) | Sévérité: 1487
+  [ID SWITCH] GT_ID: 2 | Ancien Pred: 4 -> Nouveau Pred: 11 | Taille: 142 pts | Sévérité: 142
+  [SPLIT - Sur-segmentation] GT_ID: 2 divisée en preds: [11, 4] | Taille GT: 142 pts | Sévérité: 70
+  [FN - Non Détecté] GT_ID: 10 | Taille: 11 pts | Sévérité: 11
+  [FN - Non Détecté] GT_ID: 200 | Taille: 1 pts | Sévérité: 1
+  [FN - Non Détecté] GT_ID: 25 | Taille: 1 pts | Sévérité: 1
+  [FN - Non Détecté] GT_ID: 194 | Taille: 541 pts | Sévérité: 541
+  [MERGE - Sous-segmentation] Pred_ID: 12 fusionne les GT: [15, 0] | Taille Pred: 21 pts | Sévérité: 3
+--- FRAME 21 ---
+  [FN - Non Détecté] GT_ID: 196 | Taille: 41 pts | Sévérité: 41
+  [FN - Non Détecté] GT_ID: 200 | Taille: 5 pts | Sévérité: 5
+  [FN - Non Détecté] GT_ID: 4 | Taille: 174 pts | Sévérité: 174
+  [FN - Faible Overlap] GT_ID: 1 | Taille: 1603 pts | Max Pred ID: 9 (70 pts) | Sévérité: 1533
+  [SPLIT - Sur-segmentation] GT_ID: 2 divisée en preds: [11, 4] | Taille GT: 146 pts | Sévérité: 70
+  [FN - Non Détecté] GT_ID: 194 | Taille: 559 pts | Sévérité: 559
+  [FN - Non Détecté] GT_ID: 10 | Taille: 9 pts | Sévérité: 9
+--- FRAME 22 ---
+  [FN - Non Détecté] GT_ID: 196 | Taille: 31 pts | Sévérité: 31
+  [FN - Non Détecté] GT_ID: 200 | Taille: 2 pts | Sévérité: 2
+  [FN - Non Détecté] GT_ID: 4 | Taille: 214 pts | Sévérité: 214
+  [FN - Faible Overlap] GT_ID: 1 | Taille: 1624 pts | Max Pred ID: 9 (56 pts) | Sévérité: 1568
+  [FN - Non Détecté] GT_ID: 10 | Taille: 13 pts | Sévérité: 13
+  [SPLIT - Sur-segmentation] GT_ID: 2 divisée en preds: [11, 4] | Taille GT: 150 pts | Sévérité: 67
+  [FN - Non Détecté] GT_ID: 25 | Taille: 4 pts | Sévérité: 4
+  [FN - Non Détecté] GT_ID: 194 | Taille: 544 pts | Sévérité: 544
+--- FRAME 23 ---
+  [FN - Non Détecté] GT_ID: 196 | Taille: 32 pts | Sévérité: 32
+  [SPLIT - Sur-segmentation] GT_ID: 2 divisée en preds: [11, 4] | Taille GT: 160 pts | Sévérité: 78
+  [FN - Non Détecté] GT_ID: 4 | Taille: 210 pts | Sévérité: 210
+  [FN - Faible Overlap] GT_ID: 1 | Taille: 1645 pts | Max Pred ID: 9 (55 pts) | Sévérité: 1590
+  [FN - Non Détecté] GT_ID: 10 | Taille: 13 pts | Sévérité: 13
+  [FN - Non Détecté] GT_ID: 25 | Taille: 2 pts | Sévérité: 2
+  [FN - Non Détecté] GT_ID: 194 | Taille: 539 pts | Sévérité: 539
+--- FRAME 24 ---
+  [FN - Faible Overlap] GT_ID: 1 | Taille: 1627 pts | Max Pred ID: 9 (58 pts) | Sévérité: 1569
+  [FN - Non Détecté] GT_ID: 196 | Taille: 34 pts | Sévérité: 34
+  [FN - Non Détecté] GT_ID: 200 | Taille: 2 pts | Sévérité: 2
+  [SPLIT - Sur-segmentation] GT_ID: 2 divisée en preds: [11, 4] | Taille GT: 168 pts | Sévérité: 75
+  [FN - Non Détecté] GT_ID: 10 | Taille: 13 pts | Sévérité: 13
+  [FN - Non Détecté] GT_ID: 4 | Taille: 207 pts | Sévérité: 207
+  [FN - Non Détecté] GT_ID: 25 | Taille: 3 pts | Sévérité: 3
+  [FN - Non Détecté] GT_ID: 194 | Taille: 554 pts | Sévérité: 554
+--- FRAME 25 ---
+  [FN - Faible Overlap] GT_ID: 1 | Taille: 1611 pts | Max Pred ID: 9 (58 pts) | Sévérité: 1553
+  [FN - Non Détecté] GT_ID: 196 | Taille: 38 pts | Sévérité: 38
+  [FN - Non Détecté] GT_ID: 200 | Taille: 5 pts | Sévérité: 5
+  [SPLIT - Sur-segmentation] GT_ID: 2 divisée en preds: [11, 4] | Taille GT: 153 pts | Sévérité: 68
+  [FN - Non Détecté] GT_ID: 4 | Taille: 270 pts | Sévérité: 270
+  [FN - Non Détecté] GT_ID: 10 | Taille: 12 pts | Sévérité: 12
+  [FN - Non Détecté] GT_ID: 194 | Taille: 535 pts | Sévérité: 535
+  [FN - Non Détecté] GT_ID: 25 | Taille: 2 pts | Sévérité: 2
+--- FRAME 26 ---
+  [ID SWITCH] GT_ID: 1 | Ancien Pred: 3 -> Nouveau Pred: 35 | Taille: 1636 pts | Sévérité: 1636
+  [ID SWITCH] GT_ID: 196 | Ancien Pred: 34 -> Nouveau Pred: 39 | Taille: 25 pts | Sévérité: 25
+  [FN - Non Détecté] GT_ID: 200 | Taille: 1 pts | Sévérité: 1
+  [SPLIT - Sur-segmentation] GT_ID: 2 divisée en preds: [11, 4] | Taille GT: 159 pts | Sévérité: 57
+  [FN - Non Détecté] GT_ID: 4 | Taille: 298 pts | Sévérité: 298
+  [FN - Non Détecté] GT_ID: 10 | Taille: 15 pts | Sévérité: 15
+  [FN - Non Détecté] GT_ID: 25 | Taille: 5 pts | Sévérité: 5
+  [ID SWITCH] GT_ID: 194 | Ancien Pred: 31 -> Nouveau Pred: 36 | Taille: 544 pts | Sévérité: 544
+--- FRAME 27 ---
+  [FN - Non Détecté] GT_ID: 196 | Taille: 28 pts | Sévérité: 28
+  [FN - Faible Overlap] GT_ID: 1 | Taille: 1606 pts | Max Pred ID: 9 (72 pts) | Sévérité: 1534
+  [FN - Non Détecté] GT_ID: 200 | Taille: 1 pts | Sévérité: 1
+  [SPLIT - Sur-segmentation] GT_ID: 2 divisée en preds: [11, 4] | Taille GT: 160 pts | Sévérité: 51
+  [FN - Non Détecté] GT_ID: 4 | Taille: 340 pts | Sévérité: 340
+  [FN - Non Détecté] GT_ID: 10 | Taille: 13 pts | Sévérité: 13
+  [FN - Non Détecté] GT_ID: 25 | Taille: 3 pts | Sévérité: 3
+  [FN - Non Détecté] GT_ID: 194 | Taille: 553 pts | Sévérité: 553
+--- FRAME 28 ---
+  [FN - Faible Overlap] GT_ID: 1 | Taille: 1642 pts | Max Pred ID: 9 (84 pts) | Sévérité: 1558
+  [FN - Non Détecté] GT_ID: 196 | Taille: 16 pts | Sévérité: 16
+  [FN - Non Détecté] GT_ID: 200 | Taille: 1 pts | Sévérité: 1
+  [FN - Non Détecté] GT_ID: 4 | Taille: 383 pts | Sévérité: 383
+  [FN - Non Détecté] GT_ID: 10 | Taille: 16 pts | Sévérité: 16
+  [SPLIT - Sur-segmentation] GT_ID: 2 divisée en preds: [11, 4] | Taille GT: 178 pts | Sévérité: 52
+  [FN - Non Détecté] GT_ID: 25 | Taille: 5 pts | Sévérité: 5
+  [FN - Non Détecté] GT_ID: 194 | Taille: 554 pts | Sévérité: 554
+--- FRAME 29 ---
+  [FN - Non Détecté] GT_ID: 196 | Taille: 15 pts | Sévérité: 15
+  [FN - Faible Overlap] GT_ID: 1 | Taille: 1652 pts | Max Pred ID: 9 (82 pts) | Sévérité: 1570
+  [SPLIT - Sur-segmentation] GT_ID: 2 divisée en preds: [11, 4] | Taille GT: 175 pts | Sévérité: 49
+  [FN - Non Détecté] GT_ID: 200 | Taille: 1 pts | Sévérité: 1
+  [FN - Non Détecté] GT_ID: 4 | Taille: 430 pts | Sévérité: 430
+  [FN - Non Détecté] GT_ID: 10 | Taille: 13 pts | Sévérité: 13
+  [FN - Non Détecté] GT_ID: 25 | Taille: 6 pts | Sévérité: 6
+  [FN - Non Détecté] GT_ID: 194 | Taille: 556 pts | Sévérité: 556
+--- FRAME 30 ---
+  [FN - Non Détecté] GT_ID: 196 | Taille: 14 pts | Sévérité: 14
+  [FN - Faible Overlap] GT_ID: 1 | Taille: 1678 pts | Max Pred ID: 9 (89 pts) | Sévérité: 1589
+  [SPLIT - Sur-segmentation] GT_ID: 2 divisée en preds: [11, 4] | Taille GT: 173 pts | Sévérité: 50
+  [FN - Non Détecté] GT_ID: 200 | Taille: 2 pts | Sévérité: 2
+  [ID SWITCH] GT_ID: 4 | Ancien Pred: 13 -> Nouveau Pred: 40 | Taille: 506 pts | Sévérité: 506
+  [FN - Non Détecté] GT_ID: 10 | Taille: 13 pts | Sévérité: 13
+  [SPLIT - Sur-segmentation] GT_ID: 0 divisée en preds: [12, 9] | Taille GT: 4 pts | Sévérité: 1
+  [FN - Non Détecté] GT_ID: 25 | Taille: 2 pts | Sévérité: 2
+  [FN - Non Détecté] GT_ID: 194 | Taille: 568 pts | Sévérité: 568
+--- FRAME 31 ---
+  [FN - Faible Overlap] GT_ID: 1 | Taille: 1615 pts | Max Pred ID: 9 (78 pts) | Sévérité: 1537
+  [FN - Non Détecté] GT_ID: 196 | Taille: 14 pts | Sévérité: 14
+  [SPLIT - Sur-segmentation] GT_ID: 2 divisée en preds: [11, 4] | Taille GT: 166 pts | Sévérité: 49
+  [FN - Non Détecté] GT_ID: 10 | Taille: 13 pts | Sévérité: 13
+  [FN - Non Détecté] GT_ID: 25 | Taille: 3 pts | Sévérité: 3
+  [FN - Faible Overlap] GT_ID: 194 | Taille: 563 pts | Max Pred ID: 6 (1 pts) | Sévérité: 562
+  [ID SWITCH] GT_ID: 0 | Ancien Pred: 12 -> Nouveau Pred: 9 | Taille: 3 pts | Sévérité: 3
+  [SPLIT - Sur-segmentation] GT_ID: 0 divisée en preds: [9, 12] | Taille GT: 3 pts | Sévérité: 1
+--- FRAME 32 ---
+  [FN - Faible Overlap] GT_ID: 1 | Taille: 1600 pts | Max Pred ID: 9 (86 pts) | Sévérité: 1514
+  [FN - Non Détecté] GT_ID: 196 | Taille: 18 pts | Sévérité: 18
+  [SPLIT - Sur-segmentation] GT_ID: 2 divisée en preds: [11, 4] | Taille GT: 159 pts | Sévérité: 45
+  [FN - Non Détecté] GT_ID: 10 | Taille: 14 pts | Sévérité: 14
+  [FN - Non Détecté] GT_ID: 194 | Taille: 560 pts | Sévérité: 560
+  [FN - Non Détecté] GT_ID: 25 | Taille: 3 pts | Sévérité: 3
+--- FRAME 33 ---
+  [FN - Faible Overlap] GT_ID: 1 | Taille: 1662 pts | Max Pred ID: 9 (87 pts) | Sévérité: 1575
+  [FN - Non Détecté] GT_ID: 196 | Taille: 17 pts | Sévérité: 17
+  [SPLIT - Sur-segmentation] GT_ID: 2 divisée en preds: [11, 4] | Taille GT: 142 pts | Sévérité: 36
+  [FN - Non Détecté] GT_ID: 10 | Taille: 13 pts | Sévérité: 13
+  [ID SWITCH] GT_ID: 0 | Ancien Pred: 9 -> Nouveau Pred: 12 | Taille: 3 pts | Sévérité: 3
+  [FN - Non Détecté] GT_ID: 25 | Taille: 4 pts | Sévérité: 4
+  [FN - Non Détecté] GT_ID: 194 | Taille: 564 pts | Sévérité: 564
+--- FRAME 34 ---
+  [FN - Faible Overlap] GT_ID: 1 | Taille: 1668 pts | Max Pred ID: 9 (104 pts) | Sévérité: 1564
+  [FN - Non Détecté] GT_ID: 196 | Taille: 16 pts | Sévérité: 16
+  [SPLIT - Sur-segmentation] GT_ID: 2 divisée en preds: [11, 4] | Taille GT: 162 pts | Sévérité: 33
+  [FN - Non Détecté] GT_ID: 10 | Taille: 15 pts | Sévérité: 15
+  [FN - Non Détecté] GT_ID: 25 | Taille: 5 pts | Sévérité: 5
+  [FN - Non Détecté] GT_ID: 194 | Taille: 568 pts | Sévérité: 568
+--- FRAME 35 ---
+  [SPLIT - Sur-segmentation] GT_ID: 2 divisée en preds: [11, 4] | Taille GT: 157 pts | Sévérité: 39
+  [FN - Faible Overlap] GT_ID: 1 | Taille: 1657 pts | Max Pred ID: 9 (96 pts) | Sévérité: 1561
+  [FN - Non Détecté] GT_ID: 196 | Taille: 8 pts | Sévérité: 8
+  [FN - Non Détecté] GT_ID: 10 | Taille: 14 pts | Sévérité: 14
+  [FN - Non Détecté] GT_ID: 25 | Taille: 4 pts | Sévérité: 4
+  [FN - Non Détecté] GT_ID: 194 | Taille: 551 pts | Sévérité: 551
+--- FRAME 36 ---
+  [FN - Faible Overlap] GT_ID: 1 | Taille: 1715 pts | Max Pred ID: 9 (102 pts) | Sévérité: 1613
+  [FN - Non Détecté] GT_ID: 196 | Taille: 9 pts | Sévérité: 9
+  [FN - Non Détecté] GT_ID: 10 | Taille: 14 pts | Sévérité: 14
+  [SPLIT - Sur-segmentation] GT_ID: 2 divisée en preds: [11, 4] | Taille GT: 169 pts | Sévérité: 30
+  [FN - Non Détecté] GT_ID: 25 | Taille: 5 pts | Sévérité: 5
+  [FN - Non Détecté] GT_ID: 194 | Taille: 553 pts | Sévérité: 553
+--- FRAME 37 ---
+  [FN - Faible Overlap] GT_ID: 1 | Taille: 1700 pts | Max Pred ID: 9 (107 pts) | Sévérité: 1593
+  [FN - Non Détecté] GT_ID: 196 | Taille: 11 pts | Sévérité: 11
+  [SPLIT - Sur-segmentation] GT_ID: 2 divisée en preds: [11, 4] | Taille GT: 170 pts | Sévérité: 31
+  [FN - Non Détecté] GT_ID: 25 | Taille: 5 pts | Sévérité: 5
+  [FN - Non Détecté] GT_ID: 194 | Taille: 548 pts | Sévérité: 548
+  [MERGE - Sous-segmentation] Pred_ID: 16 fusionne les GT: [9, 10] | Taille Pred: 69 pts | Sévérité: 16
+--- FRAME 38 ---
+  [FN - Faible Overlap] GT_ID: 1 | Taille: 1726 pts | Max Pred ID: 9 (113 pts) | Sévérité: 1613
+  [FN - Non Détecté] GT_ID: 196 | Taille: 12 pts | Sévérité: 12
+  [FN - Non Détecté] GT_ID: 194 | Taille: 554 pts | Sévérité: 554
+  [FN - Non Détecté] GT_ID: 25 | Taille: 4 pts | Sévérité: 4
+  [MERGE - Sous-segmentation] Pred_ID: 16 fusionne les GT: [9, 10] | Taille Pred: 67 pts | Sévérité: 15
+--- FRAME 39 ---
+  [FN - Faible Overlap] GT_ID: 1 | Taille: 1800 pts | Max Pred ID: 9 (117 pts) | Sévérité: 1683
+  [FN - Non Détecté] GT_ID: 196 | Taille: 20 pts | Sévérité: 20
+  [FN - Non Détecté] GT_ID: 200 | Taille: 1 pts | Sévérité: 1
+  [FN - Non Détecté] GT_ID: 194 | Taille: 574 pts | Sévérité: 574
+  [FN - Non Détecté] GT_ID: 25 | Taille: 5 pts | Sévérité: 5
+  [MERGE - Sous-segmentation] Pred_ID: 16 fusionne les GT: [9, 10] | Taille Pred: 68 pts | Sévérité: 13
+--- FRAME 40 ---
+  [FN - Faible Overlap] GT_ID: 1 | Taille: 1847 pts | Max Pred ID: 9 (126 pts) | Sévérité: 1721
+  [FN - Non Détecté] GT_ID: 196 | Taille: 17 pts | Sévérité: 17
+  [ID SWITCH] GT_ID: 200 | Ancien Pred: 4 -> Nouveau Pred: 13 | Taille: 5 pts | Sévérité: 5
+  [FN - Non Détecté] GT_ID: 25 | Taille: 5 pts | Sévérité: 5
+  [FN - Non Détecté] GT_ID: 194 | Taille: 557 pts | Sévérité: 557
+  [MERGE - Sous-segmentation] Pred_ID: 13 fusionne les GT: [199, 200] | Taille Pred: 36 pts | Sévérité: 5
+  [MERGE - Sous-segmentation] Pred_ID: 16 fusionne les GT: [9, 10] | Taille Pred: 68 pts | Sévérité: 14
+--- FRAME 41 ---
+  [FN - Faible Overlap] GT_ID: 1 | Taille: 1842 pts | Max Pred ID: 9 (116 pts) | Sévérité: 1726
+  [FN - Non Détecté] GT_ID: 196 | Taille: 19 pts | Sévérité: 19
+  [FN - Non Détecté] GT_ID: 25 | Taille: 7 pts | Sévérité: 7
+  [FN - Non Détecté] GT_ID: 194 | Taille: 560 pts | Sévérité: 560
+  [MERGE - Sous-segmentation] Pred_ID: 16 fusionne les GT: [9, 10] | Taille Pred: 66 pts | Sévérité: 15
+--- FRAME 42 ---
+  [FN - Faible Overlap] GT_ID: 1 | Taille: 1875 pts | Max Pred ID: 9 (127 pts) | Sévérité: 1748
+  [FN - Non Détecté] GT_ID: 196 | Taille: 17 pts | Sévérité: 17
+  [FN - Non Détecté] GT_ID: 200 | Taille: 3 pts | Sévérité: 3
+  [FN - Non Détecté] GT_ID: 194 | Taille: 555 pts | Sévérité: 555
+  [FN - Non Détecté] GT_ID: 25 | Taille: 7 pts | Sévérité: 7
+  [MERGE - Sous-segmentation] Pred_ID: 16 fusionne les GT: [9, 10] | Taille Pred: 71 pts | Sévérité: 19
+--- FRAME 43 ---
+  [FN - Faible Overlap] GT_ID: 1 | Taille: 1922 pts | Max Pred ID: 9 (121 pts) | Sévérité: 1801
+  [FN - Non Détecté] GT_ID: 196 | Taille: 20 pts | Sévérité: 20
+  [FN - Non Détecté] GT_ID: 25 | Taille: 9 pts | Sévérité: 9
+  [FN - Non Détecté] GT_ID: 194 | Taille: 559 pts | Sévérité: 559
+  [MERGE - Sous-segmentation] Pred_ID: 16 fusionne les GT: [9, 10] | Taille Pred: 73 pts | Sévérité: 17
+--- FRAME 44 ---
+  [SPLIT - Sur-segmentation] GT_ID: 3 divisée en preds: [1, 10] | Taille GT: 880 pts | Sévérité: 101
+  [FN - Faible Overlap] GT_ID: 1 | Taille: 1941 pts | Max Pred ID: 9 (122 pts) | Sévérité: 1819
+  [FN - Non Détecté] GT_ID: 196 | Taille: 14 pts | Sévérité: 14
+  [FN - Non Détecté] GT_ID: 197 | Taille: 5 pts | Sévérité: 5
+  [FN - Faible Overlap] GT_ID: 194 | Taille: 573 pts | Max Pred ID: 6 (1 pts) | Sévérité: 572
+  [FN - Non Détecté] GT_ID: 200 | Taille: 1 pts | Sévérité: 1
+  [FN - Non Détecté] GT_ID: 25 | Taille: 4 pts | Sévérité: 4
+  [MERGE - Sous-segmentation] Pred_ID: 16 fusionne les GT: [9, 10] | Taille Pred: 77 pts | Sévérité: 22
+--- FRAME 45 ---
+  [SPLIT - Sur-segmentation] GT_ID: 3 divisée en preds: [1, 10] | Taille GT: 641 pts | Sévérité: 111
+  [FN - Faible Overlap] GT_ID: 1 | Taille: 1899 pts | Max Pred ID: 9 (93 pts) | Sévérité: 1806
+  [ID SWITCH] GT_ID: 196 | Ancien Pred: 39 -> Nouveau Pred: 17 | Taille: 15 pts | Sévérité: 15
+  [FN - Non Détecté] GT_ID: 197 | Taille: 4 pts | Sévérité: 4
+  [FN - Non Détecté] GT_ID: 194 | Taille: 567 pts | Sévérité: 567
+  [FN - Non Détecté] GT_ID: 25 | Taille: 8 pts | Sévérité: 8
+  [MERGE - Sous-segmentation] Pred_ID: 16 fusionne les GT: [9, 10] | Taille Pred: 81 pts | Sévérité: 23
+--- FRAME 46 ---
+  [SPLIT - Sur-segmentation] GT_ID: 3 divisée en preds: [1, 10] | Taille GT: 1121 pts | Sévérité: 500
+  [FN - Faible Overlap] GT_ID: 1 | Taille: 1965 pts | Max Pred ID: 9 (95 pts) | Sévérité: 1870
+  [FN - Non Détecté] GT_ID: 197 | Taille: 6 pts | Sévérité: 6
+  [ID SWITCH] GT_ID: 0 | Ancien Pred: 12 -> Nouveau Pred: 11 | Taille: 52 pts | Sévérité: 52
+  [FN - Non Détecté] GT_ID: 194 | Taille: 567 pts | Sévérité: 567
+  [FN - Non Détecté] GT_ID: 25 | Taille: 9 pts | Sévérité: 9
+  [MERGE - Sous-segmentation] Pred_ID: 16 fusionne les GT: [9, 10] | Taille Pred: 85 pts | Sévérité: 26
+  [MERGE - Sous-segmentation] Pred_ID: 11 fusionne les GT: [2, 0] | Taille Pred: 158 pts | Sévérité: 49
+--- FRAME 47 ---
+  [FN - Faible Overlap] GT_ID: 1 | Taille: 1949 pts | Max Pred ID: 9 (91 pts) | Sévérité: 1858
+  [FN - Non Détecté] GT_ID: 197 | Taille: 5 pts | Sévérité: 5
+  [FN - Non Détecté] GT_ID: 194 | Taille: 569 pts | Sévérité: 569
+  [SPLIT - Sur-segmentation] GT_ID: 2 divisée en preds: [11, 48] | Taille GT: 61 pts | Sévérité: 11
+  [FN - Non Détecté] GT_ID: 25 | Taille: 5 pts | Sévérité: 5
+  [FN - Non Détecté] GT_ID: 200 | Taille: 1 pts | Sévérité: 1
+  [MERGE - Sous-segmentation] Pred_ID: 11 fusionne les GT: [0, 2] | Taille Pred: 163 pts | Sévérité: 50
+  [MERGE - Sous-segmentation] Pred_ID: 16 fusionne les GT: [9, 10] | Taille Pred: 78 pts | Sévérité: 25
+--- FRAME 48 ---
+  [FN - Faible Overlap] GT_ID: 1 | Taille: 2020 pts | Max Pred ID: 9 (88 pts) | Sévérité: 1932
+  [FN - Non Détecté] GT_ID: 197 | Taille: 6 pts | Sévérité: 6
+  [FN - Non Détecté] GT_ID: 194 | Taille: 559 pts | Sévérité: 559
+  [SPLIT - Sur-segmentation] GT_ID: 2 divisée en preds: [11, 48] | Taille GT: 79 pts | Sévérité: 13
+  [FN - Non Détecté] GT_ID: 25 | Taille: 6 pts | Sévérité: 6
+  [MERGE - Sous-segmentation] Pred_ID: 16 fusionne les GT: [9, 10] | Taille Pred: 81 pts | Sévérité: 26
+  [MERGE - Sous-segmentation] Pred_ID: 11 fusionne les GT: [0, 2] | Taille Pred: 148 pts | Sévérité: 66
+--- FRAME 49 ---
+  [FN - Faible Overlap] GT_ID: 1 | Taille: 2053 pts | Max Pred ID: 9 (106 pts) | Sévérité: 1947
+  [FN - Non Détecté] GT_ID: 197 | Taille: 6 pts | Sévérité: 6
+  [SPLIT - Sur-segmentation] GT_ID: 2 divisée en preds: [11, 51] | Taille GT: 55 pts | Sévérité: 12
+  [FN - Non Détecté] GT_ID: 194 | Taille: 540 pts | Sévérité: 540
+  [MERGE - Sous-segmentation] Pred_ID: 16 fusionne les GT: [9, 10] | Taille Pred: 90 pts | Sévérité: 27
+  [MERGE - Sous-segmentation] Pred_ID: 11 fusionne les GT: [0, 2] | Taille Pred: 148 pts | Sévérité: 43
+--- FRAME 50 ---
+  [FN - Non Détecté] GT_ID: 197 | Taille: 10 pts | Sévérité: 10
+  [FN - Faible Overlap] GT_ID: 1 | Taille: 2080 pts | Max Pred ID: 9 (72 pts) | Sévérité: 2008
+  [FN - Non Détecté] GT_ID: 194 | Taille: 532 pts | Sévérité: 532
+  [FN - Non Détecté] GT_ID: 25 | Taille: 8 pts | Sévérité: 8
+  [MERGE - Sous-segmentation] Pred_ID: 11 fusionne les GT: [0, 2] | Taille Pred: 155 pts | Sévérité: 35
+  [MERGE - Sous-segmentation] Pred_ID: 16 fusionne les GT: [9, 10] | Taille Pred: 82 pts | Sévérité: 24
+--- FRAME 51 ---
+  [ID SWITCH] GT_ID: 197 | Ancien Pred: 17 -> Nouveau Pred: 52 | Taille: 13 pts | Sévérité: 13
+  [FN - Faible Overlap] GT_ID: 1 | Taille: 2134 pts | Max Pred ID: 9 (72 pts) | Sévérité: 2062
+  [FN - Non Détecté] GT_ID: 194 | Taille: 513 pts | Sévérité: 513
+  [FN - Non Détecté] GT_ID: 25 | Taille: 9 pts | Sévérité: 9
+  [MERGE - Sous-segmentation] Pred_ID: 16 fusionne les GT: [9, 10] | Taille Pred: 88 pts | Sévérité: 25
+  [MERGE - Sous-segmentation] Pred_ID: 11 fusionne les GT: [0, 2] | Taille Pred: 156 pts | Sévérité: 45
+--- FRAME 52 ---
+  [FN - Faible Overlap] GT_ID: 1 | Taille: 2205 pts | Max Pred ID: 9 (79 pts) | Sévérité: 2126
+  [FN - Non Détecté] GT_ID: 194 | Taille: 509 pts | Sévérité: 509
+  [SPLIT - Sur-segmentation] GT_ID: 2 divisée en preds: [11, 54] | Taille GT: 33 pts | Sévérité: 11
+  [FN - Non Détecté] GT_ID: 25 | Taille: 8 pts | Sévérité: 8
+  [FN - Non Détecté] GT_ID: 200 | Taille: 1 pts | Sévérité: 1
+  [MERGE - Sous-segmentation] Pred_ID: 16 fusionne les GT: [9, 10] | Taille Pred: 95 pts | Sévérité: 27
+  [MERGE - Sous-segmentation] Pred_ID: 11 fusionne les GT: [0, 2] | Taille Pred: 159 pts | Sévérité: 22
+--- FRAME 53 ---
+  [FN - Non Détecté] GT_ID: 197 | Taille: 8 pts | Sévérité: 8
+  [FN - Faible Overlap] GT_ID: 1 | Taille: 2260 pts | Max Pred ID: 9 (101 pts) | Sévérité: 2159
+  [FN - Faible Overlap] GT_ID: 194 | Taille: 505 pts | Max Pred ID: 6 (2 pts) | Sévérité: 503
+  [ID SWITCH] GT_ID: 25 | Ancien Pred: 49 -> Nouveau Pred: 55 | Taille: 12 pts | Sévérité: 12
+  [SPLIT - Sur-segmentation] GT_ID: 2 divisée en preds: [11, 54] | Taille GT: 46 pts | Sévérité: 12
+  [MERGE - Sous-segmentation] Pred_ID: 16 fusionne les GT: [9, 10] | Taille Pred: 93 pts | Sévérité: 23
+  [MERGE - Sous-segmentation] Pred_ID: 11 fusionne les GT: [0, 2] | Taille Pred: 165 pts | Sévérité: 34
+--- FRAME 54 ---
+  [FN - Faible Overlap] GT_ID: 1 | Taille: 2280 pts | Max Pred ID: 9 (97 pts) | Sévérité: 2183
+  [SPLIT - Sur-segmentation] GT_ID: 2 divisée en preds: [11, 57] | Taille GT: 83 pts | Sévérité: 14
+  [FN - Non Détecté] GT_ID: 25 | Taille: 7 pts | Sévérité: 7
+  [FN - Non Détecté] GT_ID: 194 | Taille: 477 pts | Sévérité: 477
+  [MERGE - Sous-segmentation] Pred_ID: 16 fusionne les GT: [9, 10] | Taille Pred: 93 pts | Sévérité: 22
+  [MERGE - Sous-segmentation] Pred_ID: 11 fusionne les GT: [0, 2] | Taille Pred: 163 pts | Sévérité: 69
+--- FRAME 55 ---
+  [FN - Faible Overlap] GT_ID: 1 | Taille: 2259 pts | Max Pred ID: 9 (101 pts) | Sévérité: 2158
+  [FN - Non Détecté] GT_ID: 200 | Taille: 7 pts | Sévérité: 7
+  [ID SWITCH] GT_ID: 25 | Ancien Pred: 55 -> Nouveau Pred: 58 | Taille: 14 pts | Sévérité: 14
+  [FN - Non Détecté] GT_ID: 194 | Taille: 481 pts | Sévérité: 481
+  [MERGE - Sous-segmentation] Pred_ID: 11 fusionne les GT: [0, 2] | Taille Pred: 168 pts | Sévérité: 66
+  [MERGE - Sous-segmentation] Pred_ID: 16 fusionne les GT: [9, 10] | Taille Pred: 97 pts | Sévérité: 21
+--- FRAME 56 ---
+  [FN - Non Détecté] GT_ID: 197 | Taille: 1 pts | Sévérité: 1
+  [FN - Faible Overlap] GT_ID: 1 | Taille: 2314 pts | Max Pred ID: 9 (97 pts) | Sévérité: 2217
+  [FN - Non Détecté] GT_ID: 200 | Taille: 1 pts | Sévérité: 1
+  [FN - Non Détecté] GT_ID: 194 | Taille: 468 pts | Sévérité: 468
+  [MERGE - Sous-segmentation] Pred_ID: 11 fusionne les GT: [2, 0] | Taille Pred: 172 pts | Sévérité: 78
+  [MERGE - Sous-segmentation] Pred_ID: 16 fusionne les GT: [9, 10] | Taille Pred: 105 pts | Sévérité: 25
+--- FRAME 57 ---
+  [FN - Faible Overlap] GT_ID: 1 | Taille: 2403 pts | Max Pred ID: 9 (79 pts) | Sévérité: 2324
+  [FN - Non Détecté] GT_ID: 194 | Taille: 468 pts | Sévérité: 468
+  [MERGE - Sous-segmentation] Pred_ID: 13 fusionne les GT: [199, 200] | Taille Pred: 59 pts | Sévérité: 7
+  [MERGE - Sous-segmentation] Pred_ID: 11 fusionne les GT: [2, 0] | Taille Pred: 160 pts | Sévérité: 49
+  [MERGE - Sous-segmentation] Pred_ID: 16 fusionne les GT: [9, 10] | Taille Pred: 110 pts | Sévérité: 23
+--- FRAME 58 ---
+  [FN - Faible Overlap] GT_ID: 1 | Taille: 2431 pts | Max Pred ID: 9 (80 pts) | Sévérité: 2351
+  [FN - Non Détecté] GT_ID: 197 | Taille: 1 pts | Sévérité: 1
+  [FN - Non Détecté] GT_ID: 194 | Taille: 473 pts | Sévérité: 473
+  [MERGE - Sous-segmentation] Pred_ID: 16 fusionne les GT: [9, 10] | Taille Pred: 118 pts | Sévérité: 28
+--- FRAME 59 ---
+  [FN - Faible Overlap] GT_ID: 1 | Taille: 2415 pts | Max Pred ID: 9 (71 pts) | Sévérité: 2344
+  [ID SWITCH] GT_ID: 197 | Ancien Pred: 52 -> Nouveau Pred: 62 | Taille: 15 pts | Sévérité: 15
+  [FN - Non Détecté] GT_ID: 194 | Taille: 456 pts | Sévérité: 456
+  [FN - Non Détecté] GT_ID: 0 | Taille: 1 pts | Sévérité: 1
+  [MERGE - Sous-segmentation] Pred_ID: 46 fusionne les GT: [1, 2] | Taille Pred: 37 pts | Sévérité: 10
+  [MERGE - Sous-segmentation] Pred_ID: 16 fusionne les GT: [9, 10] | Taille Pred: 114 pts | Sévérité: 26
+--- FRAME 60 ---
+  [FN - Faible Overlap] GT_ID: 1 | Taille: 2370 pts | Max Pred ID: 9 (56 pts) | Sévérité: 2314
+  [ID SWITCH] GT_ID: 197 | Ancien Pred: 62 -> Nouveau Pred: 64 | Taille: 15 pts | Sévérité: 15
+  [FN - Non Détecté] GT_ID: 194 | Taille: 449 pts | Sévérité: 449
+  [ID SWITCH] GT_ID: 0 | Ancien Pred: 11 -> Nouveau Pred: 12 | Taille: 4 pts | Sévérité: 4
+  [MERGE - Sous-segmentation] Pred_ID: 16 fusionne les GT: [9, 10] | Taille Pred: 100 pts | Sévérité: 24
+--- FRAME 61 ---
+  [FN - Faible Overlap] GT_ID: 1 | Taille: 2302 pts | Max Pred ID: 9 (46 pts) | Sévérité: 2256
+  [ID SWITCH] GT_ID: 197 | Ancien Pred: 64 -> Nouveau Pred: 67 | Taille: 21 pts | Sévérité: 21
+  [FN - Non Détecté] GT_ID: 194 | Taille: 402 pts | Sévérité: 402
+  [MERGE - Sous-segmentation] Pred_ID: 13 fusionne les GT: [199, 200] | Taille Pred: 63 pts | Sévérité: 7
+  [MERGE - Sous-segmentation] Pred_ID: 46 fusionne les GT: [1, 2] | Taille Pred: 39 pts | Sévérité: 10
+  [MERGE - Sous-segmentation] Pred_ID: 16 fusionne les GT: [9, 10] | Taille Pred: 100 pts | Sévérité: 22
+--- FRAME 62 ---
+  [FN - Faible Overlap] GT_ID: 1 | Taille: 2207 pts | Max Pred ID: 9 (45 pts) | Sévérité: 2162
+  [ID SWITCH] GT_ID: 10 | Ancien Pred: 16 -> Nouveau Pred: 71 | Taille: 18 pts | Sévérité: 18
+  [ID SWITCH] GT_ID: 197 | Ancien Pred: 67 -> Nouveau Pred: 69 | Taille: 18 pts | Sévérité: 18
+  [FN - Non Détecté] GT_ID: 194 | Taille: 403 pts | Sévérité: 403
+  [FN - Non Détecté] GT_ID: 0 | Taille: 3 pts | Sévérité: 3
+--- FRAME 63 ---
+  [FN - Faible Overlap] GT_ID: 1 | Taille: 1985 pts | Max Pred ID: 9 (41 pts) | Sévérité: 1944
+  [ID SWITCH] GT_ID: 25 | Ancien Pred: 58 -> Nouveau Pred: 74 | Taille: 22 pts | Sévérité: 22
+  [ID SWITCH] GT_ID: 10 | Ancien Pred: 71 -> Nouveau Pred: 75 | Taille: 16 pts | Sévérité: 16
+  [ID SWITCH] GT_ID: 197 | Ancien Pred: 69 -> Nouveau Pred: 73 | Taille: 25 pts | Sévérité: 25
+  [FN - Non Détecté] GT_ID: 194 | Taille: 406 pts | Sévérité: 406
+  [MERGE - Sous-segmentation] Pred_ID: 13 fusionne les GT: [199, 200] | Taille Pred: 80 pts | Sévérité: 11
+--- FRAME 64 ---
+  [FN - Non Détecté] GT_ID: 200 | Taille: 18 pts | Sévérité: 18
+  [FN - Faible Overlap] GT_ID: 1 | Taille: 1904 pts | Max Pred ID: 9 (36 pts) | Sévérité: 1868
+  [FN - Faible Overlap] GT_ID: 198 | Taille: 340 pts | Max Pred ID: 2 (67 pts) | Sévérité: 273
+  [ID SWITCH] GT_ID: 25 | Ancien Pred: 74 -> Nouveau Pred: 58 | Taille: 24 pts | Sévérité: 24
+  [ID SWITCH] GT_ID: 197 | Ancien Pred: 73 -> Nouveau Pred: 76 | Taille: 29 pts | Sévérité: 29
+  [SPLIT - Sur-segmentation] GT_ID: 10 divisée en preds: [75, 16] | Taille GT: 12 pts | Sévérité: 2
+  [FN - Non Détecté] GT_ID: 194 | Taille: 380 pts | Sévérité: 380
+  [FN - Non Détecté] GT_ID: 0 | Taille: 3 pts | Sévérité: 3
+--- FRAME 65 ---
+  [FN - Non Détecté] GT_ID: 200 | Taille: 13 pts | Sévérité: 13
+  [FN - Faible Overlap] GT_ID: 1 | Taille: 1694 pts | Max Pred ID: 46 (33 pts) | Sévérité: 1661
+  [FN - Faible Overlap] GT_ID: 198 | Taille: 364 pts | Max Pred ID: 2 (71 pts) | Sévérité: 293
+  [ID SWITCH] GT_ID: 197 | Ancien Pred: 76 -> Nouveau Pred: 78 | Taille: 34 pts | Sévérité: 34
+  [FN - Non Détecté] GT_ID: 194 | Taille: 386 pts | Sévérité: 386
+  [ID SWITCH] GT_ID: 0 | Ancien Pred: 12 -> Nouveau Pred: 6 | Taille: 4 pts | Sévérité: 4
+--- FRAME 66 ---
+  [FN - Non Détecté] GT_ID: 200 | Taille: 14 pts | Sévérité: 14
+  [FN - Faible Overlap] GT_ID: 1 | Taille: 1600 pts | Max Pred ID: 46 (38 pts) | Sévérité: 1562
+  [ID SWITCH] GT_ID: 15 | Ancien Pred: 12 -> Nouveau Pred: 87 | Taille: 107 pts | Sévérité: 107
+  [SPLIT - Sur-segmentation] GT_ID: 15 divisée en preds: [87, 12] | Taille GT: 107 pts | Sévérité: 40
+  [ID SWITCH] GT_ID: 198 | Ancien Pred: 2 -> Nouveau Pred: 80 | Taille: 401 pts | Sévérité: 401
+  [SPLIT - Sur-segmentation] GT_ID: 198 divisée en preds: [80, 84, 81, 83] | Taille GT: 401 pts | Sévérité: 296
+  [ID SWITCH] GT_ID: 197 | Ancien Pred: 78 -> Nouveau Pred: 85 | Taille: 35 pts | Sévérité: 35
+  [FN - Non Détecté] GT_ID: 10 | Taille: 10 pts | Sévérité: 10
+  [FN - Non Détecté] GT_ID: 194 | Taille: 354 pts | Sévérité: 354
+  [FN - Non Détecté] GT_ID: 0 | Taille: 3 pts | Sévérité: 3
+--- FRAME 67 ---
+  [ID SWITCH] GT_ID: 15 | Ancien Pred: 87 -> Nouveau Pred: 95 | Taille: 96 pts | Sévérité: 96
+  [FN - Faible Overlap] GT_ID: 1 | Taille: 1494 pts | Max Pred ID: 46 (39 pts) | Sévérité: 1455
+  [FN - Non Détecté] GT_ID: 200 | Taille: 16 pts | Sévérité: 16
+  [FN - Faible Overlap] GT_ID: 198 | Taille: 412 pts | Max Pred ID: 91 (75 pts) | Sévérité: 337
+  [SPLIT - Sur-segmentation] GT_ID: 198 divisée en preds: [91, 89, 92] | Taille GT: 412 pts | Sévérité: 337
+  [FN - Non Détecté] GT_ID: 10 | Taille: 9 pts | Sévérité: 9
+  [ID SWITCH] GT_ID: 197 | Ancien Pred: 85 -> Nouveau Pred: 94 | Taille: 33 pts | Sévérité: 33
+  [FN - Non Détecté] GT_ID: 194 | Taille: 354 pts | Sévérité: 354
+--- FRAME 68 ---
+  [FN - Faible Overlap] GT_ID: 1 | Taille: 1432 pts | Max Pred ID: 46 (42 pts) | Sévérité: 1390
+  [FN - Non Détecté] GT_ID: 200 | Taille: 19 pts | Sévérité: 19
+  [ID SWITCH] GT_ID: 15 | Ancien Pred: 95 -> Nouveau Pred: 75 | Taille: 98 pts | Sévérité: 98
+  [ID SWITCH] GT_ID: 198 | Ancien Pred: 80 -> Nouveau Pred: 2 | Taille: 510 pts | Sévérité: 510
+  [SPLIT - Sur-segmentation] GT_ID: 198 divisée en preds: [2, 99] | Taille GT: 510 pts | Sévérité: 395
+  [FN - Non Détecté] GT_ID: 10 | Taille: 7 pts | Sévérité: 7
+  [ID SWITCH] GT_ID: 197 | Ancien Pred: 94 -> Nouveau Pred: 101 | Taille: 34 pts | Sévérité: 34
+  [FN - Non Détecté] GT_ID: 194 | Taille: 333 pts | Sévérité: 333
+  [ID SWITCH] GT_ID: 0 | Ancien Pred: 6 -> Nouveau Pred: 75 | Taille: 4 pts | Sévérité: 4
+--- FRAME 69 ---
+  [FN - Non Détecté] GT_ID: 200 | Taille: 21 pts | Sévérité: 21
+  [ID SWITCH] GT_ID: 15 | Ancien Pred: 75 -> Nouveau Pred: 112 | Taille: 98 pts | Sévérité: 98
+  [FN - Faible Overlap] GT_ID: 1 | Taille: 1297 pts | Max Pred ID: 46 (44 pts) | Sévérité: 1253
+  [ID SWITCH] GT_ID: 198 | Ancien Pred: 2 -> Nouveau Pred: 105 | Taille: 529 pts | Sévérité: 529
+  [SPLIT - Sur-segmentation] GT_ID: 198 divisée en preds: [105, 104] | Taille GT: 529 pts | Sévérité: 403
+  [SPLIT - Sur-segmentation] GT_ID: 2 divisée en preds: [11, 111] | Taille GT: 147 pts | Sévérité: 96
+  [FN - Non Détecté] GT_ID: 10 | Taille: 4 pts | Sévérité: 4
+  [ID SWITCH] GT_ID: 197 | Ancien Pred: 101 -> Nouveau Pred: 109 | Taille: 36 pts | Sévérité: 36
+  [FN - Non Détecté] GT_ID: 194 | Taille: 305 pts | Sévérité: 305
+  [ID SWITCH] GT_ID: 0 | Ancien Pred: 75 -> Nouveau Pred: 112 | Taille: 4 pts | Sévérité: 4
+--- FRAME 70 ---
+  [FN - Non Détecté] GT_ID: 11 | Taille: 3 pts | Sévérité: 3
+  [FN - Non Détecté] GT_ID: 200 | Taille: 23 pts | Sévérité: 23
+  [ID SWITCH] GT_ID: 15 | Ancien Pred: 112 -> Nouveau Pred: 126 | Taille: 103 pts | Sévérité: 103
+  [FN - Faible Overlap] GT_ID: 1 | Taille: 1258 pts | Max Pred ID: 46 (47 pts) | Sévérité: 1211
+  [FN - Faible Overlap] GT_ID: 198 | Taille: 508 pts | Max Pred ID: 115 (90 pts) | Sévérité: 418
+  [SPLIT - Sur-segmentation] GT_ID: 198 divisée en preds: [115, 118, 119] | Taille GT: 508 pts | Sévérité: 418
+  [ID SWITCH] GT_ID: 197 | Ancien Pred: 109 -> Nouveau Pred: 121 | Taille: 33 pts | Sévérité: 33
+  [FN - Non Détecté] GT_ID: 10 | Taille: 3 pts | Sévérité: 3
+  [SPLIT - Sur-segmentation] GT_ID: 4 divisée en preds: [40, 123] | Taille GT: 152 pts | Sévérité: 50
+  [FN - Non Détecté] GT_ID: 5 | Taille: 7 pts | Sévérité: 7
+  [FN - Non Détecté] GT_ID: 194 | Taille: 311 pts | Sévérité: 311
+  [ID SWITCH] GT_ID: 0 | Ancien Pred: 112 -> Nouveau Pred: 126 | Taille: 2 pts | Sévérité: 2
+--- FRAME 71 ---
+  [FN - Non Détecté] GT_ID: 11 | Taille: 1 pts | Sévérité: 1
+  [FN - Non Détecté] GT_ID: 200 | Taille: 23 pts | Sévérité: 23
+  [ID SWITCH] GT_ID: 15 | Ancien Pred: 126 -> Nouveau Pred: 137 | Taille: 93 pts | Sévérité: 93
+  [FN - Faible Overlap] GT_ID: 1 | Taille: 1241 pts | Max Pred ID: 46 (52 pts) | Sévérité: 1189
+  [ID SWITCH] GT_ID: 198 | Ancien Pred: 105 -> Nouveau Pred: 2 | Taille: 573 pts | Sévérité: 573
+  [SPLIT - Sur-segmentation] GT_ID: 198 divisée en preds: [2, 130] | Taille GT: 573 pts | Sévérité: 403
+  [FN - Non Détecté] GT_ID: 0 | Taille: 1 pts | Sévérité: 1
+  [ID SWITCH] GT_ID: 2 | Ancien Pred: 11 -> Nouveau Pred: 136 | Taille: 139 pts | Sévérité: 139
+  [ID SWITCH] GT_ID: 197 | Ancien Pred: 121 -> Nouveau Pred: 128 | Taille: 30 pts | Sévérité: 30
+  [FN - Non Détecté] GT_ID: 10 | Taille: 2 pts | Sévérité: 2
+  [FN - Non Détecté] GT_ID: 194 | Taille: 278 pts | Sévérité: 278
+--- FRAME 72 ---
+  [FN - Non Détecté] GT_ID: 11 | Taille: 1 pts | Sévérité: 1
+  [ID SWITCH] GT_ID: 15 | Ancien Pred: 137 -> Nouveau Pred: 142 | Taille: 99 pts | Sévérité: 99
+  [FN - Non Détecté] GT_ID: 200 | Taille: 17 pts | Sévérité: 17
+  [FN - Faible Overlap] GT_ID: 198 | Taille: 634 pts | Max Pred ID: 2 (40 pts) | Sévérité: 594
+  [FN - Faible Overlap] GT_ID: 1 | Taille: 1189 pts | Max Pred ID: 46 (57 pts) | Sévérité: 1132
+  [ID SWITCH] GT_ID: 2 | Ancien Pred: 136 -> Nouveau Pred: 141 | Taille: 141 pts | Sévérité: 141
+  [ID SWITCH] GT_ID: 197 | Ancien Pred: 128 -> Nouveau Pred: 139 | Taille: 24 pts | Sévérité: 24
+  [FN - Non Détecté] GT_ID: 10 | Taille: 1 pts | Sévérité: 1
+  [FN - Non Détecté] GT_ID: 194 | Taille: 244 pts | Sévérité: 244
+  [ID SWITCH] GT_ID: 0 | Ancien Pred: 126 -> Nouveau Pred: 142 | Taille: 4 pts | Sévérité: 4
+--- FRAME 73 ---
+  [FN - Non Détecté] GT_ID: 11 | Taille: 2 pts | Sévérité: 2
+  [FN - Non Détecté] GT_ID: 200 | Taille: 27 pts | Sévérité: 27
+  [ID SWITCH] GT_ID: 15 | Ancien Pred: 142 -> Nouveau Pred: 151 | Taille: 98 pts | Sévérité: 98
+  [SPLIT - Sur-segmentation] GT_ID: 198 divisée en preds: [2, 146, 145] | Taille GT: 631 pts | Sévérité: 368
+  [FN - Faible Overlap] GT_ID: 1 | Taille: 1079 pts | Max Pred ID: 46 (57 pts) | Sévérité: 1022
+  [ID SWITCH] GT_ID: 2 | Ancien Pred: 141 -> Nouveau Pred: 11 | Taille: 132 pts | Sévérité: 132
+  [ID SWITCH] GT_ID: 197 | Ancien Pred: 139 -> Nouveau Pred: 148 | Taille: 19 pts | Sévérité: 19
+  [FN - Non Détecté] GT_ID: 194 | Taille: 201 pts | Sévérité: 201
+  [ID SWITCH] GT_ID: 0 | Ancien Pred: 142 -> Nouveau Pred: 151 | Taille: 5 pts | Sévérité: 5
+--- FRAME 74 ---
+  [FN - Non Détecté] GT_ID: 11 | Taille: 1 pts | Sévérité: 1
+  [FN - Non Détecté] GT_ID: 200 | Taille: 29 pts | Sévérité: 29
+  [ID SWITCH] GT_ID: 15 | Ancien Pred: 151 -> Nouveau Pred: 157 | Taille: 85 pts | Sévérité: 85
+  [FN - Faible Overlap] GT_ID: 1 | Taille: 1013 pts | Max Pred ID: 46 (71 pts) | Sévérité: 942
+  [SPLIT - Sur-segmentation] GT_ID: 198 divisée en preds: [2, 155] | Taille GT: 677 pts | Sévérité: 235
+  [SPLIT - Sur-segmentation] GT_ID: 2 divisée en preds: [11, 159, 16] | Taille GT: 132 pts | Sévérité: 64
+  [ID SWITCH] GT_ID: 9 | Ancien Pred: 16 -> Nouveau Pred: 161 | Taille: 40 pts | Sévérité: 40
+  [FN - Faible Overlap] GT_ID: 195 | Taille: 80 pts | Max Pred ID: 17 (1 pts) | Sévérité: 79
+  [ID SWITCH] GT_ID: 197 | Ancien Pred: 148 -> Nouveau Pred: 156 | Taille: 18 pts | Sévérité: 18
+  [FN - Non Détecté] GT_ID: 194 | Taille: 166 pts | Sévérité: 166
+--- FRAME 75 ---
+  [FN - Non Détecté] GT_ID: 11 | Taille: 3 pts | Sévérité: 3
+  [FN - Faible Overlap] GT_ID: 198 | Taille: 709 pts | Max Pred ID: 2 (99 pts) | Sévérité: 610
+  [ID SWITCH] GT_ID: 1 | Ancien Pred: 35 -> Nouveau Pred: 163 | Taille: 890 pts | Sévérité: 890
+  [ID SWITCH] GT_ID: 15 | Ancien Pred: 157 -> Nouveau Pred: 179 | Taille: 84 pts | Sévérité: 84
+  [SPLIT - Sur-segmentation] GT_ID: 15 divisée en preds: [179, 180] | Taille GT: 84 pts | Sévérité: 26
+  [FN - Non Détecté] GT_ID: 200 | Taille: 24 pts | Sévérité: 24
+  [SPLIT - Sur-segmentation] GT_ID: 4 divisée en preds: [40, 182] | Taille GT: 121 pts | Sévérité: 14
+  [ID SWITCH] GT_ID: 2 | Ancien Pred: 11 -> Nouveau Pred: 16 | Taille: 131 pts | Sévérité: 131
+  [SPLIT - Sur-segmentation] GT_ID: 2 divisée en preds: [16, 176, 11] | Taille GT: 131 pts | Sévérité: 86
+  [ID SWITCH] GT_ID: 197 | Ancien Pred: 156 -> Nouveau Pred: 17 | Taille: 18 pts | Sévérité: 18
+  [ID SWITCH] GT_ID: 9 | Ancien Pred: 161 -> Nouveau Pred: 178 | Taille: 29 pts | Sévérité: 29
+  [ID SWITCH] GT_ID: 195 | Ancien Pred: 6 -> Nouveau Pred: 173 | Taille: 41 pts | Sévérité: 41
+  [ID SWITCH] GT_ID: 196 | Ancien Pred: 17 -> Nouveau Pred: 6 | Taille: 18 pts | Sévérité: 18
+  [ID SWITCH] GT_ID: 194 | Ancien Pred: 36 -> Nouveau Pred: 171 | Taille: 158 pts | Sévérité: 158
+  [SPLIT - Sur-segmentation] GT_ID: 194 divisée en preds: [171, 172] | Taille GT: 158 pts | Sévérité: 62
+  [ID SWITCH] GT_ID: 0 | Ancien Pred: 151 -> Nouveau Pred: 173 | Taille: 4 pts | Sévérité: 4
+  [MERGE - Sous-segmentation] Pred_ID: 181 fusionne les GT: [3, 1] | Taille Pred: 37 pts | Sévérité: 10
+--- FRAME 76 ---
+  [FN - Non Détecté] GT_ID: 11 | Taille: 1 pts | Sévérité: 1
+  [ID SWITCH] GT_ID: 15 | Ancien Pred: 179 -> Nouveau Pred: 189 | Taille: 90 pts | Sévérité: 90
+  [SPLIT - Sur-segmentation] GT_ID: 15 divisée en preds: [189, 190] | Taille GT: 90 pts | Sévérité: 31
+  [FN - Non Détecté] GT_ID: 200 | Taille: 23 pts | Sévérité: 23
+  [SPLIT - Sur-segmentation] GT_ID: 198 divisée en preds: [2, 184] | Taille GT: 564 pts | Sévérité: 449
+  [FN - Faible Overlap] GT_ID: 1 | Taille: 783 pts | Max Pred ID: 46 (78 pts) | Sévérité: 705
+  [SPLIT - Sur-segmentation] GT_ID: 4 divisée en preds: [40, 195] | Taille GT: 109 pts | Sévérité: 18
+  [SPLIT - Sur-segmentation] GT_ID: 2 divisée en preds: [16, 11] | Taille GT: 119 pts | Sévérité: 61
+  [ID SWITCH] GT_ID: 9 | Ancien Pred: 178 -> Nouveau Pred: 191 | Taille: 14 pts | Sévérité: 14
+  [FN - Non Détecté] GT_ID: 195 | Taille: 26 pts | Sévérité: 26
+  [FN - Non Détecté] GT_ID: 194 | Taille: 147 pts | Sévérité: 147
+  [FN - Faible Overlap] GT_ID: 0 | Taille: 14 pts | Max Pred ID: 40 (1 pts) | Sévérité: 13
+--- FRAME 77 ---
+  [FN - Non Détecté] GT_ID: 11 | Taille: 1 pts | Sévérité: 1
+  [ID SWITCH] GT_ID: 1 | Ancien Pred: 163 -> Nouveau Pred: 6 | Taille: 718 pts | Sévérité: 718
+  [SPLIT - Sur-segmentation] GT_ID: 1 divisée en preds: [6, 46, 198] | Taille GT: 718 pts | Sévérité: 528
+  [ID SWITCH] GT_ID: 15 | Ancien Pred: 189 -> Nouveau Pred: 209 | Taille: 89 pts | Sévérité: 89
+  [FN - Non Détecté] GT_ID: 200 | Taille: 25 pts | Sévérité: 25
+  [FN - Faible Overlap] GT_ID: 198 | Taille: 536 pts | Max Pred ID: 2 (41 pts) | Sévérité: 495
+  [SPLIT - Sur-segmentation] GT_ID: 4 divisée en preds: [40, 46] | Taille GT: 121 pts | Sévérité: 29
+  [FN - Non Détecté] GT_ID: 197 | Taille: 8 pts | Sévérité: 8
+  [FN - Non Détecté] GT_ID: 9 | Taille: 4 pts | Sévérité: 4
+  [ID SWITCH] GT_ID: 195 | Ancien Pred: 173 -> Nouveau Pred: 206 | Taille: 36 pts | Sévérité: 36
+  [ID SWITCH] GT_ID: 0 | Ancien Pred: 173 -> Nouveau Pred: 16 | Taille: 3 pts | Sévérité: 3
+  [SPLIT - Sur-segmentation] GT_ID: 0 divisée en preds: [16, 206, 209] | Taille GT: 3 pts | Sévérité: 2
+  [ID SWITCH] GT_ID: 196 | Ancien Pred: 6 -> Nouveau Pred: 17 | Taille: 27 pts | Sévérité: 27
+  [ID SWITCH] GT_ID: 194 | Ancien Pred: 171 -> Nouveau Pred: 205 | Taille: 146 pts | Sévérité: 146
+  [MERGE - Sous-segmentation] Pred_ID: 46 fusionne les GT: [1, 4] | Taille Pred: 114 pts | Sévérité: 29
+--- FRAME 78 ---
+  [FN - Non Détecté] GT_ID: 200 | Taille: 36 pts | Sévérité: 36
+  [FN - Faible Overlap] GT_ID: 1 | Taille: 699 pts | Max Pred ID: 46 (96 pts) | Sévérité: 603
+  [SPLIT - Sur-segmentation] GT_ID: 1 divisée en preds: [46, 6] | Taille GT: 699 pts | Sévérité: 603
+  [ID SWITCH] GT_ID: 15 | Ancien Pred: 209 -> Nouveau Pred: 215 | Taille: 78 pts | Sévérité: 78
+  [FN - Non Détecté] GT_ID: 9 | Taille: 4 pts | Sévérité: 4
+  [FN - Non Détecté] GT_ID: 195 | Taille: 55 pts | Sévérité: 55
+  [FN - Non Détecté] GT_ID: 196 | Taille: 32 pts | Sévérité: 32
+  [FN - Non Détecté] GT_ID: 194 | Taille: 161 pts | Sévérité: 161
+--- FRAME 79 ---
+  [ID SWITCH] GT_ID: 0 | Ancien Pred: 16 -> Nouveau Pred: 11 | Taille: 3 pts | Sévérité: 3
+  [ID SWITCH] GT_ID: 15 | Ancien Pred: 215 -> Nouveau Pred: 11 | Taille: 78 pts | Sévérité: 78
+  [FN - Non Détecté] GT_ID: 200 | Taille: 36 pts | Sévérité: 36
+  [SPLIT - Sur-segmentation] GT_ID: 4 divisée en preds: [40, 46] | Taille GT: 146 pts | Sévérité: 93
+  [ID SWITCH] GT_ID: 1 | Ancien Pred: 6 -> Nouveau Pred: 218 | Taille: 689 pts | Sévérité: 689
+  [SPLIT - Sur-segmentation] GT_ID: 1 divisée en preds: [218, 232, 219] | Taille GT: 689 pts | Sévérité: 500
+  [FN - Non Détecté] GT_ID: 9 | Taille: 5 pts | Sévérité: 5
+  [ID SWITCH] GT_ID: 196 | Ancien Pred: 17 -> Nouveau Pred: 229 | Taille: 27 pts | Sévérité: 27
+  [ID SWITCH] GT_ID: 195 | Ancien Pred: 206 -> Nouveau Pred: 228 | Taille: 46 pts | Sévérité: 46
+  [ID SWITCH] GT_ID: 194 | Ancien Pred: 205 -> Nouveau Pred: 226 | Taille: 151 pts | Sévérité: 151
+  [SPLIT - Sur-segmentation] GT_ID: 194 divisée en preds: [226, 227] | Taille GT: 151 pts | Sévérité: 108
+--- FRAME 80 ---
+  [FN - Non Détecté] GT_ID: 200 | Taille: 33 pts | Sévérité: 33
+  [ID SWITCH] GT_ID: 1 | Ancien Pred: 218 -> Nouveau Pred: 6 | Taille: 618 pts | Sévérité: 618
+  [SPLIT - Sur-segmentation] GT_ID: 1 divisée en preds: [6, 250] | Taille GT: 618 pts | Sévérité: 198
+  [FN - Faible Overlap] GT_ID: 198 | Taille: 639 pts | Max Pred ID: 235 (101 pts) | Sévérité: 538
+  [SPLIT - Sur-segmentation] GT_ID: 198 divisée en preds: [235, 234, 2, 237] | Taille GT: 639 pts | Sévérité: 538
+  [SPLIT - Sur-segmentation] GT_ID: 4 divisée en preds: [40, 46] | Taille GT: 145 pts | Sévérité: 57
+  [FN - Faible Overlap] GT_ID: 3 | Taille: 5981 pts | Max Pred ID: 1 (68 pts) | Sévérité: 5913
+  [ID SWITCH] GT_ID: 195 | Ancien Pred: 228 -> Nouveau Pred: 245 | Taille: 39 pts | Sévérité: 39
+  [ID SWITCH] GT_ID: 196 | Ancien Pred: 229 -> Nouveau Pred: 246 | Taille: 25 pts | Sévérité: 25
+  [FN - Non Détecté] GT_ID: 9 | Taille: 2 pts | Sévérité: 2
+  [ID SWITCH] GT_ID: 194 | Ancien Pred: 226 -> Nouveau Pred: 244 | Taille: 154 pts | Sévérité: 154
+--- FRAME 81 ---
+  [SPLIT - Sur-segmentation] GT_ID: 1 divisée en preds: [6, 261] | Taille GT: 630 pts | Sévérité: 223
+  [SPLIT - Sur-segmentation] GT_ID: 4 divisée en preds: [40, 46] | Taille GT: 142 pts | Sévérité: 70
+  [ID SWITCH] GT_ID: 200 | Ancien Pred: 13 -> Nouveau Pred: 259 | Taille: 37 pts | Sévérité: 37
+  [FN - Faible Overlap] GT_ID: 198 | Taille: 576 pts | Max Pred ID: 253 (109 pts) | Sévérité: 467
+  [SPLIT - Sur-segmentation] GT_ID: 198 divisée en preds: [253, 256, 254] | Taille GT: 576 pts | Sévérité: 467
+  [FN - Non Détecté] GT_ID: 196 | Taille: 27 pts | Sévérité: 27
+  [FN - Non Détecté] GT_ID: 195 | Taille: 38 pts | Sévérité: 38
+  [FN - Non Détecté] GT_ID: 194 | Taille: 142 pts | Sévérité: 142
+  [FN - Non Détecté] GT_ID: 9 | Taille: 1 pts | Sévérité: 1
+  [ID SWITCH] GT_ID: 0 | Ancien Pred: 11 -> Nouveau Pred: 40 | Taille: 1 pts | Sévérité: 1
+  [MERGE - Sous-segmentation] Pred_ID: 248 fusionne les GT: [3, 1] | Taille Pred: 51 pts | Sévérité: 11
+--- FRAME 82 ---
+  [SPLIT - Sur-segmentation] GT_ID: 1 divisée en preds: [6, 46] | Taille GT: 622 pts | Sévérité: 257
+  [ID SWITCH] GT_ID: 4 | Ancien Pred: 40 -> Nouveau Pred: 269 | Taille: 129 pts | Sévérité: 129
+  [SPLIT - Sur-segmentation] GT_ID: 4 divisée en preds: [269, 40] | Taille GT: 129 pts | Sévérité: 48
+  [FN - Non Détecté] GT_ID: 260 | Taille: 9 pts | Sévérité: 9
+  [FN - Non Détecté] GT_ID: 200 | Taille: 35 pts | Sévérité: 35
+  [ID SWITCH] GT_ID: 198 | Ancien Pred: 2 -> Nouveau Pred: 263 | Taille: 539 pts | Sévérité: 539
+  [SPLIT - Sur-segmentation] GT_ID: 198 divisée en preds: [263, 266] | Taille GT: 539 pts | Sévérité: 386
+  [FN - Non Détecté] GT_ID: 195 | Taille: 38 pts | Sévérité: 38
+  [FN - Non Détecté] GT_ID: 196 | Taille: 37 pts | Sévérité: 37
+  [FN - Non Détecté] GT_ID: 194 | Taille: 118 pts | Sévérité: 118
+  [FN - Non Détecté] GT_ID: 9 | Taille: 1 pts | Sévérité: 1
+  [FN - Non Détecté] GT_ID: 10 | Taille: 1 pts | Sévérité: 1
+  [ID SWITCH] GT_ID: 0 | Ancien Pred: 40 -> Nouveau Pred: 11 | Taille: 1 pts | Sévérité: 1
+  [MERGE - Sous-segmentation] Pred_ID: 248 fusionne les GT: [3, 1] | Taille Pred: 39 pts | Sévérité: 5
+--- FRAME 83 ---
+  [ID SWITCH] GT_ID: 1 | Ancien Pred: 6 -> Nouveau Pred: 17 | Taille: 616 pts | Sévérité: 616
+  [SPLIT - Sur-segmentation] GT_ID: 1 divisée en preds: [17, 46] | Taille GT: 616 pts | Sévérité: 193
+  [ID SWITCH] GT_ID: 4 | Ancien Pred: 269 -> Nouveau Pred: 283 | Taille: 121 pts | Sévérité: 121
+  [SPLIT - Sur-segmentation] GT_ID: 4 divisée en preds: [283, 40] | Taille GT: 121 pts | Sévérité: 27
+  [FN - Non Détecté] GT_ID: 200 | Taille: 39 pts | Sévérité: 39
+  [ID SWITCH] GT_ID: 198 | Ancien Pred: 263 -> Nouveau Pred: 271 | Taille: 510 pts | Sévérité: 510
+  [SPLIT - Sur-segmentation] GT_ID: 198 divisée en preds: [271, 276, 274] | Taille GT: 510 pts | Sévérité: 405
+  [ID SWITCH] GT_ID: 196 | Ancien Pred: 246 -> Nouveau Pred: 6 | Taille: 19 pts | Sévérité: 19
+  [ID SWITCH] GT_ID: 195 | Ancien Pred: 245 -> Nouveau Pred: 281 | Taille: 27 pts | Sévérité: 27
+  [ID SWITCH] GT_ID: 194 | Ancien Pred: 244 -> Nouveau Pred: 6 | Taille: 109 pts | Sévérité: 109
+  [FN - Non Détecté] GT_ID: 5 | Taille: 2 pts | Sévérité: 2
+  [MERGE - Sous-segmentation] Pred_ID: 6 fusionne les GT: [194, 196] | Taille Pred: 128 pts | Sévérité: 19
+--- FRAME 84 ---
+  [SPLIT - Sur-segmentation] GT_ID: 1 divisée en preds: [17, 289] | Taille GT: 651 pts | Sévérité: 277
+  [ID SWITCH] GT_ID: 4 | Ancien Pred: 283 -> Nouveau Pred: 291 | Taille: 112 pts | Sévérité: 112
+  [FN - Non Détecté] GT_ID: 200 | Taille: 31 pts | Sévérité: 31
+  [ID SWITCH] GT_ID: 198 | Ancien Pred: 271 -> Nouveau Pred: 284 | Taille: 463 pts | Sévérité: 463
+  [SPLIT - Sur-segmentation] GT_ID: 198 divisée en preds: [284, 286, 2] | Taille GT: 463 pts | Sévérité: 338
+  [FN - Non Détecté] GT_ID: 195 | Taille: 24 pts | Sévérité: 24
+  [FN - Non Détecté] GT_ID: 194 | Taille: 100 pts | Sévérité: 100
+  [FN - Non Détecté] GT_ID: 5 | Taille: 2 pts | Sévérité: 2
+--- FRAME 85 ---
+  [ID SWITCH] GT_ID: 198 | Ancien Pred: 284 -> Nouveau Pred: 2 | Taille: 284 pts | Sévérité: 284
+  [FN - Non Détecté] GT_ID: 200 | Taille: 21 pts | Sévérité: 21
+  [SPLIT - Sur-segmentation] GT_ID: 1 divisée en preds: [17, 293] | Taille GT: 671 pts | Sévérité: 421
+  [ID SWITCH] GT_ID: 4 | Ancien Pred: 291 -> Nouveau Pred: 295 | Taille: 128 pts | Sévérité: 128
+  [FN - Non Détecté] GT_ID: 196 | Taille: 21 pts | Sévérité: 21
+  [FN - Non Détecté] GT_ID: 9 | Taille: 1 pts | Sévérité: 1
+  [FN - Non Détecté] GT_ID: 195 | Taille: 23 pts | Sévérité: 23
+  [FN - Non Détecté] GT_ID: 194 | Taille: 96 pts | Sévérité: 96
+  [MERGE - Sous-segmentation] Pred_ID: 248 fusionne les GT: [3, 1] | Taille Pred: 36 pts | Sévérité: 9
+--- FRAME 86 ---
+  [FN - Non Détecté] GT_ID: 11 | Taille: 2 pts | Sévérité: 2
+  [FN - Non Détecté] GT_ID: 200 | Taille: 18 pts | Sévérité: 18
+  [SPLIT - Sur-segmentation] GT_ID: 1 divisée en preds: [17, 297, 298] | Taille GT: 763 pts | Sévérité: 465
+  [ID SWITCH] GT_ID: 4 | Ancien Pred: 295 -> Nouveau Pred: 299 | Taille: 198 pts | Sévérité: 198
+  [SPLIT - Sur-segmentation] GT_ID: 4 divisée en preds: [299, 46] | Taille GT: 198 pts | Sévérité: 100
+  [FN - Non Détecté] GT_ID: 10 | Taille: 1 pts | Sévérité: 1
+  [FN - Non Détecté] GT_ID: 195 | Taille: 11 pts | Sévérité: 11
+  [FN - Non Détecté] GT_ID: 194 | Taille: 102 pts | Sévérité: 102
+  [FN - Non Détecté] GT_ID: 0 | Taille: 1 pts | Sévérité: 1
+  [MERGE - Sous-segmentation] Pred_ID: 248 fusionne les GT: [3, 1] | Taille Pred: 32 pts | Sévérité: 7
+--- FRAME 87 ---
+  [SPLIT - Sur-segmentation] GT_ID: 1 divisée en preds: [17, 304] | Taille GT: 832 pts | Sévérité: 556
+  [ID SWITCH] GT_ID: 4 | Ancien Pred: 299 -> Nouveau Pred: 309 | Taille: 224 pts | Sévérité: 224
+  [SPLIT - Sur-segmentation] GT_ID: 4 divisée en preds: [309, 310, 311] | Taille GT: 224 pts | Sévérité: 156
+  [ID SWITCH] GT_ID: 0 | Ancien Pred: 11 -> Nouveau Pred: 16 | Taille: 2 pts | Sévérité: 2
+  [FN - Non Détecté] GT_ID: 195 | Taille: 14 pts | Sévérité: 14
+  [FN - Non Détecté] GT_ID: 194 | Taille: 92 pts | Sévérité: 92
+--- FRAME 88 ---
+  [ID SWITCH] GT_ID: 15 | Ancien Pred: 11 -> Nouveau Pred: 315 | Taille: 26 pts | Sévérité: 26
+  [ID SWITCH] GT_ID: 2 | Ancien Pred: 16 -> Nouveau Pred: 314 | Taille: 38 pts | Sévérité: 38
+  [ID SWITCH] GT_ID: 4 | Ancien Pred: 309 -> Nouveau Pred: 326 | Taille: 265 pts | Sévérité: 265
+  [SPLIT - Sur-segmentation] GT_ID: 4 divisée en preds: [326, 328] | Taille GT: 265 pts | Sévérité: 148
+  [FN - Non Détecté] GT_ID: 195 | Taille: 19 pts | Sévérité: 19
+  [FN - Non Détecté] GT_ID: 194 | Taille: 74 pts | Sévérité: 74
+  [FN - Non Détecté] GT_ID: 10 | Taille: 1 pts | Sévérité: 1
+  [MERGE - Sous-segmentation] Pred_ID: 248 fusionne les GT: [3, 1] | Taille Pred: 30 pts | Sévérité: 6
+--- FRAME 89 ---
+  [ID SWITCH] GT_ID: 15 | Ancien Pred: 315 -> Nouveau Pred: 331 | Taille: 21 pts | Sévérité: 21
+  [ID SWITCH] GT_ID: 2 | Ancien Pred: 314 -> Nouveau Pred: 330 | Taille: 28 pts | Sévérité: 28
+  [FN - Non Détecté] GT_ID: 200 | Taille: 1 pts | Sévérité: 1
+  [FN - Non Détecté] GT_ID: 196 | Taille: 18 pts | Sévérité: 18
+  [ID SWITCH] GT_ID: 4 | Ancien Pred: 326 -> Nouveau Pred: 344 | Taille: 348 pts | Sévérité: 348
+  [SPLIT - Sur-segmentation] GT_ID: 4 divisée en preds: [344, 345] | Taille GT: 348 pts | Sévérité: 255
+  [FN - Non Détecté] GT_ID: 195 | Taille: 12 pts | Sévérité: 12
+  [FN - Non Détecté] GT_ID: 194 | Taille: 75 pts | Sévérité: 75
+  [FN - Non Détecté] GT_ID: 0 | Taille: 1 pts | Sévérité: 1
+  [MERGE - Sous-segmentation] Pred_ID: 248 fusionne les GT: [3, 1] | Taille Pred: 32 pts | Sévérité: 7
+--- FRAME 90 ---
+  [ID SWITCH] GT_ID: 15 | Ancien Pred: 331 -> Nouveau Pred: 355 | Taille: 29 pts | Sévérité: 29
+  [FN - Non Détecté] GT_ID: 200 | Taille: 6 pts | Sévérité: 6
+  [ID SWITCH] GT_ID: 1 | Ancien Pred: 17 -> Nouveau Pred: 360 | Taille: 1563 pts | Sévérité: 1563
+  [SPLIT - Sur-segmentation] GT_ID: 1 divisée en preds: [360, 362] | Taille GT: 1563 pts | Sévérité: 1126
+  [FN - Non Détecté] GT_ID: 2 | Taille: 4 pts | Sévérité: 4
+  [ID SWITCH] GT_ID: 196 | Ancien Pred: 6 -> Nouveau Pred: 348 | Taille: 15 pts | Sévérité: 15
+  [ID SWITCH] GT_ID: 195 | Ancien Pred: 281 -> Nouveau Pred: 354 | Taille: 14 pts | Sévérité: 14
+  [ID SWITCH] GT_ID: 4 | Ancien Pred: 344 -> Nouveau Pred: 369 | Taille: 466 pts | Sévérité: 466
+  [SPLIT - Sur-segmentation] GT_ID: 4 divisée en preds: [369, 370, 373] | Taille GT: 466 pts | Sévérité: 323
+  [FN - Non Détecté] GT_ID: 6 | Taille: 3 pts | Sévérité: 3
+  [MERGE - Sous-segmentation] Pred_ID: 248 fusionne les GT: [3, 1] | Taille Pred: 31 pts | Sévérité: 8
+--- FRAME 91 ---
+  [ID SWITCH] GT_ID: 15 | Ancien Pred: 355 -> Nouveau Pred: 381 | Taille: 31 pts | Sévérité: 31
+  [ID SWITCH] GT_ID: 2 | Ancien Pred: 330 -> Nouveau Pred: 380 | Taille: 27 pts | Sévérité: 27
+  [FN - Non Détecté] GT_ID: 9 | Taille: 4 pts | Sévérité: 4
+  [FN - Non Détecté] GT_ID: 199 | Taille: 8 pts | Sévérité: 8
+  [FN - Faible Overlap] GT_ID: 1 | Taille: 2107 pts | Max Pred ID: 385 (348 pts) | Sévérité: 1759
+  [SPLIT - Sur-segmentation] GT_ID: 1 divisée en preds: [385, 387, 46] | Taille GT: 2107 pts | Sévérité: 1759
+  [ID SWITCH] GT_ID: 195 | Ancien Pred: 354 -> Nouveau Pred: 6 | Taille: 5 pts | Sévérité: 5
+  [FN - Non Détecté] GT_ID: 198 | Taille: 10 pts | Sévérité: 10
+  [ID SWITCH] GT_ID: 196 | Ancien Pred: 348 -> Nouveau Pred: 375 | Taille: 15 pts | Sévérité: 15
+  [ID SWITCH] GT_ID: 260 | Ancien Pred: 270 -> Nouveau Pred: 374 | Taille: 32 pts | Sévérité: 32
+  [ID SWITCH] GT_ID: 4 | Ancien Pred: 369 -> Nouveau Pred: 396 | Taille: 583 pts | Sévérité: 583
+  [MERGE - Sous-segmentation] Pred_ID: 248 fusionne les GT: [3, 1] | Taille Pred: 28 pts | Sévérité: 8
+  [MERGE - Sous-segmentation] Pred_ID: 374 fusionne les GT: [260, 262] | Taille Pred: 40 pts | Sévérité: 8
+--- FRAME 92 ---
+  [ID SWITCH] GT_ID: 15 | Ancien Pred: 381 -> Nouveau Pred: 404 | Taille: 24 pts | Sévérité: 24
+  [FN - Non Détecté] GT_ID: 9 | Taille: 8 pts | Sévérité: 8
+  [ID SWITCH] GT_ID: 2 | Ancien Pred: 380 -> Nouveau Pred: 403 | Taille: 32 pts | Sévérité: 32
+  [FN - Faible Overlap] GT_ID: 1 | Taille: 2261 pts | Max Pred ID: 17 (97 pts) | Sévérité: 2164
+  [FN - Faible Overlap] GT_ID: 3 | Taille: 1272 pts | Max Pred ID: 1 (140 pts) | Sévérité: 1132
+  [FN - Non Détecté] GT_ID: 196 | Taille: 9 pts | Sévérité: 9
+  [FN - Faible Overlap] GT_ID: 4 | Taille: 752 pts | Max Pred ID: 46 (42 pts) | Sévérité: 710
+  [ID SWITCH] GT_ID: 260 | Ancien Pred: 374 -> Nouveau Pred: 270 | Taille: 35 pts | Sévérité: 35
+  [ID SWITCH] GT_ID: 262 | Ancien Pred: 374 -> Nouveau Pred: 270 | Taille: 2 pts | Sévérité: 2
+  [FN - Non Détecté] GT_ID: 38 | Taille: 1 pts | Sévérité: 1
+  [MERGE - Sous-segmentation] Pred_ID: 248 fusionne les GT: [3, 1] | Taille Pred: 28 pts | Sévérité: 7
+  [MERGE - Sous-segmentation] Pred_ID: 270 fusionne les GT: [1, 260] | Taille Pred: 98 pts | Sévérité: 37
+  [MERGE - Sous-segmentation] Pred_ID: 6 fusionne les GT: [194, 195] | Taille Pred: 84 pts | Sévérité: 15
+--- FRAME 93 ---
+  [ID SWITCH] GT_ID: 15 | Ancien Pred: 404 -> Nouveau Pred: 408 | Taille: 22 pts | Sévérité: 22
+  [ID SWITCH] GT_ID: 1 | Ancien Pred: 360 -> Nouveau Pred: 409 | Taille: 2370 pts | Sévérité: 2370
+  [SPLIT - Sur-segmentation] GT_ID: 1 divisée en preds: [409, 410, 418] | Taille GT: 2370 pts | Sévérité: 1578
+  [ID SWITCH] GT_ID: 2 | Ancien Pred: 403 -> Nouveau Pred: 407 | Taille: 28 pts | Sévérité: 28
+  [FN - Non Détecté] GT_ID: 196 | Taille: 6 pts | Sévérité: 6
+  [FN - Non Détecté] GT_ID: 9 | Taille: 1 pts | Sévérité: 1
+  [ID SWITCH] GT_ID: 4 | Ancien Pred: 396 -> Nouveau Pred: 46 | Taille: 1013 pts | Sévérité: 1013
+  [MERGE - Sous-segmentation] Pred_ID: 248 fusionne les GT: [3, 1] | Taille Pred: 30 pts | Sévérité: 9
+  [MERGE - Sous-segmentation] Pred_ID: 6 fusionne les GT: [194, 195] | Taille Pred: 71 pts | Sévérité: 11
+--- FRAME 94 ---
+  [FN - Faible Overlap] GT_ID: 1 | Taille: 2175 pts | Max Pred ID: 409 (122 pts) | Sévérité: 2053
+  [ID SWITCH] GT_ID: 15 | Ancien Pred: 408 -> Nouveau Pred: 429 | Taille: 22 pts | Sévérité: 22
+  [FN - Faible Overlap] GT_ID: 3 | Taille: 929 pts | Max Pred ID: 1 (45 pts) | Sévérité: 884
+  [ID SWITCH] GT_ID: 2 | Ancien Pred: 407 -> Nouveau Pred: 428 | Taille: 27 pts | Sévérité: 27
+  [ID SWITCH] GT_ID: 198 | Ancien Pred: 2 -> Nouveau Pred: 13 | Taille: 116 pts | Sévérité: 116
+  [SPLIT - Sur-segmentation] GT_ID: 198 divisée en preds: [13, 2] | Taille GT: 116 pts | Sévérité: 52
+  [FN - Non Détecté] GT_ID: 199 | Taille: 3 pts | Sévérité: 3
+  [FN - Non Détecté] GT_ID: 200 | Taille: 8 pts | Sévérité: 8
+  [ID SWITCH] GT_ID: 196 | Ancien Pred: 375 -> Nouveau Pred: 425 | Taille: 10 pts | Sévérité: 10
+  [SPLIT - Sur-segmentation] GT_ID: 195 divisée en preds: [6, 425] | Taille GT: 2 pts | Sévérité: 1
+  [FN - Non Détecté] GT_ID: 10 | Taille: 2 pts | Sévérité: 2
+  [FN - Faible Overlap] GT_ID: 4 | Taille: 1456 pts | Max Pred ID: 46 (40 pts) | Sévérité: 1416
+  [MERGE - Sous-segmentation] Pred_ID: 248 fusionne les GT: [3, 1] | Taille Pred: 23 pts | Sévérité: 6
+--- FRAME 95 ---
+  [ID SWITCH] GT_ID: 1 | Ancien Pred: 409 -> Nouveau Pred: 46 | Taille: 1795 pts | Sévérité: 1795
+  [SPLIT - Sur-segmentation] GT_ID: 1 divisée en preds: [46, 448] | Taille GT: 1795 pts | Sévérité: 350
+  [ID SWITCH] GT_ID: 15 | Ancien Pred: 429 -> Nouveau Pred: 435 | Taille: 13 pts | Sévérité: 13
+  [ID SWITCH] GT_ID: 198 | Ancien Pred: 13 -> Nouveau Pred: 431 | Taille: 119 pts | Sévérité: 119
+  [SPLIT - Sur-segmentation] GT_ID: 198 divisée en preds: [431, 13, 2] | Taille GT: 119 pts | Sévérité: 62
+  [FN - Non Détecté] GT_ID: 200 | Taille: 8 pts | Sévérité: 8
+  [FN - Non Détecté] GT_ID: 196 | Taille: 9 pts | Sévérité: 9
+  [ID SWITCH] GT_ID: 2 | Ancien Pred: 428 -> Nouveau Pred: 434 | Taille: 15 pts | Sévérité: 15
+  [FN - Non Détecté] GT_ID: 194 | Taille: 49 pts | Sévérité: 49
+  [FN - Non Détecté] GT_ID: 195 | Taille: 2 pts | Sévérité: 2
+  [FN - Non Détecté] GT_ID: 9 | Taille: 1 pts | Sévérité: 1
+  [FN - Non Détecté] GT_ID: 24 | Taille: 1 pts | Sévérité: 1
+  [ID SWITCH] GT_ID: 4 | Ancien Pred: 46 -> Nouveau Pred: 436 | Taille: 1851 pts | Sévérité: 1851
+  [SPLIT - Sur-segmentation] GT_ID: 4 divisée en preds: [436, 446, 443] | Taille GT: 1851 pts | Sévérité: 1076
+  [MERGE - Sous-segmentation] Pred_ID: 270 fusionne les GT: [260, 262] | Taille Pred: 43 pts | Sévérité: 8
+  [MERGE - Sous-segmentation] Pred_ID: 248 fusionne les GT: [3, 1] | Taille Pred: 24 pts | Sévérité: 8
+--- FRAME 96 ---
+  [FN - Faible Overlap] GT_ID: 1 | Taille: 1414 pts | Max Pred ID: 17 (128 pts) | Sévérité: 1286
+  [ID SWITCH] GT_ID: 15 | Ancien Pred: 435 -> Nouveau Pred: 453 | Taille: 9 pts | Sévérité: 9
+  [FN - Non Détecté] GT_ID: 195 | Taille: 8 pts | Sévérité: 8
+  [ID SWITCH] GT_ID: 2 | Ancien Pred: 434 -> Nouveau Pred: 453 | Taille: 8 pts | Sévérité: 8
+  [ID SWITCH] GT_ID: 198 | Ancien Pred: 431 -> Nouveau Pred: 13 | Taille: 91 pts | Sévérité: 91
+  [FN - Non Détecté] GT_ID: 199 | Taille: 1 pts | Sévérité: 1
+  [FN - Non Détecté] GT_ID: 200 | Taille: 9 pts | Sévérité: 9
+  [FN - Non Détecté] GT_ID: 9 | Taille: 1 pts | Sévérité: 1
+  [FN - Non Détecté] GT_ID: 10 | Taille: 1 pts | Sévérité: 1
+  [FN - Non Détecté] GT_ID: 4 | Taille: 1977 pts | Sévérité: 1977
+  [MERGE - Sous-segmentation] Pred_ID: 248 fusionne les GT: [3, 1] | Taille Pred: 21 pts | Sévérité: 10
+  [MERGE - Sous-segmentation] Pred_ID: 453 fusionne les GT: [15, 2] | Taille Pred: 17 pts | Sévérité: 8
+--- FRAME 97 ---
+  [ID SWITCH] GT_ID: 1 | Ancien Pred: 46 -> Nouveau Pred: 460 | Taille: 1034 pts | Sévérité: 1034
+  [SPLIT - Sur-segmentation] GT_ID: 1 divisée en preds: [460, 466] | Taille GT: 1034 pts | Sévérité: 509
+  [FN - Non Détecté] GT_ID: 15 | Taille: 7 pts | Sévérité: 7
+  [FN - Non Détecté] GT_ID: 2 | Taille: 4 pts | Sévérité: 4
+  [FN - Non Détecté] GT_ID: 200 | Taille: 7 pts | Sévérité: 7
+  [FN - Non Détecté] GT_ID: 199 | Taille: 3 pts | Sévérité: 3
+  [FN - Non Détecté] GT_ID: 25 | Taille: 4 pts | Sévérité: 4
+  [ID SWITCH] GT_ID: 4 | Ancien Pred: 436 -> Nouveau Pred: 454 | Taille: 1808 pts | Sévérité: 1808
+  [SPLIT - Sur-segmentation] GT_ID: 4 divisée en preds: [454, 459] | Taille GT: 1808 pts | Sévérité: 553
+  [MERGE - Sous-segmentation] Pred_ID: 270 fusionne les GT: [260, 262] | Taille Pred: 48 pts | Sévérité: 8
+  [MERGE - Sous-segmentation] Pred_ID: 248 fusionne les GT: [1, 3] | Taille Pred: 16 pts | Sévérité: 8
+--- FRAME 98 ---
+  [ID SWITCH] GT_ID: 200 | Ancien Pred: 259 -> Nouveau Pred: 467 | Taille: 14 pts | Sévérité: 14
+  [ID SWITCH] GT_ID: 1 | Ancien Pred: 460 -> Nouveau Pred: 480 | Taille: 670 pts | Sévérité: 670
+  [FN - Faible Overlap] GT_ID: 3 | Taille: 526 pts | Max Pred ID: 1 (86 pts) | Sévérité: 440
+  [FN - Non Détecté] GT_ID: 25 | Taille: 5 pts | Sévérité: 5
+  [ID SWITCH] GT_ID: 4 | Ancien Pred: 454 -> Nouveau Pred: 468 | Taille: 1388 pts | Sévérité: 1388
+  [SPLIT - Sur-segmentation] GT_ID: 4 divisée en preds: [468, 475, 469] | Taille GT: 1388 pts | Sévérité: 901
+  [MERGE - Sous-segmentation] Pred_ID: 270 fusionne les GT: [260, 262] | Taille Pred: 46 pts | Sévérité: 11
+  [MERGE - Sous-segmentation] Pred_ID: 248 fusionne les GT: [3, 1] | Taille Pred: 17 pts | Sévérité: 8
+--- FRAME 99 ---
+  [FN - Non Détecté] GT_ID: 199 | Taille: 4 pts | Sévérité: 4
+  [FN - Non Détecté] GT_ID: 200 | Taille: 9 pts | Sévérité: 9
+  [ID SWITCH] GT_ID: 1 | Ancien Pred: 480 -> Nouveau Pred: 493 | Taille: 526 pts | Sévérité: 526
+  [SPLIT - Sur-segmentation] GT_ID: 1 divisée en preds: [493, 17, 46, 494, 496] | Taille GT: 526 pts | Sévérité: 383
+  [FN - Non Détecté] GT_ID: 10 | Taille: 1 pts | Sévérité: 1
+  [FN - Non Détecté] GT_ID: 25 | Taille: 2 pts | Sévérité: 2
+  [FN - Non Détecté] GT_ID: 194 | Taille: 2 pts | Sévérité: 2
+  [ID SWITCH] GT_ID: 4 | Ancien Pred: 468 -> Nouveau Pred: 488 | Taille: 1092 pts | Sévérité: 1092
+  [SPLIT - Sur-segmentation] GT_ID: 4 divisée en preds: [488, 492, 489, 486] | Taille GT: 1092 pts | Sévérité: 862
+  [MERGE - Sous-segmentation] Pred_ID: 248 fusionne les GT: [1, 3] | Taille Pred: 13 pts | Sévérité: 4
+--- FRAME 100 ---
+  [ID SWITCH] GT_ID: 200 | Ancien Pred: 467 -> Nouveau Pred: 2 | Taille: 18 pts | Sévérité: 18
+  [FN - Non Détecté] GT_ID: 9 | Taille: 1 pts | Sévérité: 1
+  [FN - Non Détecté] GT_ID: 11 | Taille: 5 pts | Sévérité: 5
+  [ID SWITCH] GT_ID: 1 | Ancien Pred: 493 -> Nouveau Pred: 512 | Taille: 447 pts | Sévérité: 447
+  [SPLIT - Sur-segmentation] GT_ID: 1 divisée en preds: [512, 17] | Taille GT: 447 pts | Sévérité: 181
+  [ID SWITCH] GT_ID: 195 | Ancien Pred: 6 -> Nouveau Pred: 17 | Taille: 9 pts | Sévérité: 9
+  [ID SWITCH] GT_ID: 199 | Ancien Pred: 13 -> Nouveau Pred: 2 | Taille: 10 pts | Sévérité: 10
+  [ID SWITCH] GT_ID: 194 | Ancien Pred: 6 -> Nouveau Pred: 17 | Taille: 3 pts | Sévérité: 3
+  [ID SWITCH] GT_ID: 4 | Ancien Pred: 488 -> Nouveau Pred: 505 | Taille: 740 pts | Sévérité: 740
+  [SPLIT - Sur-segmentation] GT_ID: 4 divisée en preds: [505, 500] | Taille GT: 740 pts | Sévérité: 557
+  [MERGE - Sous-segmentation] Pred_ID: 2 fusionne les GT: [200, 199] | Taille Pred: 28 pts | Sévérité: 10
+--- FRAME 101 ---
+  [ID SWITCH] GT_ID: 1 | Ancien Pred: 512 -> Nouveau Pred: 529 | Taille: 379 pts | Sévérité: 379
+  [SPLIT - Sur-segmentation] GT_ID: 1 divisée en preds: [529, 530] | Taille GT: 379 pts | Sévérité: 241
+  [FN - Non Détecté] GT_ID: 194 | Taille: 1 pts | Sévérité: 1
+  [FN - Faible Overlap] GT_ID: 3 | Taille: 402 pts | Max Pred ID: 1 (41 pts) | Sévérité: 361
+  [FN - Non Détecté] GT_ID: 25 | Taille: 1 pts | Sévérité: 1
+  [FN - Faible Overlap] GT_ID: 4 | Taille: 540 pts | Max Pred ID: 518 (84 pts) | Sévérité: 456
+  [FN - Non Détecté] GT_ID: 0 | Taille: 2 pts | Sévérité: 2
+  [MERGE - Sous-segmentation] Pred_ID: 2 fusionne les GT: [199, 200] | Taille Pred: 46 pts | Sévérité: 11
+--- FRAME 102 ---
+  [FN - Non Détecté] GT_ID: 262 | Taille: 12 pts | Sévérité: 12
+  [FN - Faible Overlap] GT_ID: 1 | Taille: 333 pts | Max Pred ID: 6 (60 pts) | Sévérité: 273
+  [SPLIT - Sur-segmentation] GT_ID: 1 divisée en preds: [6, 543, 544, 17] | Taille GT: 333 pts | Sévérité: 273
+  [FN - Non Détecté] GT_ID: 10 | Taille: 1 pts | Sévérité: 1
+  [SPLIT - Sur-segmentation] GT_ID: 3 divisée en preds: [1, 533] | Taille GT: 324 pts | Sévérité: 165
+  [FN - Non Détecté] GT_ID: 25 | Taille: 3 pts | Sévérité: 3
+  [ID SWITCH] GT_ID: 4 | Ancien Pred: 505 -> Nouveau Pred: 536 | Taille: 409 pts | Sévérité: 409
+  [SPLIT - Sur-segmentation] GT_ID: 4 divisée en preds: [536, 538, 537] | Taille GT: 409 pts | Sévérité: 316
+  [FN - Non Détecté] GT_ID: 195 | Taille: 1 pts | Sévérité: 1
+  [FN - Non Détecté] GT_ID: 194 | Taille: 1 pts | Sévérité: 1
+  [MERGE - Sous-segmentation] Pred_ID: 2 fusionne les GT: [199, 200] | Taille Pred: 26 pts | Sévérité: 11
+--- FRAME 103 ---
+  [ID SWITCH] GT_ID: 1 | Ancien Pred: 529 -> Nouveau Pred: 553 | Taille: 236 pts | Sévérité: 236
+  [SPLIT - Sur-segmentation] GT_ID: 1 divisée en preds: [553, 6, 554, 555, 17] | Taille GT: 236 pts | Sévérité: 138
+  [FN - Non Détecté] GT_ID: 10 | Taille: 1 pts | Sévérité: 1
+  [ID SWITCH] GT_ID: 4 | Ancien Pred: 536 -> Nouveau Pred: 549 | Taille: 330 pts | Sévérité: 330
+  [SPLIT - Sur-segmentation] GT_ID: 4 divisée en preds: [549, 551, 550] | Taille GT: 330 pts | Sévérité: 252
+  [FN - Non Détecté] GT_ID: 0 | Taille: 2 pts | Sévérité: 2
+  [MERGE - Sous-segmentation] Pred_ID: 2 fusionne les GT: [199, 200] | Taille Pred: 24 pts | Sévérité: 4
+--- FRAME 104 ---
+  [FN - Non Détecté] GT_ID: 261 | Taille: 1 pts | Sévérité: 1
+  [ID SWITCH] GT_ID: 1 | Ancien Pred: 553 -> Nouveau Pred: 46 | Taille: 185 pts | Sévérité: 185
+  [SPLIT - Sur-segmentation] GT_ID: 1 divisée en preds: [46, 17] | Taille GT: 185 pts | Sévérité: 45
+  [FN - Non Détecté] GT_ID: 11 | Taille: 6 pts | Sévérité: 6
+  [ID SWITCH] GT_ID: 4 | Ancien Pred: 549 -> Nouveau Pred: 557 | Taille: 238 pts | Sévérité: 238
+  [SPLIT - Sur-segmentation] GT_ID: 4 divisée en preds: [557, 46, 559, 558] | Taille GT: 238 pts | Sévérité: 172
+  [ID SWITCH] GT_ID: 0 | Ancien Pred: 16 -> Nouveau Pred: 17 | Taille: 1 pts | Sévérité: 1
+  [MERGE - Sous-segmentation] Pred_ID: 46 fusionne les GT: [1, 4] | Taille Pred: 177 pts | Sévérité: 37
+--- FRAME 105 ---
+  [FN - Non Détecté] GT_ID: 261 | Taille: 2 pts | Sévérité: 2
+  [SPLIT - Sur-segmentation] GT_ID: 1 divisée en preds: [46, 17] | Taille GT: 191 pts | Sévérité: 64
+  [FN - Non Détecté] GT_ID: 4 | Taille: 202 pts | Sévérité: 202
+  [FN - Non Détecté] GT_ID: 24 | Taille: 3 pts | Sévérité: 3
+  [FN - Non Détecté] GT_ID: 25 | Taille: 1 pts | Sévérité: 1
+--- FRAME 106 ---
+  [FN - Non Détecté] GT_ID: 261 | Taille: 2 pts | Sévérité: 2
+  [SPLIT - Sur-segmentation] GT_ID: 1 divisée en preds: [46, 17] | Taille GT: 153 pts | Sévérité: 58
+  [FN - Non Détecté] GT_ID: 4 | Taille: 160 pts | Sévérité: 160
+  [FN - Non Détecté] GT_ID: 194 | Taille: 2 pts | Sévérité: 2
+  [FN - Non Détecté] GT_ID: 24 | Taille: 6 pts | Sévérité: 6
+  [FN - Non Détecté] GT_ID: 25 | Taille: 1 pts | Sévérité: 1
+  [MERGE - Sous-segmentation] Pred_ID: 270 fusionne les GT: [260, 262] | Taille Pred: 119 pts | Sévérité: 14
+--- FRAME 107 ---
+  [FN - Non Détecté] GT_ID: 261 | Taille: 5 pts | Sévérité: 5
+  [SPLIT - Sur-segmentation] GT_ID: 1 divisée en preds: [46, 17] | Taille GT: 130 pts | Sévérité: 52
+  [FN - Non Détecté] GT_ID: 15 | Taille: 1 pts | Sévérité: 1
+  [FN - Non Détecté] GT_ID: 4 | Taille: 136 pts | Sévérité: 136
+  [FN - Non Détecté] GT_ID: 0 | Taille: 1 pts | Sévérité: 1
+  [FN - Non Détecté] GT_ID: 194 | Taille: 1 pts | Sévérité: 1
+  [FN - Non Détecté] GT_ID: 24 | Taille: 8 pts | Sévérité: 8
+  [FN - Non Détecté] GT_ID: 25 | Taille: 3 pts | Sévérité: 3
+  [MERGE - Sous-segmentation] Pred_ID: 270 fusionne les GT: [260, 262] | Taille Pred: 83 pts | Sévérité: 14
+--- FRAME 108 ---
+  [FN - Non Détecté] GT_ID: 261 | Taille: 6 pts | Sévérité: 6
+  [ID SWITCH] GT_ID: 1 | Ancien Pred: 46 -> Nouveau Pred: 17 | Taille: 106 pts | Sévérité: 106
+  [SPLIT - Sur-segmentation] GT_ID: 1 divisée en preds: [17, 46] | Taille GT: 106 pts | Sévérité: 48
+  [FN - Non Détecté] GT_ID: 15 | Taille: 9 pts | Sévérité: 9
+  [FN - Non Détecté] GT_ID: 4 | Taille: 110 pts | Sévérité: 110
+  [FN - Non Détecté] GT_ID: 0 | Taille: 1 pts | Sévérité: 1
+  [FN - Non Détecté] GT_ID: 24 | Taille: 7 pts | Sévérité: 7
+  [FN - Non Détecté] GT_ID: 25 | Taille: 2 pts | Sévérité: 2
+  [MERGE - Sous-segmentation] Pred_ID: 270 fusionne les GT: [260, 262] | Taille Pred: 159 pts | Sévérité: 16
+--- FRAME 109 ---
+  [FN - Non Détecté] GT_ID: 261 | Taille: 6 pts | Sévérité: 6
+  [SPLIT - Sur-segmentation] GT_ID: 1 divisée en preds: [17, 46] | Taille GT: 83 pts | Sévérité: 32
+  [ID SWITCH] GT_ID: 15 | Ancien Pred: 453 -> Nouveau Pred: 564 | Taille: 11 pts | Sévérité: 11
+  [ID SWITCH] GT_ID: 4 | Ancien Pred: 557 -> Nouveau Pred: 565 | Taille: 88 pts | Sévérité: 88
+  [ID SWITCH] GT_ID: 0 | Ancien Pred: 17 -> Nouveau Pred: 564 | Taille: 2 pts | Sévérité: 2
+  [FN - Non Détecté] GT_ID: 194 | Taille: 3 pts | Sévérité: 3
+  [FN - Non Détecté] GT_ID: 24 | Taille: 7 pts | Sévérité: 7
+  [FN - Non Détecté] GT_ID: 25 | Taille: 2 pts | Sévérité: 2
+  [MERGE - Sous-segmentation] Pred_ID: 564 fusionne les GT: [15, 0] | Taille Pred: 13 pts | Sévérité: 2
+--- FRAME 110 ---
+  [FN - Non Détecté] GT_ID: 261 | Taille: 7 pts | Sévérité: 7
+  [SPLIT - Sur-segmentation] GT_ID: 1 divisée en preds: [17, 46] | Taille GT: 64 pts | Sévérité: 13
+  [FN - Non Détecté] GT_ID: 15 | Taille: 10 pts | Sévérité: 10
+  [FN - Non Détecté] GT_ID: 24 | Taille: 8 pts | Sévérité: 8
+  [ID SWITCH] GT_ID: 0 | Ancien Pred: 564 -> Nouveau Pred: 17 | Taille: 2 pts | Sévérité: 2
+  [MERGE - Sous-segmentation] Pred_ID: 270 fusionne les GT: [260, 262] | Taille Pred: 208 pts | Sévérité: 25
+--- FRAME 111 ---
+  [ID SWITCH] GT_ID: 15 | Ancien Pred: 564 -> Nouveau Pred: 568 | Taille: 13 pts | Sévérité: 13
+  [ID SWITCH] GT_ID: 24 | Ancien Pred: 8 -> Nouveau Pred: 567 | Taille: 14 pts | Sévérité: 14
+  [MERGE - Sous-segmentation] Pred_ID: 270 fusionne les GT: [260, 262] | Taille Pred: 183 pts | Sévérité: 26
+--- FRAME 112 ---
+  [SPLIT - Sur-segmentation] GT_ID: 1 divisée en preds: [17, 46] | Taille GT: 41 pts | Sévérité: 18
+  [ID SWITCH] GT_ID: 15 | Ancien Pred: 568 -> Nouveau Pred: 569 | Taille: 11 pts | Sévérité: 11
+  [MERGE - Sous-segmentation] Pred_ID: 270 fusionne les GT: [260, 262] | Taille Pred: 217 pts | Sévérité: 23
+--- FRAME 113 ---
+  [ID SWITCH] GT_ID: 1 | Ancien Pred: 17 -> Nouveau Pred: 46 | Taille: 35 pts | Sévérité: 35
+  [FN - Non Détecté] GT_ID: 15 | Taille: 9 pts | Sévérité: 9
+  [MERGE - Sous-segmentation] Pred_ID: 270 fusionne les GT: [260, 262] | Taille Pred: 269 pts | Sévérité: 28
+--- FRAME 114 ---
+  [ID SWITCH] GT_ID: 1 | Ancien Pred: 46 -> Nouveau Pred: 17 | Taille: 63 pts | Sévérité: 63
+  [SPLIT - Sur-segmentation] GT_ID: 1 divisée en preds: [17, 46] | Taille GT: 63 pts | Sévérité: 29
+  [FN - Non Détecté] GT_ID: 24 | Taille: 6 pts | Sévérité: 6
+  [ID SWITCH] GT_ID: 0 | Ancien Pred: 17 -> Nouveau Pred: 46 | Taille: 1 pts | Sévérité: 1
+  [MERGE - Sous-segmentation] Pred_ID: 270 fusionne les GT: [260, 262] | Taille Pred: 254 pts | Sévérité: 34
+--- FRAME 115 ---
+  [ID SWITCH] GT_ID: 1 | Ancien Pred: 17 -> Nouveau Pred: 46 | Taille: 51 pts | Sévérité: 51
+  [SPLIT - Sur-segmentation] GT_ID: 1 divisée en preds: [46, 17] | Taille GT: 51 pts | Sévérité: 14
+  [ID SWITCH] GT_ID: 0 | Ancien Pred: 46 -> Nouveau Pred: 17 | Taille: 1 pts | Sévérité: 1
+  [FN - Non Détecté] GT_ID: 24 | Taille: 10 pts | Sévérité: 10
+  [MERGE - Sous-segmentation] Pred_ID: 566 fusionne les GT: [261, 263] | Taille Pred: 31 pts | Sévérité: 4
+  [MERGE - Sous-segmentation] Pred_ID: 270 fusionne les GT: [260, 262] | Taille Pred: 313 pts | Sévérité: 41
+--- FRAME 116 ---
+  [SPLIT - Sur-segmentation] GT_ID: 1 divisée en preds: [46, 17] | Taille GT: 53 pts | Sévérité: 13
+  [FN - Non Détecté] GT_ID: 259 | Taille: 6 pts | Sévérité: 6
+  [FN - Non Détecté] GT_ID: 198 | Taille: 7 pts | Sévérité: 7
+  [ID SWITCH] GT_ID: 0 | Ancien Pred: 17 -> Nouveau Pred: 1 | Taille: 1 pts | Sévérité: 1
+  [MERGE - Sous-segmentation] Pred_ID: 270 fusionne les GT: [260, 262] | Taille Pred: 382 pts | Sévérité: 59
+--- FRAME 117 ---
+  [SPLIT - Sur-segmentation] GT_ID: 1 divisée en preds: [46, 17] | Taille GT: 49 pts | Sévérité: 12
+  [FN - Non Détecté] GT_ID: 259 | Taille: 3 pts | Sévérité: 3
+  [MERGE - Sous-segmentation] Pred_ID: 270 fusionne les GT: [260, 262] | Taille Pred: 292 pts | Sévérité: 54
+--- FRAME 118 ---
+  [FN - Non Détecté] GT_ID: 259 | Taille: 6 pts | Sévérité: 6
+  [MERGE - Sous-segmentation] Pred_ID: 270 fusionne les GT: [260, 262] | Taille Pred: 383 pts | Sévérité: 78
+--- FRAME 119 ---
+  [FN - Non Détecté] GT_ID: 259 | Taille: 6 pts | Sévérité: 6
+  [MERGE - Sous-segmentation] Pred_ID: 270 fusionne les GT: [260, 262] | Taille Pred: 266 pts | Sévérité: 101
+--- FRAME 120 ---
+  [FN - Non Détecté] GT_ID: 260 | Taille: 737 pts | Sévérité: 737
+  [FN - Non Détecté] GT_ID: 198 | Taille: 8 pts | Sévérité: 8
+--- FRAME 121 ---
+  [FN - Non Détecté] GT_ID: 259 | Taille: 7 pts | Sévérité: 7
+  [FN - Faible Overlap] GT_ID: 260 | Taille: 888 pts | Max Pred ID: 573 (135 pts) | Sévérité: 753
+  [SPLIT - Sur-segmentation] GT_ID: 260 divisée en preds: [573, 575, 577] | Taille GT: 888 pts | Sévérité: 753
+  [FN - Non Détecté] GT_ID: 198 | Taille: 5 pts | Sévérité: 5
+--- FRAME 122 ---
+  [FN - Faible Overlap] GT_ID: 262 | Taille: 246 pts | Max Pred ID: 270 (43 pts) | Sévérité: 203
+  [FN - Non Détecté] GT_ID: 260 | Taille: 930 pts | Sévérité: 930
+--- FRAME 123 ---
+  [FN - Non Détecté] GT_ID: 259 | Taille: 9 pts | Sévérité: 9
+  [SPLIT - Sur-segmentation] GT_ID: 262 divisée en preds: [270, 593] | Taille GT: 299 pts | Sévérité: 164
+  [FN - Faible Overlap] GT_ID: 260 | Taille: 1054 pts | Max Pred ID: 582 (179 pts) | Sévérité: 875
+  [SPLIT - Sur-segmentation] GT_ID: 260 divisée en preds: [582, 583] | Taille GT: 1054 pts | Sévérité: 875
+--- FRAME 124 ---
+  [ID SWITCH] GT_ID: 259 | Ancien Pred: 566 -> Nouveau Pred: 607 | Taille: 17 pts | Sévérité: 17
+  [ID SWITCH] GT_ID: 262 | Ancien Pred: 270 -> Nouveau Pred: 605 | Taille: 367 pts | Sévérité: 367
+  [FN - Faible Overlap] GT_ID: 260 | Taille: 1169 pts | Max Pred ID: 270 (157 pts) | Sévérité: 1012
+  [FN - Non Détecté] GT_ID: 258 | Taille: 1 pts | Sévérité: 1
+--- FRAME 125 ---
+  [ID SWITCH] GT_ID: 263 | Ancien Pred: 566 -> Nouveau Pred: 623 | Taille: 16 pts | Sévérité: 16
+  [ID SWITCH] GT_ID: 259 | Ancien Pred: 607 -> Nouveau Pred: 624 | Taille: 13 pts | Sévérité: 13
+  [ID SWITCH] GT_ID: 262 | Ancien Pred: 605 -> Nouveau Pred: 17 | Taille: 480 pts | Sévérité: 480
+  [ID SWITCH] GT_ID: 260 | Ancien Pred: 270 -> Nouveau Pred: 13 | Taille: 1391 pts | Sévérité: 1391
+  [SPLIT - Sur-segmentation] GT_ID: 260 divisée en preds: [13, 270, 613] | Taille GT: 1391 pts | Sévérité: 935
+  [FN - Non Détecté] GT_ID: 258 | Taille: 1 pts | Sévérité: 1
+--- FRAME 126 ---
+  [ID SWITCH] GT_ID: 263 | Ancien Pred: 623 -> Nouveau Pred: 13 | Taille: 16 pts | Sévérité: 16
+  [SPLIT - Sur-segmentation] GT_ID: 263 divisée en preds: [13, 566] | Taille GT: 16 pts | Sévérité: 2
+  [ID SWITCH] GT_ID: 259 | Ancien Pred: 624 -> Nouveau Pred: 566 | Taille: 17 pts | Sévérité: 17
+  [ID SWITCH] GT_ID: 261 | Ancien Pred: 566 -> Nouveau Pred: 270 | Taille: 132 pts | Sévérité: 132
+  [FN - Non Détecté] GT_ID: 257 | Taille: 4 pts | Sévérité: 4
+  [FN - Faible Overlap] GT_ID: 262 | Taille: 625 pts | Max Pred ID: 17 (82 pts) | Sévérité: 543
+  [FN - Non Détecté] GT_ID: 260 | Taille: 1888 pts | Sévérité: 1888
+  [FN - Non Détecté] GT_ID: 258 | Taille: 2 pts | Sévérité: 2
+  [MERGE - Sous-segmentation] Pred_ID: 566 fusionne les GT: [259, 263] | Taille Pred: 19 pts | Sévérité: 2
+--- FRAME 127 ---
+  [FN - Non Détecté] GT_ID: 257 | Taille: 6 pts | Sévérité: 6
+  [ID SWITCH] GT_ID: 263 | Ancien Pred: 13 -> Nouveau Pred: 566 | Taille: 23 pts | Sévérité: 23
+  [ID SWITCH] GT_ID: 259 | Ancien Pred: 566 -> Nouveau Pred: 13 | Taille: 16 pts | Sévérité: 16
+  [ID SWITCH] GT_ID: 262 | Ancien Pred: 17 -> Nouveau Pred: 642 | Taille: 851 pts | Sévérité: 851
+  [ID SWITCH] GT_ID: 260 | Ancien Pred: 13 -> Nouveau Pred: 17 | Taille: 2959 pts | Sévérité: 2959
+--- FRAME 128 ---
+  [ID SWITCH] GT_ID: 259 | Ancien Pred: 13 -> Nouveau Pred: 650 | Taille: 29 pts | Sévérité: 29
+  [FN - Non Détecté] GT_ID: 257 | Taille: 4 pts | Sévérité: 4
+  [ID SWITCH] GT_ID: 261 | Ancien Pred: 270 -> Nouveau Pred: 13 | Taille: 163 pts | Sévérité: 163
+  [SPLIT - Sur-segmentation] GT_ID: 261 divisée en preds: [13, 270] | Taille GT: 163 pts | Sévérité: 120
+  [FN - Faible Overlap] GT_ID: 262 | Taille: 1101 pts | Max Pred ID: 642 (140 pts) | Sévérité: 961
+  [FN - Faible Overlap] GT_ID: 260 | Taille: 4370 pts | Max Pred ID: 17 (658 pts) | Sévérité: 3712
+--- FRAME 129 ---
+  [FN - Non Détecté] GT_ID: 257 | Taille: 8 pts | Sévérité: 8
+  [ID SWITCH] GT_ID: 263 | Ancien Pred: 566 -> Nouveau Pred: 664 | Taille: 24 pts | Sévérité: 24
+  [ID SWITCH] GT_ID: 259 | Ancien Pred: 650 -> Nouveau Pred: 665 | Taille: 25 pts | Sévérité: 25
+  [ID SWITCH] GT_ID: 261 | Ancien Pred: 13 -> Nouveau Pred: 566 | Taille: 177 pts | Sévérité: 177
+  [FN - Non Détecté] GT_ID: 4 | Taille: 9 pts | Sévérité: 9
+  [ID SWITCH] GT_ID: 262 | Ancien Pred: 642 -> Nouveau Pred: 661 | Taille: 1363 pts | Sévérité: 1363
+--- FRAME 130 ---
+  [ID SWITCH] GT_ID: 263 | Ancien Pred: 664 -> Nouveau Pred: 13 | Taille: 30 pts | Sévérité: 30
+  [ID SWITCH] GT_ID: 259 | Ancien Pred: 665 -> Nouveau Pred: 566 | Taille: 31 pts | Sévérité: 31
+  [FN - Non Détecté] GT_ID: 257 | Taille: 3 pts | Sévérité: 3
+  [ID SWITCH] GT_ID: 261 | Ancien Pred: 566 -> Nouveau Pred: 270 | Taille: 207 pts | Sévérité: 207
+  [SPLIT - Sur-segmentation] GT_ID: 261 divisée en preds: [270, 667] | Taille GT: 207 pts | Sévérité: 63
+  [FN - Non Détecté] GT_ID: 262 | Taille: 1820 pts | Sévérité: 1820
+--- FRAME 131 ---
+  [FN - Non Détecté] GT_ID: 257 | Taille: 8 pts | Sévérité: 8
+  [ID SWITCH] GT_ID: 263 | Ancien Pred: 13 -> Nouveau Pred: 270 | Taille: 36 pts | Sévérité: 36
+  [FN - Faible Overlap] GT_ID: 261 | Taille: 227 pts | Max Pred ID: 1 (42 pts) | Sévérité: 185
+  [SPLIT - Sur-segmentation] GT_ID: 261 divisée en preds: [1, 13] | Taille GT: 227 pts | Sévérité: 185
+  [FN - Faible Overlap] GT_ID: 262 | Taille: 2404 pts | Max Pred ID: 17 (26 pts) | Sévérité: 2378
+  [FN - Faible Overlap] GT_ID: 260 | Taille: 6171 pts | Max Pred ID: 17 (351 pts) | Sévérité: 5820
+--- FRAME 132 ---
+  [ID SWITCH] GT_ID: 263 | Ancien Pred: 270 -> Nouveau Pred: 689 | Taille: 40 pts | Sévérité: 40
+  [ID SWITCH] GT_ID: 261 | Ancien Pred: 270 -> Nouveau Pred: 13 | Taille: 273 pts | Sévérité: 273
+  [SPLIT - Sur-segmentation] GT_ID: 261 divisée en preds: [13, 566] | Taille GT: 273 pts | Sévérité: 201
+  [ID SWITCH] GT_ID: 259 | Ancien Pred: 566 -> Nouveau Pred: 270 | Taille: 29 pts | Sévérité: 29
+  [ID SWITCH] GT_ID: 262 | Ancien Pred: 661 -> Nouveau Pred: 686 | Taille: 4026 pts | Sévérité: 4026
+--- FRAME 133 ---
+  [ID SWITCH] GT_ID: 263 | Ancien Pred: 689 -> Nouveau Pred: 566 | Taille: 53 pts | Sévérité: 53
+  [ID SWITCH] GT_ID: 259 | Ancien Pred: 270 -> Nouveau Pred: 694 | Taille: 46 pts | Sévérité: 46
+  [FN - Non Détecté] GT_ID: 257 | Taille: 7 pts | Sévérité: 7
+  [FN - Non Détecté] GT_ID: 256 | Taille: 4 pts | Sévérité: 4
+  [SPLIT - Sur-segmentation] GT_ID: 261 divisée en preds: [13, 270] | Taille GT: 316 pts | Sévérité: 231
+  [FN - Faible Overlap] GT_ID: 262 | Taille: 5870 pts | Max Pred ID: 686 (295 pts) | Sévérité: 5575
+  [FN - Faible Overlap] GT_ID: 260 | Taille: 5250 pts | Max Pred ID: 17 (796 pts) | Sévérité: 4454
+--- FRAME 134 ---
+  [ID SWITCH] GT_ID: 257 | Ancien Pred: 674 -> Nouveau Pred: 707 | Taille: 14 pts | Sévérité: 14
+  [ID SWITCH] GT_ID: 263 | Ancien Pred: 566 -> Nouveau Pred: 712 | Taille: 62 pts | Sévérité: 62
+  [ID SWITCH] GT_ID: 259 | Ancien Pred: 694 -> Nouveau Pred: 713 | Taille: 43 pts | Sévérité: 43
+  [FN - Faible Overlap] GT_ID: 261 | Taille: 378 pts | Max Pred ID: 566 (55 pts) | Sévérité: 323
+  [SPLIT - Sur-segmentation] GT_ID: 261 divisée en preds: [566, 708, 13] | Taille GT: 378 pts | Sévérité: 323
+  [ID SWITCH] GT_ID: 262 | Ancien Pred: 686 -> Nouveau Pred: 695 | Taille: 6155 pts | Sévérité: 6155
+  [MERGE - Sous-segmentation] Pred_ID: 707 fusionne les GT: [257, 256] | Taille Pred: 22 pts | Sévérité: 8
+--- FRAME 135 ---
+  [ID SWITCH] GT_ID: 257 | Ancien Pred: 707 -> Nouveau Pred: 714 | Taille: 17 pts | Sévérité: 17
+  [ID SWITCH] GT_ID: 256 | Ancien Pred: 707 -> Nouveau Pred: 714 | Taille: 6 pts | Sévérité: 6
+  [ID SWITCH] GT_ID: 263 | Ancien Pred: 712 -> Nouveau Pred: 270 | Taille: 64 pts | Sévérité: 64
+  [ID SWITCH] GT_ID: 259 | Ancien Pred: 713 -> Nouveau Pred: 566 | Taille: 55 pts | Sévérité: 55
+  [SPLIT - Sur-segmentation] GT_ID: 261 divisée en preds: [13, 1, 717] | Taille GT: 449 pts | Sévérité: 340
+  [FN - Faible Overlap] GT_ID: 262 | Taille: 7207 pts | Max Pred ID: 17 (135 pts) | Sévérité: 7072
+  [MERGE - Sous-segmentation] Pred_ID: 714 fusionne les GT: [257, 256] | Taille Pred: 23 pts | Sévérité: 6
+  [MERGE - Sous-segmentation] Pred_ID: 17 fusionne les GT: [260, 262] | Taille Pred: 1219 pts | Sévérité: 135
+--- FRAME 136 ---
+  [ID SWITCH] GT_ID: 257 | Ancien Pred: 714 -> Nouveau Pred: 732 | Taille: 14 pts | Sévérité: 14
+  [ID SWITCH] GT_ID: 256 | Ancien Pred: 714 -> Nouveau Pred: 732 | Taille: 11 pts | Sévérité: 11
+  [ID SWITCH] GT_ID: 263 | Ancien Pred: 270 -> Nouveau Pred: 736 | Taille: 90 pts | Sévérité: 90
+  [ID SWITCH] GT_ID: 259 | Ancien Pred: 566 -> Nouveau Pred: 737 | Taille: 54 pts | Sévérité: 54
+  [ID SWITCH] GT_ID: 261 | Ancien Pred: 13 -> Nouveau Pred: 566 | Taille: 504 pts | Sévérité: 504
+  [SPLIT - Sur-segmentation] GT_ID: 261 divisée en preds: [566, 735] | Taille GT: 504 pts | Sévérité: 337
+  [ID SWITCH] GT_ID: 262 | Ancien Pred: 695 -> Nouveau Pred: 720 | Taille: 8626 pts | Sévérité: 8626
+  [MERGE - Sous-segmentation] Pred_ID: 732 fusionne les GT: [257, 256] | Taille Pred: 25 pts | Sévérité: 11
+--- FRAME 137 ---
+  [ID SWITCH] GT_ID: 257 | Ancien Pred: 732 -> Nouveau Pred: 738 | Taille: 20 pts | Sévérité: 20
+  [ID SWITCH] GT_ID: 256 | Ancien Pred: 732 -> Nouveau Pred: 738 | Taille: 8 pts | Sévérité: 8
+  [ID SWITCH] GT_ID: 263 | Ancien Pred: 736 -> Nouveau Pred: 743 | Taille: 97 pts | Sévérité: 97
+  [ID SWITCH] GT_ID: 259 | Ancien Pred: 737 -> Nouveau Pred: 270 | Taille: 62 pts | Sévérité: 62
+  [ID SWITCH] GT_ID: 261 | Ancien Pred: 566 -> Nouveau Pred: 1 | Taille: 592 pts | Sévérité: 592
+  [SPLIT - Sur-segmentation] GT_ID: 261 divisée en preds: [1, 566, 13] | Taille GT: 592 pts | Sévérité: 436
+  [FN - Faible Overlap] GT_ID: 262 | Taille: 7877 pts | Max Pred ID: 17 (61 pts) | Sévérité: 7816
+  [MERGE - Sous-segmentation] Pred_ID: 738 fusionne les GT: [257, 256] | Taille Pred: 28 pts | Sévérité: 8
+--- FRAME 138 ---
+  [ID SWITCH] GT_ID: 257 | Ancien Pred: 738 -> Nouveau Pred: 757 | Taille: 18 pts | Sévérité: 18
+  [ID SWITCH] GT_ID: 256 | Ancien Pred: 738 -> Nouveau Pred: 757 | Taille: 11 pts | Sévérité: 11
+  [ID SWITCH] GT_ID: 263 | Ancien Pred: 743 -> Nouveau Pred: 765 | Taille: 126 pts | Sévérité: 126
+  [ID SWITCH] GT_ID: 259 | Ancien Pred: 270 -> Nouveau Pred: 766 | Taille: 83 pts | Sévérité: 83
+  [ID SWITCH] GT_ID: 261 | Ancien Pred: 1 -> Nouveau Pred: 758 | Taille: 701 pts | Sévérité: 701
+  [SPLIT - Sur-segmentation] GT_ID: 261 divisée en preds: [758, 764, 270] | Taille GT: 701 pts | Sévérité: 556
+  [ID SWITCH] GT_ID: 262 | Ancien Pred: 720 -> Nouveau Pred: 745 | Taille: 7593 pts | Sévérité: 7593
+  [MERGE - Sous-segmentation] Pred_ID: 757 fusionne les GT: [257, 256] | Taille Pred: 29 pts | Sévérité: 11
+--- FRAME 139 ---
+  [ID SWITCH] GT_ID: 257 | Ancien Pred: 757 -> Nouveau Pred: 767 | Taille: 14 pts | Sévérité: 14
+  [ID SWITCH] GT_ID: 256 | Ancien Pred: 757 -> Nouveau Pred: 767 | Taille: 10 pts | Sévérité: 10
+  [ID SWITCH] GT_ID: 259 | Ancien Pred: 766 -> Nouveau Pred: 775 | Taille: 93 pts | Sévérité: 93
+  [ID SWITCH] GT_ID: 263 | Ancien Pred: 765 -> Nouveau Pred: 774 | Taille: 142 pts | Sévérité: 142
+  [ID SWITCH] GT_ID: 261 | Ancien Pred: 758 -> Nouveau Pred: 270 | Taille: 828 pts | Sévérité: 828
+  [FN - Faible Overlap] GT_ID: 260 | Taille: 984 pts | Max Pred ID: 17 (21 pts) | Sévérité: 963
+  [FN - Non Détecté] GT_ID: 262 | Taille: 6351 pts | Sévérité: 6351
+  [MERGE - Sous-segmentation] Pred_ID: 767 fusionne les GT: [257, 256] | Taille Pred: 24 pts | Sévérité: 10
+--- FRAME 140 ---
+  [ID SWITCH] GT_ID: 257 | Ancien Pred: 767 -> Nouveau Pred: 777 | Taille: 26 pts | Sévérité: 26
+  [ID SWITCH] GT_ID: 256 | Ancien Pred: 767 -> Nouveau Pred: 777 | Taille: 10 pts | Sévérité: 10
+  [ID SWITCH] GT_ID: 263 | Ancien Pred: 774 -> Nouveau Pred: 803 | Taille: 178 pts | Sévérité: 178
+  [ID SWITCH] GT_ID: 259 | Ancien Pred: 775 -> Nouveau Pred: 804 | Taille: 108 pts | Sévérité: 108
+  [FN - Faible Overlap] GT_ID: 261 | Taille: 990 pts | Max Pred ID: 797 (131 pts) | Sévérité: 859
+  [ID SWITCH] GT_ID: 262 | Ancien Pred: 745 -> Nouveau Pred: 778 | Taille: 4951 pts | Sévérité: 4951
+  [MERGE - Sous-segmentation] Pred_ID: 777 fusionne les GT: [257, 256] | Taille Pred: 36 pts | Sévérité: 10
+--- FRAME 141 ---
+  [ID SWITCH] GT_ID: 257 | Ancien Pred: 777 -> Nouveau Pred: 818 | Taille: 33 pts | Sévérité: 33
+  [ID SWITCH] GT_ID: 256 | Ancien Pred: 777 -> Nouveau Pred: 819 | Taille: 14 pts | Sévérité: 14
+  [ID SWITCH] GT_ID: 259 | Ancien Pred: 804 -> Nouveau Pred: 817 | Taille: 133 pts | Sévérité: 133
+  [ID SWITCH] GT_ID: 268 | Ancien Pred: 776 -> Nouveau Pred: 805 | Taille: 87 pts | Sévérité: 87
+  [ID SWITCH] GT_ID: 263 | Ancien Pred: 803 -> Nouveau Pred: 815 | Taille: 230 pts | Sévérité: 230
+  [FN - Faible Overlap] GT_ID: 261 | Taille: 1146 pts | Max Pred ID: 1 (166 pts) | Sévérité: 980
+  [SPLIT - Sur-segmentation] GT_ID: 261 divisée en preds: [1, 806] | Taille GT: 1146 pts | Sévérité: 980
+  [FN - Faible Overlap] GT_ID: 260 | Taille: 653 pts | Max Pred ID: 17 (31 pts) | Sévérité: 622
+  [FN - Non Détecté] GT_ID: 262 | Taille: 3509 pts | Sévérité: 3509
+--- FRAME 142 ---
+  [ID SWITCH] GT_ID: 257 | Ancien Pred: 818 -> Nouveau Pred: 846 | Taille: 37 pts | Sévérité: 37
+  [ID SWITCH] GT_ID: 256 | Ancien Pred: 819 -> Nouveau Pred: 847 | Taille: 17 pts | Sévérité: 17
+  [ID SWITCH] GT_ID: 259 | Ancien Pred: 817 -> Nouveau Pred: 845 | Taille: 140 pts | Sévérité: 140
+  [ID SWITCH] GT_ID: 263 | Ancien Pred: 815 -> Nouveau Pred: 843 | Taille: 293 pts | Sévérité: 293
+  [SPLIT - Sur-segmentation] GT_ID: 263 divisée en preds: [843, 844] | Taille GT: 293 pts | Sévérité: 221
+  [ID SWITCH] GT_ID: 261 | Ancien Pred: 270 -> Nouveau Pred: 566 | Taille: 1361 pts | Sévérité: 1361
+  [SPLIT - Sur-segmentation] GT_ID: 261 divisée en preds: [566, 836] | Taille GT: 1361 pts | Sévérité: 1062
+  [ID SWITCH] GT_ID: 262 | Ancien Pred: 778 -> Nouveau Pred: 1 | Taille: 2356 pts | Sévérité: 2356
+  [SPLIT - Sur-segmentation] GT_ID: 262 divisée en preds: [1, 824] | Taille GT: 2356 pts | Sévérité: 1445
+  [MERGE - Sous-segmentation] Pred_ID: 847 fusionne les GT: [256, 257] | Taille Pred: 19 pts | Sévérité: 2
+--- FRAME 143 ---
+  [ID SWITCH] GT_ID: 257 | Ancien Pred: 846 -> Nouveau Pred: 862 | Taille: 57 pts | Sévérité: 57
+  [ID SWITCH] GT_ID: 256 | Ancien Pred: 847 -> Nouveau Pred: 863 | Taille: 14 pts | Sévérité: 14
+  [ID SWITCH] GT_ID: 259 | Ancien Pred: 845 -> Nouveau Pred: 861 | Taille: 170 pts | Sévérité: 170
+  [FN - Non Détecté] GT_ID: 265 | Taille: 1 pts | Sévérité: 1
+  [ID SWITCH] GT_ID: 263 | Ancien Pred: 843 -> Nouveau Pred: 860 | Taille: 379 pts | Sévérité: 379
+  [ID SWITCH] GT_ID: 261 | Ancien Pred: 566 -> Nouveau Pred: 852 | Taille: 1661 pts | Sévérité: 1661
+  [FN - Faible Overlap] GT_ID: 260 | Taille: 427 pts | Max Pred ID: 17 (25 pts) | Sévérité: 402
+  [FN - Faible Overlap] GT_ID: 262 | Taille: 1663 pts | Max Pred ID: 1 (35 pts) | Sévérité: 1628
+--- FRAME 144 ---
+  [ID SWITCH] GT_ID: 257 | Ancien Pred: 862 -> Nouveau Pred: 891 | Taille: 51 pts | Sévérité: 51
+  [ID SWITCH] GT_ID: 256 | Ancien Pred: 863 -> Nouveau Pred: 892 | Taille: 24 pts | Sévérité: 24
+  [ID SWITCH] GT_ID: 259 | Ancien Pred: 861 -> Nouveau Pred: 890 | Taille: 210 pts | Sévérité: 210
+  [ID SWITCH] GT_ID: 263 | Ancien Pred: 860 -> Nouveau Pred: 888 | Taille: 512 pts | Sévérité: 512
+  [SPLIT - Sur-segmentation] GT_ID: 263 divisée en preds: [888, 889] | Taille GT: 512 pts | Sévérité: 217
+  [FN - Faible Overlap] GT_ID: 261 | Taille: 2071 pts | Max Pred ID: 883 (358 pts) | Sévérité: 1713
+  [SPLIT - Sur-segmentation] GT_ID: 261 divisée en preds: [883, 878] | Taille GT: 2071 pts | Sévérité: 1713
+--- FRAME 145 ---
+  [ID SWITCH] GT_ID: 256 | Ancien Pred: 892 -> Nouveau Pred: 910 | Taille: 27 pts | Sévérité: 27
+  [ID SWITCH] GT_ID: 257 | Ancien Pred: 891 -> Nouveau Pred: 909 | Taille: 72 pts | Sévérité: 72
+  [ID SWITCH] GT_ID: 259 | Ancien Pred: 890 -> Nouveau Pred: 908 | Taille: 260 pts | Sévérité: 260
+  [ID SWITCH] GT_ID: 263 | Ancien Pred: 888 -> Nouveau Pred: 907 | Taille: 660 pts | Sévérité: 660
+  [FN - Faible Overlap] GT_ID: 260 | Taille: 255 pts | Max Pred ID: 17 (39 pts) | Sévérité: 216
+  [FN - Faible Overlap] GT_ID: 262 | Taille: 1117 pts | Max Pred ID: 1 (42 pts) | Sévérité: 1075
+  [ID SWITCH] GT_ID: 261 | Ancien Pred: 852 -> Nouveau Pred: 893 | Taille: 2963 pts | Sévérité: 2963
+--- FRAME 146 ---
+  [ID SWITCH] GT_ID: 257 | Ancien Pred: 909 -> Nouveau Pred: 923 | Taille: 92 pts | Sévérité: 92
+  [ID SWITCH] GT_ID: 256 | Ancien Pred: 910 -> Nouveau Pred: 924 | Taille: 25 pts | Sévérité: 25
+  [FN - Non Détecté] GT_ID: 7 | Taille: 2 pts | Sévérité: 2
+  [FN - Non Détecté] GT_ID: 259 | Taille: 327 pts | Sévérité: 327
+  [FN - Non Détecté] GT_ID: 263 | Taille: 873 pts | Sévérité: 873
+  [FN - Faible Overlap] GT_ID: 262 | Taille: 963 pts | Max Pred ID: 1 (155 pts) | Sévérité: 808
+  [SPLIT - Sur-segmentation] GT_ID: 262 divisée en preds: [1, 566] | Taille GT: 963 pts | Sévérité: 808
+  [FN - Faible Overlap] GT_ID: 261 | Taille: 4626 pts | Max Pred ID: 893 (61 pts) | Sévérité: 4565
+--- FRAME 147 ---
+  [FN - Non Détecté] GT_ID: 264 | Taille: 2 pts | Sévérité: 2
+  [ID SWITCH] GT_ID: 0 | Ancien Pred: 1 -> Nouveau Pred: 954 | Taille: 13 pts | Sévérité: 13
+  [ID SWITCH] GT_ID: 256 | Ancien Pred: 924 -> Nouveau Pred: 953 | Taille: 31 pts | Sévérité: 31
+  [ID SWITCH] GT_ID: 257 | Ancien Pred: 923 -> Nouveau Pred: 952 | Taille: 99 pts | Sévérité: 99
+  [ID SWITCH] GT_ID: 259 | Ancien Pred: 908 -> Nouveau Pred: 950 | Taille: 419 pts | Sévérité: 419
+  [SPLIT - Sur-segmentation] GT_ID: 260 divisée en preds: [17, 936] | Taille GT: 174 pts | Sévérité: 106
+  [FN - Non Détecté] GT_ID: 265 | Taille: 1 pts | Sévérité: 1
+  [ID SWITCH] GT_ID: 262 | Ancien Pred: 1 -> Nouveau Pred: 13 | Taille: 817 pts | Sévérité: 817
+  [ID SWITCH] GT_ID: 263 | Ancien Pred: 907 -> Nouveau Pred: 949 | Taille: 1027 pts | Sévérité: 1027
+  [ID SWITCH] GT_ID: 261 | Ancien Pred: 893 -> Nouveau Pred: 270 | Taille: 5855 pts | Sévérité: 5855
+  [MERGE - Sous-segmentation] Pred_ID: 954 fusionne les GT: [0, 7] | Taille Pred: 16 pts | Sévérité: 3
+--- FRAME 148 ---
+  [FN - Non Détecté] GT_ID: 264 | Taille: 9 pts | Sévérité: 9
+  [ID SWITCH] GT_ID: 257 | Ancien Pred: 952 -> Nouveau Pred: 967 | Taille: 90 pts | Sévérité: 90
+  [ID SWITCH] GT_ID: 256 | Ancien Pred: 953 -> Nouveau Pred: 968 | Taille: 34 pts | Sévérité: 34
+  [SPLIT - Sur-segmentation] GT_ID: 260 divisée en preds: [17, 966] | Taille GT: 134 pts | Sévérité: 64
+  [FN - Non Détecté] GT_ID: 259 | Taille: 475 pts | Sévérité: 475
+  [FN - Non Détecté] GT_ID: 265 | Taille: 1 pts | Sévérité: 1
+  [SPLIT - Sur-segmentation] GT_ID: 262 divisée en preds: [13, 958, 959] | Taille GT: 687 pts | Sévérité: 523
+  [FN - Non Détecté] GT_ID: 263 | Taille: 1281 pts | Sévérité: 1281
+  [FN - Faible Overlap] GT_ID: 261 | Taille: 6030 pts | Max Pred ID: 270 (593 pts) | Sévérité: 5437
+--- FRAME 149 ---
+  [FN - Non Détecté] GT_ID: 264 | Taille: 2 pts | Sévérité: 2
+  [ID SWITCH] GT_ID: 256 | Ancien Pred: 968 -> Nouveau Pred: 993 | Taille: 42 pts | Sévérité: 42
+  [ID SWITCH] GT_ID: 257 | Ancien Pred: 967 -> Nouveau Pred: 992 | Taille: 130 pts | Sévérité: 130
+  [SPLIT - Sur-segmentation] GT_ID: 260 divisée en preds: [17, 978] | Taille GT: 116 pts | Sévérité: 40
+  [ID SWITCH] GT_ID: 262 | Ancien Pred: 13 -> Nouveau Pred: 566 | Taille: 623 pts | Sévérité: 623
+  [SPLIT - Sur-segmentation] GT_ID: 262 divisée en preds: [566, 270, 974] | Taille GT: 623 pts | Sévérité: 473
+  [ID SWITCH] GT_ID: 259 | Ancien Pred: 950 -> Nouveau Pred: 991 | Taille: 585 pts | Sévérité: 585
+  [ID SWITCH] GT_ID: 263 | Ancien Pred: 949 -> Nouveau Pred: 990 | Taille: 1811 pts | Sévérité: 1811
+  [ID SWITCH] GT_ID: 261 | Ancien Pred: 270 -> Nouveau Pred: 979 | Taille: 7776 pts | Sévérité: 7776
+  [MERGE - Sous-segmentation] Pred_ID: 954 fusionne les GT: [7, 0] | Taille Pred: 17 pts | Sévérité: 8
+--- FRAME 150 ---
+  [ID SWITCH] GT_ID: 255 | Ancien Pred: 969 -> Nouveau Pred: 994 | Taille: 28 pts | Sévérité: 28
+  [FN - Non Détecté] GT_ID: 264 | Taille: 6 pts | Sévérité: 6
+  [ID SWITCH] GT_ID: 256 | Ancien Pred: 993 -> Nouveau Pred: 1004 | Taille: 55 pts | Sévérité: 55
+  [ID SWITCH] GT_ID: 257 | Ancien Pred: 992 -> Nouveau Pred: 1003 | Taille: 147 pts | Sévérité: 147
+  [FN - Non Détecté] GT_ID: 266 | Taille: 1 pts | Sévérité: 1
+  [SPLIT - Sur-segmentation] GT_ID: 260 divisée en preds: [17, 1002] | Taille GT: 93 pts | Sévérité: 53
+  [FN - Faible Overlap] GT_ID: 262 | Taille: 507 pts | Max Pred ID: 1 (95 pts) | Sévérité: 412
+  [SPLIT - Sur-segmentation] GT_ID: 262 divisée en preds: [1, 270, 13] | Taille GT: 507 pts | Sévérité: 412
+  [FN - Non Détecté] GT_ID: 265 | Taille: 1 pts | Sévérité: 1
+  [FN - Non Détecté] GT_ID: 259 | Taille: 702 pts | Sévérité: 702
+  [FN - Non Détecté] GT_ID: 263 | Taille: 2730 pts | Sévérité: 2730
+  [FN - Faible Overlap] GT_ID: 261 | Taille: 8429 pts | Max Pred ID: 979 (1051 pts) | Sévérité: 7378
+--- FRAME 151 ---
+  [FN - Non Détecté] GT_ID: 0 | Taille: 1 pts | Sévérité: 1
+  [FN - Non Détecté] GT_ID: 264 | Taille: 10 pts | Sévérité: 10
+  [ID SWITCH] GT_ID: 255 | Ancien Pred: 994 -> Nouveau Pred: 1005 | Taille: 24 pts | Sévérité: 24
+  [ID SWITCH] GT_ID: 256 | Ancien Pred: 1004 -> Nouveau Pred: 1027 | Taille: 52 pts | Sévérité: 52
+  [ID SWITCH] GT_ID: 257 | Ancien Pred: 1003 -> Nouveau Pred: 1026 | Taille: 177 pts | Sévérité: 177
+  [SPLIT - Sur-segmentation] GT_ID: 260 divisée en preds: [17, 270] | Taille GT: 71 pts | Sévérité: 44
+  [FN - Non Détecté] GT_ID: 266 | Taille: 2 pts | Sévérité: 2
+  [ID SWITCH] GT_ID: 262 | Ancien Pred: 566 -> Nouveau Pred: 1 | Taille: 441 pts | Sévérité: 441
+  [FN - Non Détecté] GT_ID: 265 | Taille: 4 pts | Sévérité: 4
+  [ID SWITCH] GT_ID: 259 | Ancien Pred: 991 -> Nouveau Pred: 1025 | Taille: 779 pts | Sévérité: 779
+  [ID SWITCH] GT_ID: 263 | Ancien Pred: 990 -> Nouveau Pred: 1024 | Taille: 4113 pts | Sévérité: 4113
+  [ID SWITCH] GT_ID: 261 | Ancien Pred: 979 -> Nouveau Pred: 566 | Taille: 7856 pts | Sévérité: 7856
+--- FRAME 152 ---
+  [FN - Non Détecté] GT_ID: 0 | Taille: 1 pts | Sévérité: 1
+  [ID SWITCH] GT_ID: 255 | Ancien Pred: 1005 -> Nouveau Pred: 1028 | Taille: 29 pts | Sévérité: 29
+  [FN - Non Détecté] GT_ID: 264 | Taille: 5 pts | Sévérité: 5
+  [ID SWITCH] GT_ID: 256 | Ancien Pred: 1027 -> Nouveau Pred: 1034 | Taille: 65 pts | Sévérité: 65
+  [ID SWITCH] GT_ID: 257 | Ancien Pred: 1026 -> Nouveau Pred: 1033 | Taille: 194 pts | Sévérité: 194
+  [ID SWITCH] GT_ID: 260 | Ancien Pred: 17 -> Nouveau Pred: 270 | Taille: 70 pts | Sévérité: 70
+  [FN - Non Détecté] GT_ID: 265 | Taille: 7 pts | Sévérité: 7
+  [FN - Non Détecté] GT_ID: 266 | Taille: 4 pts | Sévérité: 4
+  [ID SWITCH] GT_ID: 262 | Ancien Pred: 1 -> Nouveau Pred: 13 | Taille: 379 pts | Sévérité: 379
+  [SPLIT - Sur-segmentation] GT_ID: 262 divisée en preds: [13, 1] | Taille GT: 379 pts | Sévérité: 271
+  [FN - Non Détecté] GT_ID: 259 | Taille: 894 pts | Sévérité: 894
+  [FN - Faible Overlap] GT_ID: 263 | Taille: 4587 pts | Max Pred ID: 1024 (148 pts) | Sévérité: 4439
+  [FN - Faible Overlap] GT_ID: 261 | Taille: 7311 pts | Max Pred ID: 566 (307 pts) | Sévérité: 7004
+--- FRAME 153 ---
+  [ID SWITCH] GT_ID: 255 | Ancien Pred: 1028 -> Nouveau Pred: 1035 | Taille: 42 pts | Sévérité: 42
+  [FN - Non Détecté] GT_ID: 264 | Taille: 3 pts | Sévérité: 3
+  [ID SWITCH] GT_ID: 257 | Ancien Pred: 1033 -> Nouveau Pred: 1063 | Taille: 246 pts | Sévérité: 246
+  [SPLIT - Sur-segmentation] GT_ID: 257 divisée en preds: [1063, 1064] | Taille GT: 246 pts | Sévérité: 171
+  [ID SWITCH] GT_ID: 256 | Ancien Pred: 1034 -> Nouveau Pred: 1065 | Taille: 59 pts | Sévérité: 59
+  [ID SWITCH] GT_ID: 262 | Ancien Pred: 13 -> Nouveau Pred: 1 | Taille: 317 pts | Sévérité: 317
+  [SPLIT - Sur-segmentation] GT_ID: 262 divisée en preds: [1, 1038] | Taille GT: 317 pts | Sévérité: 97
+  [ID SWITCH] GT_ID: 259 | Ancien Pred: 1025 -> Nouveau Pred: 1061 | Taille: 1007 pts | Sévérité: 1007
+  [ID SWITCH] GT_ID: 261 | Ancien Pred: 566 -> Nouveau Pred: 1040 | Taille: 6058 pts | Sévérité: 6058
+  [ID SWITCH] GT_ID: 263 | Ancien Pred: 1024 -> Nouveau Pred: 13 | Taille: 4930 pts | Sévérité: 4930
+  [MERGE - Sous-segmentation] Pred_ID: 1062 fusionne les GT: [265, 266] | Taille Pred: 13 pts | Sévérité: 2
+--- FRAME 154 ---
+  [ID SWITCH] GT_ID: 255 | Ancien Pred: 1035 -> Nouveau Pred: 1066 | Taille: 42 pts | Sévérité: 42
+  [FN - Non Détecté] GT_ID: 264 | Taille: 4 pts | Sévérité: 4
+  [ID SWITCH] GT_ID: 256 | Ancien Pred: 1065 -> Nouveau Pred: 1074 | Taille: 83 pts | Sévérité: 83
+  [FN - Faible Overlap] GT_ID: 257 | Taille: 271 pts | Max Pred ID: 1071 (39 pts) | Sévérité: 232
+  [SPLIT - Sur-segmentation] GT_ID: 257 divisée en preds: [1071, 1072, 1073] | Taille GT: 271 pts | Sévérité: 232
+  [ID SWITCH] GT_ID: 260 | Ancien Pred: 270 -> Nouveau Pred: 1 | Taille: 53 pts | Sévérité: 53
+  [SPLIT - Sur-segmentation] GT_ID: 260 divisée en preds: [1, 270] | Taille GT: 53 pts | Sévérité: 24
+  [ID SWITCH] GT_ID: 262 | Ancien Pred: 1 -> Nouveau Pred: 17 | Taille: 281 pts | Sévérité: 281
+  [SPLIT - Sur-segmentation] GT_ID: 262 divisée en preds: [17, 566] | Taille GT: 281 pts | Sévérité: 112
+  [FN - Non Détecté] GT_ID: 259 | Taille: 1414 pts | Sévérité: 1414
+  [FN - Non Détecté] GT_ID: 261 | Taille: 4593 pts | Sévérité: 4593
+  [FN - Faible Overlap] GT_ID: 263 | Taille: 5895 pts | Max Pred ID: 13 (591 pts) | Sévérité: 5304
+  [MERGE - Sous-segmentation] Pred_ID: 1062 fusionne les GT: [266, 265] | Taille Pred: 24 pts | Sévérité: 11
+--- FRAME 155 ---
+  [FN - Non Détecté] GT_ID: 0 | Taille: 1 pts | Sévérité: 1
+  [FN - Non Détecté] GT_ID: 264 | Taille: 2 pts | Sévérité: 2
+  [ID SWITCH] GT_ID: 255 | Ancien Pred: 1066 -> Nouveau Pred: 1075 | Taille: 43 pts | Sévérité: 43
+  [ID SWITCH] GT_ID: 256 | Ancien Pred: 1074 -> Nouveau Pred: 1094 | Taille: 97 pts | Sévérité: 97
+  [ID SWITCH] GT_ID: 257 | Ancien Pred: 1063 -> Nouveau Pred: 1092 | Taille: 287 pts | Sévérité: 287
+  [SPLIT - Sur-segmentation] GT_ID: 257 divisée en preds: [1092, 1093] | Taille GT: 287 pts | Sévérité: 182
+  [ID SWITCH] GT_ID: 260 | Ancien Pred: 1 -> Nouveau Pred: 270 | Taille: 45 pts | Sévérité: 45
+  [ID SWITCH] GT_ID: 262 | Ancien Pred: 17 -> Nouveau Pred: 566 | Taille: 226 pts | Sévérité: 226
+  [SPLIT - Sur-segmentation] GT_ID: 262 divisée en preds: [566, 1] | Taille GT: 226 pts | Sévérité: 94
+  [ID SWITCH] GT_ID: 261 | Ancien Pred: 1040 -> Nouveau Pred: 17 | Taille: 3179 pts | Sévérité: 3179
+  [ID SWITCH] GT_ID: 259 | Ancien Pred: 1061 -> Nouveau Pred: 1091 | Taille: 2063 pts | Sévérité: 2063
+  [ID SWITCH] GT_ID: 263 | Ancien Pred: 13 -> Nouveau Pred: 17 | Taille: 5732 pts | Sévérité: 5732
+  [MERGE - Sous-segmentation] Pred_ID: 1062 fusionne les GT: [266, 265] | Taille Pred: 35 pts | Sévérité: 10
+  [MERGE - Sous-segmentation] Pred_ID: 17 fusionne les GT: [263, 261] | Taille Pred: 8160 pts | Sévérité: 3179
+--- FRAME 156 ---
+  [FN - Non Détecté] GT_ID: 264 | Taille: 12 pts | Sévérité: 12
+  [ID SWITCH] GT_ID: 255 | Ancien Pred: 1075 -> Nouveau Pred: 1095 | Taille: 39 pts | Sévérité: 39
+  [ID SWITCH] GT_ID: 256 | Ancien Pred: 1094 -> Nouveau Pred: 1102 | Taille: 113 pts | Sévérité: 113
+  [FN - Non Détecté] GT_ID: 266 | Taille: 76 pts | Sévérité: 76
+  [ID SWITCH] GT_ID: 257 | Ancien Pred: 1092 -> Nouveau Pred: 1099 | Taille: 372 pts | Sévérité: 372
+  [SPLIT - Sur-segmentation] GT_ID: 257 divisée en preds: [1099, 13] | Taille GT: 372 pts | Sévérité: 290
+  [SPLIT - Sur-segmentation] GT_ID: 262 divisée en preds: [566, 1] | Taille GT: 221 pts | Sévérité: 92
+  [FN - Non Détecté] GT_ID: 261 | Taille: 2259 pts | Sévérité: 2259
+  [FN - Non Détecté] GT_ID: 259 | Taille: 3203 pts | Sévérité: 3203
+  [FN - Faible Overlap] GT_ID: 263 | Taille: 5856 pts | Max Pred ID: 17 (164 pts) | Sévérité: 5692
+--- FRAME 157 ---
+  [FN - Non Détecté] GT_ID: 264 | Taille: 7 pts | Sévérité: 7
+  [ID SWITCH] GT_ID: 255 | Ancien Pred: 1095 -> Nouveau Pred: 1103 | Taille: 48 pts | Sévérité: 48
+  [ID SWITCH] GT_ID: 256 | Ancien Pred: 1102 -> Nouveau Pred: 1131 | Taille: 136 pts | Sévérité: 136
+  [ID SWITCH] GT_ID: 266 | Ancien Pred: 1062 -> Nouveau Pred: 1104 | Taille: 126 pts | Sévérité: 126
+  [FN - Faible Overlap] GT_ID: 257 | Taille: 458 pts | Max Pred ID: 1124 (90 pts) | Sévérité: 368
+  [SPLIT - Sur-segmentation] GT_ID: 257 divisée en preds: [1124, 1126, 1125, 1128] | Taille GT: 458 pts | Sévérité: 368
+  [ID SWITCH] GT_ID: 262 | Ancien Pred: 566 -> Nouveau Pred: 1 | Taille: 202 pts | Sévérité: 202
+  [SPLIT - Sur-segmentation] GT_ID: 262 divisée en preds: [1, 1107] | Taille GT: 202 pts | Sévérité: 48
+  [ID SWITCH] GT_ID: 261 | Ancien Pred: 17 -> Nouveau Pred: 1120 | Taille: 1533 pts | Sévérité: 1533
+  [ID SWITCH] GT_ID: 263 | Ancien Pred: 17 -> Nouveau Pred: 1109 | Taille: 5070 pts | Sévérité: 5070
+  [ID SWITCH] GT_ID: 259 | Ancien Pred: 1091 -> Nouveau Pred: 13 | Taille: 4240 pts | Sévérité: 4240
+--- FRAME 158 ---
+  [ID SWITCH] GT_ID: 255 | Ancien Pred: 1103 -> Nouveau Pred: 1132 | Taille: 54 pts | Sévérité: 54
+  [ID SWITCH] GT_ID: 256 | Ancien Pred: 1131 -> Nouveau Pred: 1142 | Taille: 171 pts | Sévérité: 171
+  [FN - Non Détecté] GT_ID: 265 | Taille: 161 pts | Sévérité: 161
+  [ID SWITCH] GT_ID: 257 | Ancien Pred: 1099 -> Nouveau Pred: 1136 | Taille: 513 pts | Sévérité: 513
+  [SPLIT - Sur-segmentation] GT_ID: 257 divisée en preds: [1136, 1138] | Taille GT: 513 pts | Sévérité: 344
+  [SPLIT - Sur-segmentation] GT_ID: 262 divisée en preds: [1, 270] | Taille GT: 180 pts | Sévérité: 42
+  [FN - Non Détecté] GT_ID: 260 | Taille: 13 pts | Sévérité: 13
+  [FN - Non Détecté] GT_ID: 261 | Taille: 1166 pts | Sévérité: 1166
+  [FN - Non Détecté] GT_ID: 263 | Taille: 4067 pts | Sévérité: 4067
+  [FN - Faible Overlap] GT_ID: 259 | Taille: 4017 pts | Max Pred ID: 13 (47 pts) | Sévérité: 3970
+--- FRAME 159 ---
+  [ID SWITCH] GT_ID: 255 | Ancien Pred: 1132 -> Nouveau Pred: 1143 | Taille: 50 pts | Sévérité: 50
+  [ID SWITCH] GT_ID: 256 | Ancien Pred: 1142 -> Nouveau Pred: 1167 | Taille: 213 pts | Sévérité: 213
+  [FN - Non Détecté] GT_ID: 265 | Taille: 281 pts | Sévérité: 281
+  [FN - Faible Overlap] GT_ID: 257 | Taille: 582 pts | Max Pred ID: 1160 (109 pts) | Sévérité: 473
+  [SPLIT - Sur-segmentation] GT_ID: 257 divisée en preds: [1160, 1161, 1163] | Taille GT: 582 pts | Sévérité: 473
+  [ID SWITCH] GT_ID: 262 | Ancien Pred: 1 -> Nouveau Pred: 270 | Taille: 174 pts | Sévérité: 174
+  [ID SWITCH] GT_ID: 260 | Ancien Pred: 270 -> Nouveau Pred: 1 | Taille: 17 pts | Sévérité: 17
+  [ID SWITCH] GT_ID: 261 | Ancien Pred: 1120 -> Nouveau Pred: 17 | Taille: 950 pts | Sévérité: 950
+  [ID SWITCH] GT_ID: 263 | Ancien Pred: 1109 -> Nouveau Pred: 13 | Taille: 3106 pts | Sévérité: 3106
+  [ID SWITCH] GT_ID: 259 | Ancien Pred: 13 -> Nouveau Pred: 1147 | Taille: 4328 pts | Sévérité: 4328
+--- FRAME 160 ---
+  [ID SWITCH] GT_ID: 255 | Ancien Pred: 1143 -> Nouveau Pred: 1168 | Taille: 55 pts | Sévérité: 55
+  [ID SWITCH] GT_ID: 256 | Ancien Pred: 1167 -> Nouveau Pred: 1185 | Taille: 270 pts | Sévérité: 270
+  [ID SWITCH] GT_ID: 265 | Ancien Pred: 1062 -> Nouveau Pred: 1104 | Taille: 297 pts | Sévérité: 297
+  [SPLIT - Sur-segmentation] GT_ID: 265 divisée en preds: [1104, 1171] | Taille GT: 297 pts | Sévérité: 68
+  [SPLIT - Sur-segmentation] GT_ID: 266 divisée en preds: [1104, 1173] | Taille GT: 206 pts | Sévérité: 108
+  [ID SWITCH] GT_ID: 257 | Ancien Pred: 1136 -> Nouveau Pred: 1179 | Taille: 608 pts | Sévérité: 608
+  [SPLIT - Sur-segmentation] GT_ID: 257 divisée en preds: [1179, 1177, 1178] | Taille GT: 608 pts | Sévérité: 475
+  [SPLIT - Sur-segmentation] GT_ID: 262 divisée en preds: [270, 17] | Taille GT: 142 pts | Sévérité: 36
+  [FN - Non Détecté] GT_ID: 261 | Taille: 759 pts | Sévérité: 759
+  [FN - Faible Overlap] GT_ID: 263 | Taille: 2175 pts | Max Pred ID: 13 (25 pts) | Sévérité: 2150
+  [FN - Faible Overlap] GT_ID: 259 | Taille: 4601 pts | Max Pred ID: 1147 (513 pts) | Sévérité: 4088
+  [MERGE - Sous-segmentation] Pred_ID: 1104 fusionne les GT: [265, 266] | Taille Pred: 327 pts | Sévérité: 98
+--- FRAME 161 ---
+  [ID SWITCH] GT_ID: 255 | Ancien Pred: 1168 -> Nouveau Pred: 1189 | Taille: 59 pts | Sévérité: 59
+  [ID SWITCH] GT_ID: 256 | Ancien Pred: 1185 -> Nouveau Pred: 1204 | Taille: 337 pts | Sévérité: 337
+  [SPLIT - Sur-segmentation] GT_ID: 256 divisée en preds: [1204, 1206, 1205] | Taille GT: 337 pts | Sévérité: 226
+  [FN - Non Détecté] GT_ID: 266 | Taille: 214 pts | Sévérité: 214
+  [ID SWITCH] GT_ID: 257 | Ancien Pred: 1179 -> Nouveau Pred: 1202 | Taille: 602 pts | Sévérité: 602
+  [ID SWITCH] GT_ID: 262 | Ancien Pred: 270 -> Nouveau Pred: 17 | Taille: 135 pts | Sévérité: 135
+  [SPLIT - Sur-segmentation] GT_ID: 262 divisée en preds: [17, 1] | Taille GT: 135 pts | Sévérité: 98
+  [FN - Non Détecté] GT_ID: 260 | Taille: 11 pts | Sévérité: 11
+  [ID SWITCH] GT_ID: 261 | Ancien Pred: 17 -> Nouveau Pred: 1201 | Taille: 615 pts | Sévérité: 615
+  [ID SWITCH] GT_ID: 263 | Ancien Pred: 13 -> Nouveau Pred: 1200 | Taille: 1560 pts | Sévérité: 1560
+  [ID SWITCH] GT_ID: 259 | Ancien Pred: 1147 -> Nouveau Pred: 1191 | Taille: 3493 pts | Sévérité: 3493
+--- FRAME 162 ---
+  [ID SWITCH] GT_ID: 255 | Ancien Pred: 1189 -> Nouveau Pred: 1209 | Taille: 62 pts | Sévérité: 62
+  [ID SWITCH] GT_ID: 264 | Ancien Pred: 1062 -> Nouveau Pred: 1210 | Taille: 32 pts | Sévérité: 32
+  [ID SWITCH] GT_ID: 265 | Ancien Pred: 1104 -> Nouveau Pred: 1062 | Taille: 586 pts | Sévérité: 586
+  [ID SWITCH] GT_ID: 256 | Ancien Pred: 1204 -> Nouveau Pred: 1232 | Taille: 413 pts | Sévérité: 413
+  [ID SWITCH] GT_ID: 262 | Ancien Pred: 17 -> Nouveau Pred: 1 | Taille: 109 pts | Sévérité: 109
+  [ID SWITCH] GT_ID: 257 | Ancien Pred: 1202 -> Nouveau Pred: 1230 | Taille: 642 pts | Sévérité: 642
+  [ID SWITCH] GT_ID: 261 | Ancien Pred: 1201 -> Nouveau Pred: 270 | Taille: 500 pts | Sévérité: 500
+  [ID SWITCH] GT_ID: 263 | Ancien Pred: 1200 -> Nouveau Pred: 566 | Taille: 1205 pts | Sévérité: 1205
+  [ID SWITCH] GT_ID: 259 | Ancien Pred: 1191 -> Nouveau Pred: 1217 | Taille: 4069 pts | Sévérité: 4069
+  [SPLIT - Sur-segmentation] GT_ID: 259 divisée en preds: [1217, 1218] | Taille GT: 4069 pts | Sévérité: 2148
+  [MERGE - Sous-segmentation] Pred_ID: 1104 fusionne les GT: [266, 265] | Taille Pred: 292 pts | Sévérité: 37
+--- FRAME 163 ---
+  [ID SWITCH] GT_ID: 255 | Ancien Pred: 1209 -> Nouveau Pred: 1233 | Taille: 75 pts | Sévérité: 75
+  [ID SWITCH] GT_ID: 264 | Ancien Pred: 1210 -> Nouveau Pred: 1062 | Taille: 38 pts | Sévérité: 38
+  [FN - Non Détecté] GT_ID: 265 | Taille: 663 pts | Sévérité: 663
+  [ID SWITCH] GT_ID: 256 | Ancien Pred: 1232 -> Nouveau Pred: 1250 | Taille: 514 pts | Sévérité: 514
+  [SPLIT - Sur-segmentation] GT_ID: 256 divisée en preds: [1250, 1252] | Taille GT: 514 pts | Sévérité: 373
+  [ID SWITCH] GT_ID: 261 | Ancien Pred: 270 -> Nouveau Pred: 17 | Taille: 419 pts | Sévérité: 419
+  [ID SWITCH] GT_ID: 257 | Ancien Pred: 1230 -> Nouveau Pred: 270 | Taille: 724 pts | Sévérité: 724
+  [ID SWITCH] GT_ID: 263 | Ancien Pred: 566 -> Nouveau Pred: 1246 | Taille: 982 pts | Sévérité: 982
+  [ID SWITCH] GT_ID: 259 | Ancien Pred: 1217 -> Nouveau Pred: 270 | Taille: 3813 pts | Sévérité: 3813
+  [SPLIT - Sur-segmentation] GT_ID: 259 divisée en preds: [270, 1239, 1238] | Taille GT: 3813 pts | Sévérité: 1828
+  [FN - Non Détecté] GT_ID: 0 | Taille: 1 pts | Sévérité: 1
+  [MERGE - Sous-segmentation] Pred_ID: 270 fusionne les GT: [259, 257] | Taille Pred: 2663 pts | Sévérité: 678
+--- FRAME 164 ---
+  [ID SWITCH] GT_ID: 255 | Ancien Pred: 1233 -> Nouveau Pred: 17 | Taille: 82 pts | Sévérité: 82
+  [ID SWITCH] GT_ID: 264 | Ancien Pred: 1062 -> Nouveau Pred: 1255 | Taille: 48 pts | Sévérité: 48
+  [FN - Non Détecté] GT_ID: 256 | Taille: 608 pts | Sévérité: 608
+  [FN - Non Détecté] GT_ID: 261 | Taille: 334 pts | Sévérité: 334
+  [FN - Non Détecté] GT_ID: 263 | Taille: 855 pts | Sévérité: 855
+  [FN - Faible Overlap] GT_ID: 257 | Taille: 842 pts | Max Pred ID: 270 (19 pts) | Sévérité: 823
+  [FN - Non Détecté] GT_ID: 259 | Taille: 2955 pts | Sévérité: 2955
+  [MERGE - Sous-segmentation] Pred_ID: 1 fusionne les GT: [262, 260] | Taille Pred: 103 pts | Sévérité: 11
+--- FRAME 165 ---
+  [ID SWITCH] GT_ID: 264 | Ancien Pred: 1255 -> Nouveau Pred: 1104 | Taille: 65 pts | Sévérité: 65
+  [FN - Non Détecté] GT_ID: 266 | Taille: 361 pts | Sévérité: 361
+  [ID SWITCH] GT_ID: 257 | Ancien Pred: 270 -> Nouveau Pred: 13 | Taille: 1228 pts | Sévérité: 1228
+  [ID SWITCH] GT_ID: 256 | Ancien Pred: 1250 -> Nouveau Pred: 1281 | Taille: 746 pts | Sévérité: 746
+  [ID SWITCH] GT_ID: 261 | Ancien Pred: 17 -> Nouveau Pred: 1278 | Taille: 270 pts | Sévérité: 270
+  [FN - Non Détecté] GT_ID: 258 | Taille: 4 pts | Sévérité: 4
+  [ID SWITCH] GT_ID: 263 | Ancien Pred: 1246 -> Nouveau Pred: 1277 | Taille: 684 pts | Sévérité: 684
+  [ID SWITCH] GT_ID: 259 | Ancien Pred: 270 -> Nouveau Pred: 13 | Taille: 2450 pts | Sévérité: 2450
+  [SPLIT - Sur-segmentation] GT_ID: 259 divisée en preds: [13, 1270] | Taille GT: 2450 pts | Sévérité: 1210
+  [MERGE - Sous-segmentation] Pred_ID: 13 fusionne les GT: [259, 257] | Taille Pred: 2361 pts | Sévérité: 1121
+--- FRAME 166 ---
+  [FN - Non Détecté] GT_ID: 256 | Taille: 905 pts | Sévérité: 905
+  [ID SWITCH] GT_ID: 262 | Ancien Pred: 1 -> Nouveau Pred: 566 | Taille: 86 pts | Sévérité: 86
+  [FN - Non Détecté] GT_ID: 266 | Taille: 351 pts | Sévérité: 351
+  [ID SWITCH] GT_ID: 260 | Ancien Pred: 1 -> Nouveau Pred: 566 | Taille: 7 pts | Sévérité: 7
+  [FN - Non Détecté] GT_ID: 261 | Taille: 212 pts | Sévérité: 212
+  [FN - Non Détecté] GT_ID: 263 | Taille: 532 pts | Sévérité: 532
+  [FN - Faible Overlap] GT_ID: 257 | Taille: 1514 pts | Max Pred ID: 13 (24 pts) | Sévérité: 1490
+  [FN - Non Détecté] GT_ID: 259 | Taille: 1680 pts | Sévérité: 1680
+--- FRAME 167 ---
+  [ID SWITCH] GT_ID: 255 | Ancien Pred: 17 -> Nouveau Pred: 1 | Taille: 114 pts | Sévérité: 114
+  [FN - Faible Overlap] GT_ID: 265 | Taille: 646 pts | Max Pred ID: 1062 (103 pts) | Sévérité: 543
+  [ID SWITCH] GT_ID: 256 | Ancien Pred: 1281 -> Nouveau Pred: 17 | Taille: 1044 pts | Sévérité: 1044
+  [FN - Non Détecté] GT_ID: 266 | Taille: 365 pts | Sévérité: 365
+  [ID SWITCH] GT_ID: 261 | Ancien Pred: 1278 -> Nouveau Pred: 1 | Taille: 181 pts | Sévérité: 181
+  [ID SWITCH] GT_ID: 263 | Ancien Pred: 1277 -> Nouveau Pred: 1299 | Taille: 410 pts | Sévérité: 410
+  [ID SWITCH] GT_ID: 257 | Ancien Pred: 13 -> Nouveau Pred: 1292 | Taille: 1625 pts | Sévérité: 1625
+  [SPLIT - Sur-segmentation] GT_ID: 257 divisée en preds: [1292, 1290, 1286, 1295] | Taille GT: 1625 pts | Sévérité: 1275
+  [MERGE - Sous-segmentation] Pred_ID: 1 fusionne les GT: [261, 255] | Taille Pred: 295 pts | Sévérité: 114
+--- FRAME 168 ---
+  [FN - Non Détecté] GT_ID: 261 | Taille: 171 pts | Sévérité: 171
+  [ID SWITCH] GT_ID: 266 | Ancien Pred: 1104 -> Nouveau Pred: 1309 | Taille: 384 pts | Sévérité: 384
+  [FN - Faible Overlap] GT_ID: 256 | Taille: 1207 pts | Max Pred ID: 17 (39 pts) | Sévérité: 1168
+  [FN - Non Détecté] GT_ID: 263 | Taille: 313 pts | Sévérité: 313
+  [FN - Non Détecté] GT_ID: 259 | Taille: 937 pts | Sévérité: 937
+  [FN - Non Détecté] GT_ID: 257 | Taille: 1505 pts | Sévérité: 1505
+--- FRAME 169 ---
+  [ID SWITCH] GT_ID: 255 | Ancien Pred: 1 -> Nouveau Pred: 1311 | Taille: 144 pts | Sévérité: 144
+  [FN - Non Détecté] GT_ID: 266 | Taille: 358 pts | Sévérité: 358
+  [ID SWITCH] GT_ID: 261 | Ancien Pred: 1 -> Nouveau Pred: 13 | Taille: 134 pts | Sévérité: 134
+  [ID SWITCH] GT_ID: 263 | Ancien Pred: 1299 -> Nouveau Pred: 1327 | Taille: 256 pts | Sévérité: 256
+  [SPLIT - Sur-segmentation] GT_ID: 256 divisée en preds: [17, 1317] | Taille GT: 1464 pts | Sévérité: 1085
+  [FN - Non Détecté] GT_ID: 0 | Taille: 1 pts | Sévérité: 1
+  [ID SWITCH] GT_ID: 259 | Ancien Pred: 13 -> Nouveau Pred: 270 | Taille: 734 pts | Sévérité: 734
+  [ID SWITCH] GT_ID: 257 | Ancien Pred: 1292 -> Nouveau Pred: 13 | Taille: 2557 pts | Sévérité: 2557
+  [SPLIT - Sur-segmentation] GT_ID: 257 divisée en preds: [13, 1315] | Taille GT: 2557 pts | Sévérité: 516
+--- FRAME 170 ---
+  [ID SWITCH] GT_ID: 255 | Ancien Pred: 1311 -> Nouveau Pred: 270 | Taille: 165 pts | Sévérité: 165
+  [FN - Non Détecté] GT_ID: 261 | Taille: 117 pts | Sévérité: 117
+  [ID SWITCH] GT_ID: 265 | Ancien Pred: 1062 -> Nouveau Pred: 1331 | Taille: 472 pts | Sévérité: 472
+  [SPLIT - Sur-segmentation] GT_ID: 265 divisée en preds: [1331, 1333] | Taille GT: 472 pts | Sévérité: 196
+  [FN - Non Détecté] GT_ID: 263 | Taille: 195 pts | Sévérité: 195
+  [ID SWITCH] GT_ID: 266 | Ancien Pred: 1309 -> Nouveau Pred: 1336 | Taille: 194 pts | Sévérité: 194
+  [SPLIT - Sur-segmentation] GT_ID: 266 divisée en preds: [1336, 1062] | Taille GT: 194 pts | Sévérité: 76
+  [FN - Non Détecté] GT_ID: 256 | Taille: 1717 pts | Sévérité: 1717
+  [FN - Non Détecté] GT_ID: 259 | Taille: 606 pts | Sévérité: 606
+  [FN - Non Détecté] GT_ID: 8 | Taille: 3 pts | Sévérité: 3
+--- FRAME 171 ---
+  [ID SWITCH] GT_ID: 261 | Ancien Pred: 13 -> Nouveau Pred: 1354 | Taille: 94 pts | Sévérité: 94
+  [SPLIT - Sur-segmentation] GT_ID: 261 divisée en preds: [1354, 1355] | Taille GT: 94 pts | Sévérité: 35
+  [ID SWITCH] GT_ID: 263 | Ancien Pred: 1327 -> Nouveau Pred: 1353 | Taille: 154 pts | Sévérité: 154
+  [SPLIT - Sur-segmentation] GT_ID: 263 divisée en preds: [1353, 1351, 1352] | Taille GT: 154 pts | Sévérité: 109
+  [ID SWITCH] GT_ID: 265 | Ancien Pred: 1331 -> Nouveau Pred: 1340 | Taille: 426 pts | Sévérité: 426
+  [SPLIT - Sur-segmentation] GT_ID: 265 divisée en preds: [1340, 1341] | Taille GT: 426 pts | Sévérité: 265
+  [ID SWITCH] GT_ID: 266 | Ancien Pred: 1336 -> Nouveau Pred: 1062 | Taille: 37 pts | Sévérité: 37
+  [ID SWITCH] GT_ID: 259 | Ancien Pred: 270 -> Nouveau Pred: 17 | Taille: 516 pts | Sévérité: 516
+  [SPLIT - Sur-segmentation] GT_ID: 259 divisée en preds: [17, 1] | Taille GT: 516 pts | Sévérité: 290
+  [FN - Non Détecté] GT_ID: 256 | Taille: 2288 pts | Sévérité: 2288
+  [FN - Faible Overlap] GT_ID: 257 | Taille: 2947 pts | Max Pred ID: 13 (51 pts) | Sévérité: 2896
+--- FRAME 172 ---
+  [ID SWITCH] GT_ID: 261 | Ancien Pred: 1354 -> Nouveau Pred: 1373 | Taille: 88 pts | Sévérité: 88
+  [SPLIT - Sur-segmentation] GT_ID: 261 divisée en preds: [1373, 1374] | Taille GT: 88 pts | Sévérité: 47
+  [FN - Faible Overlap] GT_ID: 265 | Taille: 406 pts | Max Pred ID: 1358 (60 pts) | Sévérité: 346
+  [ID SWITCH] GT_ID: 263 | Ancien Pred: 1353 -> Nouveau Pred: 1371 | Taille: 109 pts | Sévérité: 109
+  [SPLIT - Sur-segmentation] GT_ID: 263 divisée en preds: [1371, 1372] | Taille GT: 109 pts | Sévérité: 39
+  [FN - Faible Overlap] GT_ID: 259 | Taille: 477 pts | Max Pred ID: 1368 (66 pts) | Sévérité: 411
+  [SPLIT - Sur-segmentation] GT_ID: 259 divisée en preds: [1368, 1] | Taille GT: 477 pts | Sévérité: 411
+  [ID SWITCH] GT_ID: 256 | Ancien Pred: 17 -> Nouveau Pred: 1375 | Taille: 3654 pts | Sévérité: 3654
+  [ID SWITCH] GT_ID: 257 | Ancien Pred: 13 -> Nouveau Pred: 1387 | Taille: 2503 pts | Sévérité: 2503
+  [MERGE - Sous-segmentation] Pred_ID: 1104 fusionne les GT: [264, 265] | Taille Pred: 174 pts | Sévérité: 33
+  [MERGE - Sous-segmentation] Pred_ID: 1062 fusionne les GT: [266, 265] | Taille Pred: 72 pts | Sévérité: 23
+--- FRAME 173 ---
+  [FN - Faible Overlap] GT_ID: 265 | Taille: 286 pts | Max Pred ID: 1062 (19 pts) | Sévérité: 267
+  [ID SWITCH] GT_ID: 261 | Ancien Pred: 1373 -> Nouveau Pred: 17 | Taille: 61 pts | Sévérité: 61
+  [ID SWITCH] GT_ID: 263 | Ancien Pred: 1371 -> Nouveau Pred: 1395 | Taille: 95 pts | Sévérité: 95
+  [SPLIT - Sur-segmentation] GT_ID: 263 divisée en preds: [1395, 1396] | Taille GT: 95 pts | Sévérité: 41
+  [ID SWITCH] GT_ID: 259 | Ancien Pred: 17 -> Nouveau Pred: 13 | Taille: 432 pts | Sévérité: 432
+  [FN - Non Détecté] GT_ID: 266 | Taille: 2 pts | Sévérité: 2
+  [FN - Faible Overlap] GT_ID: 257 | Taille: 1803 pts | Max Pred ID: 1387 (123 pts) | Sévérité: 1680
+  [FN - Non Détecté] GT_ID: 256 | Taille: 5555 pts | Sévérité: 5555
+--- FRAME 174 ---
+  [ID SWITCH] GT_ID: 255 | Ancien Pred: 270 -> Nouveau Pred: 1398 | Taille: 271 pts | Sévérité: 271
+  [ID SWITCH] GT_ID: 265 | Ancien Pred: 1340 -> Nouveau Pred: 1062 | Taille: 191 pts | Sévérité: 191
+  [ID SWITCH] GT_ID: 263 | Ancien Pred: 1395 -> Nouveau Pred: 1 | Taille: 77 pts | Sévérité: 77
+  [SPLIT - Sur-segmentation] GT_ID: 263 divisée en preds: [1, 1418] | Taille GT: 77 pts | Sévérité: 31
+  [SPLIT - Sur-segmentation] GT_ID: 259 divisée en preds: [13, 1415] | Taille GT: 354 pts | Sévérité: 92
+  [ID SWITCH] GT_ID: 257 | Ancien Pred: 1387 -> Nouveau Pred: 1413 | Taille: 1748 pts | Sévérité: 1748
+  [ID SWITCH] GT_ID: 256 | Ancien Pred: 1375 -> Nouveau Pred: 1401 | Taille: 5714 pts | Sévérité: 5714
+--- FRAME 175 ---
+  [ID SWITCH] GT_ID: 255 | Ancien Pred: 1398 -> Nouveau Pred: 1420 | Taille: 317 pts | Sévérité: 317
+  [SPLIT - Sur-segmentation] GT_ID: 261 divisée en preds: [17, 1428] | Taille GT: 60 pts | Sévérité: 24
+  [ID SWITCH] GT_ID: 263 | Ancien Pred: 1 -> Nouveau Pred: 1429 | Taille: 61 pts | Sévérité: 61
+  [FN - Faible Overlap] GT_ID: 259 | Taille: 290 pts | Max Pred ID: 1425 (47 pts) | Sévérité: 243
+  [SPLIT - Sur-segmentation] GT_ID: 259 divisée en preds: [1425, 1422, 270, 13] | Taille GT: 290 pts | Sévérité: 243
+  [FN - Faible Overlap] GT_ID: 257 | Taille: 1583 pts | Max Pred ID: 1413 (138 pts) | Sévérité: 1445
+  [FN - Faible Overlap] GT_ID: 256 | Taille: 6984 pts | Max Pred ID: 1401 (44 pts) | Sévérité: 6940
+--- FRAME 176 ---
+  [FN - Faible Overlap] GT_ID: 255 | Taille: 362 pts | Max Pred ID: 1420 (63 pts) | Sévérité: 299
+  [ID SWITCH] GT_ID: 263 | Ancien Pred: 1429 -> Nouveau Pred: 1449 | Taille: 53 pts | Sévérité: 53
+  [FN - Faible Overlap] GT_ID: 259 | Taille: 251 pts | Max Pred ID: 1447 (48 pts) | Sévérité: 203
+  [SPLIT - Sur-segmentation] GT_ID: 259 divisée en preds: [1447, 13, 270] | Taille GT: 251 pts | Sévérité: 203
+  [ID SWITCH] GT_ID: 257 | Ancien Pred: 1413 -> Nouveau Pred: 1444 | Taille: 1103 pts | Sévérité: 1103
+  [ID SWITCH] GT_ID: 256 | Ancien Pred: 1401 -> Nouveau Pred: 1432 | Taille: 8411 pts | Sévérité: 8411
+--- FRAME 177 ---
+  [ID SWITCH] GT_ID: 255 | Ancien Pred: 1420 -> Nouveau Pred: 1452 | Taille: 443 pts | Sévérité: 443
+  [ID SWITCH] GT_ID: 263 | Ancien Pred: 1449 -> Nouveau Pred: 1 | Taille: 31 pts | Sévérité: 31
+  [ID SWITCH] GT_ID: 259 | Ancien Pred: 13 -> Nouveau Pred: 270 | Taille: 205 pts | Sévérité: 205
+  [SPLIT - Sur-segmentation] GT_ID: 259 divisée en preds: [270, 13] | Taille GT: 205 pts | Sévérité: 50
+  [FN - Non Détecté] GT_ID: 257 | Taille: 961 pts | Sévérité: 961
+  [FN - Faible Overlap] GT_ID: 256 | Taille: 7610 pts | Max Pred ID: 1432 (997 pts) | Sévérité: 6613
+--- FRAME 178 ---
+  [SPLIT - Sur-segmentation] GT_ID: 259 divisée en preds: [270, 13] | Taille GT: 192 pts | Sévérité: 53
+  [ID SWITCH] GT_ID: 257 | Ancien Pred: 1444 -> Nouveau Pred: 1470 | Taille: 829 pts | Sévérité: 829
+  [ID SWITCH] GT_ID: 256 | Ancien Pred: 1432 -> Nouveau Pred: 1459 | Taille: 7511 pts | Sévérité: 7511
+  [MERGE - Sous-segmentation] Pred_ID: 270 fusionne les GT: [259, 256] | Taille Pred: 219 pts | Sévérité: 80
+--- FRAME 179 ---
+  [ID SWITCH] GT_ID: 255 | Ancien Pred: 1452 -> Nouveau Pred: 1475 | Taille: 607 pts | Sévérité: 607
+  [ID SWITCH] GT_ID: 259 | Ancien Pred: 270 -> Nouveau Pred: 13 | Taille: 155 pts | Sévérité: 155
+  [FN - Non Détecté] GT_ID: 257 | Taille: 776 pts | Sévérité: 776
+  [FN - Faible Overlap] GT_ID: 256 | Taille: 6182 pts | Max Pred ID: 270 (31 pts) | Sévérité: 6151
+--- FRAME 180 ---
+  [FN - Faible Overlap] GT_ID: 255 | Taille: 740 pts | Max Pred ID: 1475 (111 pts) | Sévérité: 629
+  [SPLIT - Sur-segmentation] GT_ID: 259 divisée en preds: [13, 1495] | Taille GT: 124 pts | Sévérité: 26
+  [ID SWITCH] GT_ID: 257 | Ancien Pred: 1470 -> Nouveau Pred: 1493 | Taille: 661 pts | Sévérité: 661
+  [ID SWITCH] GT_ID: 256 | Ancien Pred: 1459 -> Nouveau Pred: 1482 | Taille: 4640 pts | Sévérité: 4640
+--- FRAME 181 ---
+  [ID SWITCH] GT_ID: 255 | Ancien Pred: 1475 -> Nouveau Pred: 1498 | Taille: 886 pts | Sévérité: 886
+  [ID SWITCH] GT_ID: 261 | Ancien Pred: 17 -> Nouveau Pred: 566 | Taille: 15 pts | Sévérité: 15
+  [ID SWITCH] GT_ID: 263 | Ancien Pred: 1 -> Nouveau Pred: 566 | Taille: 17 pts | Sévérité: 17
+  [ID SWITCH] GT_ID: 259 | Ancien Pred: 13 -> Nouveau Pred: 17 | Taille: 113 pts | Sévérité: 113
+  [FN - Non Détecté] GT_ID: 265 | Taille: 1 pts | Sévérité: 1
+  [ID SWITCH] GT_ID: 257 | Ancien Pred: 1493 -> Nouveau Pred: 13 | Taille: 532 pts | Sévérité: 532
+  [ID SWITCH] GT_ID: 256 | Ancien Pred: 1482 -> Nouveau Pred: 270 | Taille: 3071 pts | Sévérité: 3071
+  [SPLIT - Sur-segmentation] GT_ID: 256 divisée en preds: [270, 1505] | Taille GT: 3071 pts | Sévérité: 1781
+  [MERGE - Sous-segmentation] Pred_ID: 566 fusionne les GT: [263, 261] | Taille Pred: 32 pts | Sévérité: 15
+--- FRAME 182 ---
+  [FN - Faible Overlap] GT_ID: 255 | Taille: 1094 pts | Max Pred ID: 1518 (97 pts) | Sévérité: 997
+  [FN - Faible Overlap] GT_ID: 256 | Taille: 2138 pts | Max Pred ID: 1527 (362 pts) | Sévérité: 1776
+  [SPLIT - Sur-segmentation] GT_ID: 256 divisée en preds: [1527, 1531] | Taille GT: 2138 pts | Sévérité: 1776
+  [MERGE - Sous-segmentation] Pred_ID: 566 fusionne les GT: [263, 261] | Taille Pred: 31 pts | Sévérité: 14
+--- FRAME 183 ---
+  [ID SWITCH] GT_ID: 255 | Ancien Pred: 1498 -> Nouveau Pred: 1062 | Taille: 1204 pts | Sévérité: 1204
+  [ID SWITCH] GT_ID: 257 | Ancien Pred: 13 -> Nouveau Pred: 1 | Taille: 342 pts | Sévérité: 342
+  [FN - Faible Overlap] GT_ID: 256 | Taille: 1501 pts | Max Pred ID: 13 (232 pts) | Sévérité: 1269
+  [SPLIT - Sur-segmentation] GT_ID: 256 divisée en preds: [13, 1556] | Taille GT: 1501 pts | Sévérité: 1269
+  [MERGE - Sous-segmentation] Pred_ID: 566 fusionne les GT: [261, 263] | Taille Pred: 28 pts | Sévérité: 14
+--- FRAME 184 ---
+  [ID SWITCH] GT_ID: 257 | Ancien Pred: 1 -> Nouveau Pred: 1579 | Taille: 280 pts | Sévérité: 280
+  [SPLIT - Sur-segmentation] GT_ID: 257 divisée en preds: [1579, 13] | Taille GT: 280 pts | Sévérité: 160
+  [SPLIT - Sur-segmentation] GT_ID: 256 divisée en preds: [270, 1571] | Taille GT: 1294 pts | Sévérité: 1010
+  [FN - Non Détecté] GT_ID: 0 | Taille: 1 pts | Sévérité: 1
+  [FN - Non Détecté] GT_ID: 254 | Taille: 1 pts | Sévérité: 1
+  [MERGE - Sous-segmentation] Pred_ID: 566 fusionne les GT: [261, 263] | Taille Pred: 24 pts | Sévérité: 5
+--- FRAME 185 ---
+  [ID SWITCH] GT_ID: 261 | Ancien Pred: 566 -> Nouveau Pred: 17 | Taille: 16 pts | Sévérité: 16
+  [ID SWITCH] GT_ID: 263 | Ancien Pred: 566 -> Nouveau Pred: 17 | Taille: 6 pts | Sévérité: 6
+  [ID SWITCH] GT_ID: 259 | Ancien Pred: 17 -> Nouveau Pred: 1 | Taille: 57 pts | Sévérité: 57
+  [FN - Non Détecté] GT_ID: 257 | Taille: 211 pts | Sévérité: 211
+  [FN - Faible Overlap] GT_ID: 255 | Taille: 1640 pts | Max Pred ID: 1062 (116 pts) | Sévérité: 1524
+  [FN - Faible Overlap] GT_ID: 256 | Taille: 1039 pts | Max Pred ID: 270 (35 pts) | Sévérité: 1004
+  [FN - Non Détecté] GT_ID: 9 | Taille: 6 pts | Sévérité: 6
+  [MERGE - Sous-segmentation] Pred_ID: 17 fusionne les GT: [261, 263] | Taille Pred: 22 pts | Sévérité: 6
+--- FRAME 186 ---
+  [ID SWITCH] GT_ID: 259 | Ancien Pred: 1 -> Nouveau Pred: 566 | Taille: 43 pts | Sévérité: 43
+  [ID SWITCH] GT_ID: 257 | Ancien Pred: 1579 -> Nouveau Pred: 13 | Taille: 169 pts | Sévérité: 169
+  [SPLIT - Sur-segmentation] GT_ID: 257 divisée en preds: [13, 1] | Taille GT: 169 pts | Sévérité: 78
+  [FN - Faible Overlap] GT_ID: 256 | Taille: 874 pts | Max Pred ID: 270 (153 pts) | Sévérité: 721
+  [SPLIT - Sur-segmentation] GT_ID: 256 divisée en preds: [270, 1585] | Taille GT: 874 pts | Sévérité: 721
+  [FN - Non Détecté] GT_ID: 0 | Taille: 1 pts | Sévérité: 1
+  [FN - Non Détecté] GT_ID: 10 | Taille: 4 pts | Sévérité: 4
+  [MERGE - Sous-segmentation] Pred_ID: 17 fusionne les GT: [261, 263] | Taille Pred: 18 pts | Sévérité: 7
+--- FRAME 187 ---
+  [ID SWITCH] GT_ID: 259 | Ancien Pred: 566 -> Nouveau Pred: 13 | Taille: 50 pts | Sévérité: 50
+  [FN - Faible Overlap] GT_ID: 257 | Taille: 136 pts | Max Pred ID: 1 (26 pts) | Sévérité: 110
+  [FN - Non Détecté] GT_ID: 256 | Taille: 756 pts | Sévérité: 756
+  [FN - Non Détecté] GT_ID: 11 | Taille: 2 pts | Sévérité: 2
+  [MERGE - Sous-segmentation] Pred_ID: 17 fusionne les GT: [261, 263] | Taille Pred: 15 pts | Sévérité: 4
+--- FRAME 188 ---
+  [ID SWITCH] GT_ID: 257 | Ancien Pred: 13 -> Nouveau Pred: 566 | Taille: 110 pts | Sévérité: 110
+  [SPLIT - Sur-segmentation] GT_ID: 257 divisée en preds: [566, 1609] | Taille GT: 110 pts | Sévérité: 51
+  [FN - Faible Overlap] GT_ID: 255 | Taille: 4786 pts | Max Pred ID: 1062 (25 pts) | Sévérité: 4761
+  [FN - Non Détecté] GT_ID: 12 | Taille: 2 pts | Sévérité: 2
+  [MERGE - Sous-segmentation] Pred_ID: 17 fusionne les GT: [261, 263] | Taille Pred: 14 pts | Sévérité: 2
+--- FRAME 189 ---
+  [FN - Non Détecté] GT_ID: 270 | Taille: 10 pts | Sévérité: 10
+  [ID SWITCH] GT_ID: 263 | Ancien Pred: 17 -> Nouveau Pred: 13 | Taille: 3 pts | Sévérité: 3
+  [FN - Non Détecté] GT_ID: 261 | Taille: 5 pts | Sévérité: 5
+  [ID SWITCH] GT_ID: 257 | Ancien Pred: 566 -> Nouveau Pred: 17 | Taille: 89 pts | Sévérité: 89
+  [SPLIT - Sur-segmentation] GT_ID: 257 divisée en preds: [17, 566] | Taille GT: 89 pts | Sévérité: 44
+  [FN - Faible Overlap] GT_ID: 256 | Taille: 559 pts | Max Pred ID: 270 (76 pts) | Sévérité: 483
+  [ID SWITCH] GT_ID: 255 | Ancien Pred: 1062 -> Nouveau Pred: 1610 | Taille: 5874 pts | Sévérité: 5874
+  [FN - Non Détecté] GT_ID: 254 | Taille: 8 pts | Sévérité: 8
+  [FN - Non Détecté] GT_ID: 13 | Taille: 4 pts | Sévérité: 4
+--- FRAME 190 ---
+  [FN - Non Détecté] GT_ID: 261 | Taille: 4 pts | Sévérité: 4
+  [SPLIT - Sur-segmentation] GT_ID: 257 divisée en preds: [17, 566] | Taille GT: 69 pts | Sévérité: 30
+  [FN - Faible Overlap] GT_ID: 256 | Taille: 471 pts | Max Pred ID: 270 (93 pts) | Sévérité: 378
+  [SPLIT - Sur-segmentation] GT_ID: 256 divisée en preds: [270, 1062] | Taille GT: 471 pts | Sévérité: 378
+  [FN - Non Détecté] GT_ID: 267 | Taille: 1 pts | Sévérité: 1
+  [FN - Non Détecté] GT_ID: 14 | Taille: 4 pts | Sévérité: 4
+--- FRAME 191 ---
+  [FN - Non Détecté] GT_ID: 270 | Taille: 10 pts | Sévérité: 10
+  [FN - Non Détecté] GT_ID: 261 | Taille: 4 pts | Sévérité: 4
+  [SPLIT - Sur-segmentation] GT_ID: 257 divisée en preds: [17, 1636] | Taille GT: 53 pts | Sévérité: 25
+  [FN - Faible Overlap] GT_ID: 256 | Taille: 391 pts | Max Pred ID: 270 (73 pts) | Sévérité: 318
+  [SPLIT - Sur-segmentation] GT_ID: 256 divisée en preds: [270, 1, 1062] | Taille GT: 391 pts | Sévérité: 318
+  [FN - Faible Overlap] GT_ID: 255 | Taille: 6930 pts | Max Pred ID: 1610 (1082 pts) | Sévérité: 5848
+  [FN - Non Détecté] GT_ID: 15 | Taille: 5 pts | Sévérité: 5
+--- FRAME 192 ---
+  [ID SWITCH] GT_ID: 270 | Ancien Pred: 1621 -> Nouveau Pred: 1637 | Taille: 22 pts | Sévérité: 22
+  [FN - Non Détecté] GT_ID: 261 | Taille: 4 pts | Sévérité: 4
+  [ID SWITCH] GT_ID: 257 | Ancien Pred: 17 -> Nouveau Pred: 566 | Taille: 41 pts | Sévérité: 41
+  [SPLIT - Sur-segmentation] GT_ID: 257 divisée en preds: [566, 17] | Taille GT: 41 pts | Sévérité: 18
+  [SPLIT - Sur-segmentation] GT_ID: 256 divisée en preds: [270, 1, 1062] | Taille GT: 337 pts | Sévérité: 158
+  [FN - Faible Overlap] GT_ID: 255 | Taille: 6941 pts | Max Pred ID: 1610 (56 pts) | Sévérité: 6885
+--- FRAME 193 ---
+  [FN - Non Détecté] GT_ID: 261 | Taille: 3 pts | Sévérité: 3
+  [ID SWITCH] GT_ID: 257 | Ancien Pred: 566 -> Nouveau Pred: 17 | Taille: 28 pts | Sévérité: 28
+  [ID SWITCH] GT_ID: 256 | Ancien Pred: 270 -> Nouveau Pred: 1 | Taille: 292 pts | Sévérité: 292
+  [SPLIT - Sur-segmentation] GT_ID: 256 divisée en preds: [1, 566] | Taille GT: 292 pts | Sévérité: 138
+  [FN - Non Détecté] GT_ID: 16 | Taille: 5 pts | Sévérité: 5
+--- FRAME 194 ---
+  [FN - Non Détecté] GT_ID: 259 | Taille: 9 pts | Sévérité: 9
+  [ID SWITCH] GT_ID: 256 | Ancien Pred: 1 -> Nouveau Pred: 566 | Taille: 250 pts | Sévérité: 250
+  [SPLIT - Sur-segmentation] GT_ID: 256 divisée en preds: [566, 1062, 270] | Taille GT: 250 pts | Sévérité: 107
+  [FN - Non Détecté] GT_ID: 0 | Taille: 1 pts | Sévérité: 1
+--- FRAME 195 ---
+  [ID SWITCH] GT_ID: 257 | Ancien Pred: 17 -> Nouveau Pred: 270 | Taille: 21 pts | Sévérité: 21
+  [ID SWITCH] GT_ID: 259 | Ancien Pred: 13 -> Nouveau Pred: 17 | Taille: 12 pts | Sévérité: 12
+  [ID SWITCH] GT_ID: 256 | Ancien Pred: 566 -> Nouveau Pred: 1062 | Taille: 206 pts | Sévérité: 206
+  [FN - Non Détecté] GT_ID: 17 | Taille: 4 pts | Sévérité: 4
+--- FRAME 196 ---
+  [FN - Non Détecté] GT_ID: 259 | Taille: 9 pts | Sévérité: 9
+  [FN - Non Détecté] GT_ID: 18 | Taille: 10 pts | Sévérité: 10
+--- FRAME 197 ---
+  [ID SWITCH] GT_ID: 257 | Ancien Pred: 270 -> Nouveau Pred: 17 | Taille: 20 pts | Sévérité: 20
+  [FN - Non Détecté] GT_ID: 259 | Taille: 8 pts | Sévérité: 8
+  [SPLIT - Sur-segmentation] GT_ID: 256 divisée en preds: [1062, 270] | Taille GT: 167 pts | Sévérité: 74
+  [FN - Non Détecté] GT_ID: 19 | Taille: 2 pts | Sévérité: 2
+--- FRAME 198 ---
+  [FN - Non Détecté] GT_ID: 257 | Taille: 15 pts | Sévérité: 15
+  [FN - Non Détecté] GT_ID: 259 | Taille: 4 pts | Sévérité: 4
+  [FN - Non Détecté] GT_ID: 0 | Taille: 1 pts | Sévérité: 1
+  [FN - Non Détecté] GT_ID: 20 | Taille: 9 pts | Sévérité: 9
+--- FRAME 199 ---
+  [FN - Non Détecté] GT_ID: 257 | Taille: 7 pts | Sévérité: 7
+  [FN - Non Détecté] GT_ID: 259 | Taille: 3 pts | Sévérité: 3
+  [SPLIT - Sur-segmentation] GT_ID: 256 divisée en preds: [1062, 270] | Taille GT: 137 pts | Sévérité: 54
+  [FN - Faible Overlap] GT_ID: 255 | Taille: 1331 pts | Max Pred ID: 1610 (233 pts) | Sévérité: 1098
+  [FN - Non Détecté] GT_ID: 21 | Taille: 7 pts | Sévérité: 7
+
+=== RÉSUMÉ DES ERREURS ===
+Total False Negatives (Pistes non détectées ou très faibles) : 702
+Total False Positives (Ghosts ou très faible overlap GT) : 0
+Total Splits (Sur-segmentations d'une GT) : 245
+Total Merges (Sous-segmentations, plusieurs GT fusionnées) : 135
+Total ID Switches (Inconsistance temporelle) : 446
+====================================
