@@ -1,4 +1,4 @@
-BACKEND = "cgal"
+BACKEND = "geogram"
 # @title 2.1 Configuration Séquence et Téléchargement
 # IMPORTANT : Si vous ne voulez tester qu'une seule séquence, lancez cette cellule.
 # Le téléchargement via gdown --folder récupère tout le dossier si on ne filtre pas.

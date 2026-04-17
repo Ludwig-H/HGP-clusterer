@@ -21,7 +21,7 @@ except ImportError:
     pass
 # @title 1.1 Choix du Backend Géométrique
 # 'geogram' est recommandé pour la vitesse (headless). 'cgal' est plus lent mais exact.
-BACKEND = 'cgal'  # @param ['geogram', 'cgal']
+BACKEND = 'geogram'  # @param ['geogram', 'cgal']
 print(f"Backend sélectionné : {BACKEND}")
 
 # @title 1.2 Installation des dépendances système
