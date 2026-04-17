@@ -501,19 +501,6 @@ private:
         if (n_cells > 0) {
             int n_verts_per_cell = delaunay->cell_size();
             _parallel_extract_all_edges(delaunay, n_points, n_cells, n_verts_per_cell, edges);
-        } 
-        else {
-            // Fallback for nD NN if no cells
-            GEO::vector<GEO::index_t> neighbors;
-            for(GEO::index_t i = 0; i < n_points; ++i) {
-                delaunay->get_neighbors(i, neighbors);
-                for(GEO::index_t n_idx : neighbors) {
-                    if (n_idx < n_points && n_idx != i) {
-                        if (i < n_idx) edges.push_back({(int)i, (int)n_idx});
-                        else edges.push_back({(int)n_idx, (int)i});
-                    }
-                }
-            }
         }
         
         return edges;
@@ -568,8 +555,10 @@ private:
         const char* env_engine = std::getenv("GEOGRAM_ENGINE_3D");
         std::string engine_name = "default";
         
-        if (dim == 2) engine_name = "BDEL"; // PDEL is unstable
-        else if (dim == 3) {
+        if (lifted_dim == 3) {
+            if (env_engine) engine_name = std::string(env_engine);
+            else engine_name = "PDEL";
+        } else if (lifted_dim == 4) {
             if (env_engine) engine_name = std::string(env_engine);
             else engine_name = "PDEL"; 
         }
