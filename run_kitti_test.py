@@ -657,7 +657,25 @@ def optimal_flat_clustering_cvx(parents, f_scores, points_dict, M):
             node_hulls[v] = hull
 
     # FAST CONFLICT RESOLUTION (O(1) without tree shatter)
-    # block removed
+    valid_nodes = [v for v in V_opt if v in node_hulls]
+    if len(valid_nodes) >= 2:
+        geoms = [node_hulls[v] for v in valid_nodes]
+        tree = STRtree(geoms)
+        left, right = tree.query(geoms, predicate="intersects")
+        
+        conflicts = set()
+        for i, j in zip(left, right):
+            if i >= j: continue
+            u, v = valid_nodes[i], valid_nodes[j]
+            
+            if labels_opt[u] == labels_opt[v]:
+                continue # Same track, no conflict
+            
+            conflicts.add(u)
+            conflicts.add(v)
+            
+        for v in conflicts:
+            labels_opt[v] = 0 # Trim conflicting nodes (they go to Passe 2)
 
     return V_opt, labels_opt
 
