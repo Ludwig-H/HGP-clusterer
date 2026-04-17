@@ -29,9 +29,10 @@ inline bool my_cell_is_infinite(const GEO::Delaunay* delaunay, GEO::index_t c) {
 #include <geogram/basic/file_system.h>
 
 #ifdef CGAL_LINKED_WITH_TBB
-#include <tbb/parallel_for.h>
 #include <tbb/parallel_sort.h>
+#include <tbb/parallel_for.h>
 #include <tbb/blocked_range.h>
+#include <tbb/concurrent_vector.h>
 #endif
 
 // ==============================================================================
