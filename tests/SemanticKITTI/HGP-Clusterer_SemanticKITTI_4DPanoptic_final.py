@@ -77,7 +77,8 @@ if BACKEND == 'geogram':
 # os.system('git clone --recursive https://github.com/BrunoLevy/geogram.git')
     
     print("Compilation de Geogram (Headless)...")
-# os.system('cmake -S geogram -B geogram/build -DCMAKE_BUILD_TYPE=Release -DGEOGRAM_WITH_GRAPHICS=OFF -DGEOGRAM_WITH_LUA=OFF -DGEOGRAM_WITH_GARGANTUA=OFF')
+    os.system('rm -rf geogram/build')
+    os.system('cmake -S geogram -B geogram/build -DCMAKE_BUILD_TYPE=Release -DGEOGRAM_WITH_GRAPHICS=OFF -DGEOGRAM_WITH_LUA=OFF -DGEOGRAM_WITH_GARGANTUA=OFF')
 # os.system('cmake --build geogram/build --config Release --parallel 4')
 # os.system('cmake --install geogram/build --prefix /usr/local')
     os.environ['GEOGRAM_INSTALL_PREFIX'] = '/usr/local'
