@@ -174,8 +174,6 @@ if(TRUE)
     if (TARGET geogram::geogram OR TARGET geogram)
         message(STATUS "Geogram found! Enabled HGP_WITH_GEOGRAM")
         target_compile_definitions(geometry_binding PRIVATE HGP_WITH_GEOGRAM)
-        # Enable GARGANTUA for 64-bit indices support in Geogram (Required if Geogram was built with it)
-        target_compile_definitions(geometry_binding PRIVATE GARGANTUA)
         
         # Link geogram using whole-archive to ensure static initializers (Delaunay factory) are not stripped
         if(CMAKE_CXX_COMPILER_ID MATCHES "GNU" OR CMAKE_CXX_COMPILER_ID MATCHES "Clang")
