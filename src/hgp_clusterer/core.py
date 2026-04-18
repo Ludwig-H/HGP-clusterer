@@ -170,6 +170,11 @@ class HGPClusterer(BaseEstimator, ClusterMixin):
                  X_processed = reducer.fit_transform(X_processed).astype(np.float32)
 
         # 3. Build Hypergraph
+        # Fix Geogram PDEL infinite hang on exactly coplanar/collinear inputs
+        if self.backend == 'geogram' and X_processed.shape[0] > 0:
+            rng_noise = np.random.default_rng(42)
+            X_processed = X_processed + rng_noise.normal(0, 1e-5, X_processed.shape).astype(X_processed.dtype)
+            
         # Optim: Returns unique faces and pre-calculated S_faces
         faces_unique, e_u, e_v, e_w, S_faces, nS = _build_graph_KSimplexes(
             X_processed,
