@@ -3,6 +3,10 @@ try:
     output.enable_custom_widget_manager()
 except ImportError:
     pass
+
+import sys
+sys.setrecursionlimit(10000)
+
 # @title 0. Montage Google Drive (Si exécution sur Colab)
 import os
 try:
@@ -744,11 +748,18 @@ def optimal_flat_clustering_cvx(parents, f_scores, points_dict, M):
     best_m = np.zeros(N, dtype=int)
     is_leaf_cut = np.zeros(N, dtype=bool)
     
-    def dfs(v):
-        child_sum = 0.0
-        for c in children[v]:
-            child_sum += dfs(c)
+    # 1. Post-order traversal (bottom-up) iteration
+    post_order = []
+    stack = []
+    for r in roots: stack.append(r)
+    while stack:
+        curr = stack.pop()
+        post_order.append(curr)
+        for c in children[curr]: stack.append(c)
             
+    for v in reversed(post_order):
+        child_sum = sum(dp_val[c] for c in children[v])
+        
         best_score_at_v = -float('inf')
         b_m = 0
         for m in range(M + 1):
@@ -768,23 +779,20 @@ def optimal_flat_clustering_cvx(parents, f_scores, points_dict, M):
             else:
                 dp_val[v] = child_sum
                 is_leaf_cut[v] = False
-        return dp_val[v]
-
-    for r in roots:
-        dfs(r)
-        
+                
     V_opt = []
     labels_opt = {}
-    def retrieve(v):
+    
+    # 2. Top-down retrieval iteration
+    stack = []
+    for r in roots: stack.append(r)
+    while stack:
+        v = stack.pop()
         if is_leaf_cut[v]:
             V_opt.append(v)
             labels_opt[v] = best_m[v]
         else:
-            for c in children[v]:
-                retrieve(c)
-                
-    for r in roots:
-        retrieve(r)
+            for c in children[v]: stack.append(c)
 
     node_hulls = {}
     for v in V_opt:
@@ -1145,7 +1153,8 @@ for t in frames:
                         V_opt, labels_opt = optimal_flat_clustering_cvx(parents, f_scores, points_dict, M_conf)
                         if TRACKING_VERBOSE: print(f"      * [MILP Confirmed] Solved pour composante de {len(parents)} noeuds. {len(V_opt)} noeuds gardés.")
                     except Exception as e: 
-                        if TRACKING_VERBOSE: print(f"      * [MILP Error] {e}")
+                        import traceback
+                        if TRACKING_VERBOSE: print(f"      * [MILP Error] {e}\n{traceback.format_exc()}")
                         continue
                         
                     roots = [i for i, p in enumerate(parents) if p == -1]
@@ -1299,7 +1308,8 @@ for t in frames:
                         V_opt, labels_opt = optimal_flat_clustering_cvx(parents, f_scores, points_dict, M_unconf)
                         if TRACKING_VERBOSE: print(f"      * [MILP Unconf] Solved pour composante de {len(parents)} noeuds. {len(V_opt)} noeuds gardés.")
                     except Exception as e: 
-                        if TRACKING_VERBOSE: print(f"      * [MILP Error] {e}")
+                        import traceback
+                        if TRACKING_VERBOSE: print(f"      * [MILP Error] {e}\n{traceback.format_exc()}")
                         continue
                         
                     roots = [i for i, p in enumerate(parents) if p == -1]
