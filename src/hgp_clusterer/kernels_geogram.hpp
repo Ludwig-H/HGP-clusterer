@@ -399,6 +399,7 @@ public:
             GEO::CmdLine::import_arg_group("global");
             GEO::CmdLine::import_arg_group("algo");
             GEO::CmdLine::import_arg_group("standard");
+            GEO::CmdLine::set_arg("sys:multithread", "true");
             initialized = true;
         }
     }
@@ -479,10 +480,11 @@ private:
             else engine_name = "PDEL"; 
         }
         
-        std::cout << "[Geogram] Creating Delaunay engine: " << engine_name << " for dim " << dim << std::endl;
 
         GEO::Delaunay_var delaunay = GEO::Delaunay::create(dim, engine_name);
-        if (!delaunay) return edges;
+        if (!delaunay) {
+            return edges;
+        }
 
         // Memory Optimization
         delaunay->set_stores_neighbors(false);
@@ -565,7 +567,6 @@ private:
         
         GEO::Delaunay_var delaunay = GEO::Delaunay::create(lifted_dim, engine_name);
         if (!delaunay) {
-            std::cerr << "[Geogram Error] Failed to create engine: " << engine_name << std::endl;
             return edges;
         }
 
