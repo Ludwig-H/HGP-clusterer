@@ -1,6 +1,6 @@
 semantic_kitti_data/
 third_party/
-geogram_install/
+geogram_*
 CGALDelaunay/
 *venv*/
 .venv/
