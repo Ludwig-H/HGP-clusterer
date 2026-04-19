@@ -165,10 +165,15 @@ class HGPReducer(BaseEstimator, TransformerMixin):
                         L_gpu = D_gpu - W_gpu
                         
                         if self.verbose:
-                            print(f"Computing {d_target} eigenvectors on GPU...")
+                            print(f"Computing {d_target} eigenvectors on GPU (using LA Trick)...")
                         
-                        evals_gpu, evecs_gpu = csplinalg.eigsh(L_gpu, k=k_eig, which='SA')
-                        evals = cp.asnumpy(evals_gpu)
+                        # LA trick for combinatorial: L has eigenvalues in [0, 2*max(D)]
+                        # Find largest evals of M = c*I - L
+                        c_bound = 2.0 * cp.max(D_diag_gpu) + 0.1
+                        M_gpu = csp.eye(n_faces, dtype=cp.float32) * c_bound - L_gpu
+                        
+                        evals_gpu, evecs_gpu = csplinalg.eigsh(M_gpu, k=k_eig, which='LA')
+                        evals = cp.asnumpy(c_bound - evals_gpu)
                         evecs = cp.asnumpy(evecs_gpu)
                     
                     # Sort explicitly to be certain
@@ -212,15 +217,20 @@ class HGPReducer(BaseEstimator, TransformerMixin):
                     L = D - W_csr
                     
                     if self.verbose:
-                        print(f"Computing {d_target} eigenvectors on CPU...")
+                        print(f"Computing {d_target} eigenvectors on CPU (using LA Trick)...")
                         
+                    # LA Trick on CPU to prevent Memory issues and speed up
+                    c_bound = 2.0 * np.max(D_diag) + 0.1
+                    M_cpu = sp.eye(n_faces) * c_bound - L
                     try:
-                        # Shift-invert is significantly faster for finding smallest eigenvectors
-                        evals, evecs = splinalg.eigsh(L, k=k_eig, sigma=-1e-5, which='LM')
+                        evals_M, evecs_M = splinalg.eigsh(M_cpu, k=k_eig, which='LA')
                     except Exception as e:
                         if self.verbose:
-                            print(f"eigsh shift-invert failed ({e}), falling back to standard SM...")
-                        evals, evecs = splinalg.eigsh(L, k=k_eig, which='SM')
+                            print(f"eigsh LA failed ({e}), falling back to LM...")
+                        evals_M, evecs_M = splinalg.eigsh(M_cpu, k=k_eig, which='LM')
+                    
+                    evals = c_bound - evals_M
+                    evecs = evecs_M
                 
                 # Sort explicitly
                 idx = np.argsort(evals)
