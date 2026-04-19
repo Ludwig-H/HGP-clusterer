@@ -1896,7 +1896,6 @@ def get_obb_corners(cx, cy, cz, l, w, h, yaw):
 
 def compute_obb(pts):
     if len(pts) < 3: return None
-    c = np.mean(pts, axis=0)
     xy = pts[:, :2]
     cov = np.cov(xy.T)
     eigenvalues, eigenvectors = np.linalg.eigh(cov)
@@ -1905,10 +1904,15 @@ def compute_obb(pts):
     cos_t, sin_t = np.cos(-yaw), np.sin(-yaw)
     R = np.array([[cos_t, -sin_t], [sin_t, cos_t]])
     aligned_xy = xy @ R.T
-    dim_x = np.max(aligned_xy[:, 0]) - np.min(aligned_xy[:, 0])
-    dim_y = np.max(aligned_xy[:, 1]) - np.min(aligned_xy[:, 1])
+    min_x, max_x = np.min(aligned_xy[:, 0]), np.max(aligned_xy[:, 0])
+    min_y, max_y = np.min(aligned_xy[:, 1]), np.max(aligned_xy[:, 1])
+    dim_x = max_x - min_x
+    dim_y = max_y - min_y
+    center_aligned_xy = np.array([min_x + dim_x / 2, min_y + dim_y / 2])
+    c_xy = center_aligned_xy @ np.array([[cos_t, sin_t], [-sin_t, cos_t]])
     dim_z = np.max(pts[:, 2]) - np.min(pts[:, 2])
-    return c[0], c[1], c[2], dim_x, dim_y, dim_z, yaw
+    cz = np.min(pts[:, 2]) + dim_z / 2
+    return c_xy[0], c_xy[1], cz, dim_x, dim_y, dim_z, yaw
 
 def create_obb_lines(obbs):
     x_lines, y_lines, z_lines = [], [], []
