@@ -140,7 +140,7 @@ class HGPReducer(BaseEstimator, TransformerMixin):
             if use_cuda:
                 # --- CUDA Fast Path ---
                 try:
-                    W_gpu = csp.coo_matrix(W).tocsr()
+                    W_gpu = csp.csr_matrix(W)
                     D_diag_gpu = cp.asarray(W_gpu.sum(axis=1)).flatten()
                     
                     if self.laplacian_type == 'normalized':
@@ -148,19 +148,26 @@ class HGPReducer(BaseEstimator, TransformerMixin):
                             D_inv_sqrt_gpu = 1.0 / cp.sqrt(D_diag_gpu)
                         D_inv_sqrt_gpu[~cp.isfinite(D_inv_sqrt_gpu)] = 0.0
                         D_inv_sqrt_mat_gpu = csp.diags(D_inv_sqrt_gpu)
-                        I_gpu = csp.eye(n_faces, dtype=cp.float32)
-                        L_gpu = I_gpu - D_inv_sqrt_mat_gpu @ W_gpu @ D_inv_sqrt_mat_gpu
+                        
+                        if self.verbose:
+                            print(f"Computing {d_target} eigenvectors on GPU (using LA Trick)...")
+                            
+                        # Trick to find smallest eigenvalues of L = I - M:
+                        # Find largest eigenvalues of M = D^{-1/2} W D^{-1/2}
+                        M_gpu = D_inv_sqrt_mat_gpu.dot(W_gpu).dot(D_inv_sqrt_mat_gpu)
+                        evals_gpu, evecs_gpu = csplinalg.eigsh(M_gpu, k=k_eig, which='LA')
+                        evals = 1.0 - cp.asnumpy(evals_gpu)
+                        evecs = cp.asnumpy(evecs_gpu)
                     else:
                         D_gpu = csp.diags(D_diag_gpu)
                         L_gpu = D_gpu - W_gpu
                         
-                    if self.verbose:
-                        print(f"Computing {d_target} eigenvectors on GPU...")
-                    
-                    # Compute smallest algebraic eigenvalues on GPU
-                    evals_gpu, evecs_gpu = csplinalg.eigsh(L_gpu, k=k_eig, which='SM')
-                    evals = cp.asnumpy(evals_gpu)
-                    evecs = cp.asnumpy(evecs_gpu)
+                        if self.verbose:
+                            print(f"Computing {d_target} eigenvectors on GPU...")
+                        
+                        evals_gpu, evecs_gpu = csplinalg.eigsh(L_gpu, k=k_eig, which='SA')
+                        evals = cp.asnumpy(evals_gpu)
+                        evecs = cp.asnumpy(evecs_gpu)
                     
                     # Sort explicitly to be certain
                     idx = np.argsort(evals)
