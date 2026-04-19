@@ -408,21 +408,34 @@ class SemanticKITTILoader:
         print("⚠️ Warning: Aucune matrice 'Tr' (Transformation Velo -> Cam) trouvée dans calib.txt. Fallback sur une matrice Identité (ce qui causera des erreurs de rotation sur l'axe Z !)")
         return np.eye(4)
 
-    def get_scan(self, idx, apply_pose=True):
-        scan = np.fromfile(self.scan_files[idx], dtype=np.float32).reshape(-1, 4)
-        points = scan[:, :3]
-        if apply_pose and self.poses and idx < len(self.poses):
-            # Transformation officielle SemanticKITTI : inv(Tr) @ Pose_Cam @ Tr
-            # Cela permet de transformer les points Lidar vers le monde tout en restant 
-            # dans le système de coordonnées Lidar (x=avant, y=gauche, z=haut)
+    def get_pose(self, idx, flatten=True):
+        if self.poses and idx < len(self.poses):
             Tr = self.calib
             Pose_cam = self.poses[idx]
             T_world_velo = np.linalg.inv(Tr) @ Pose_cam @ Tr
-            
+            if flatten:
+                t = T_world_velo[:3, 3]
+                R = T_world_velo[:3, :3]
+                yaw = np.arctan2(R[1, 0], R[0, 0])
+                R_flat = np.array([
+                    [np.cos(yaw), -np.sin(yaw), 0],
+                    [np.sin(yaw),  np.cos(yaw), 0],
+                    [0,           0,            1]
+                ])
+                T_world_velo = np.eye(4)
+                T_world_velo[:3, :3] = R_flat
+                T_world_velo[:3, 3] = t
+            return T_world_velo
+        return np.eye(4)
+
+    def get_scan(self, idx, apply_pose=True, flatten_pose=True):
+        scan = np.fromfile(self.scan_files[idx], dtype=np.float32).reshape(-1, 4)
+        points = scan[:, :3]
+        if apply_pose and self.poses and idx < len(self.poses):
+            T_world_velo = self.get_pose(idx, flatten=flatten_pose)
             hom_points = np.hstack([points, np.ones((len(points), 1))])
             points = (T_world_velo @ hom_points.T).T[:, :3]
         return points
-
     def get_labels(self, idx):
         if idx >= len(self.label_files): return None, None
         label = np.fromfile(self.label_files[idx], dtype=np.uint32)
