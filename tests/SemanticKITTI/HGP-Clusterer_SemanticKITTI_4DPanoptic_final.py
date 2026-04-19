@@ -397,9 +397,15 @@ class SemanticKITTILoader:
             for line in f:
                 if ':' not in line: continue
                 key, val = line.split(':', 1)
-                calib[key] = np.array([float(x) for x in val.split()]).reshape(3, 4)
+                calib[key.strip()] = np.array([float(x) for x in val.split()]).reshape(3, 4)
         if 'Tr' in calib:
             return np.vstack([calib['Tr'], [0, 0, 0, 1]])
+        elif 'Tr_velo_to_cam' in calib:
+            return np.vstack([calib['Tr_velo_to_cam'], [0, 0, 0, 1]])
+        for k in calib.keys():
+            if 'Tr' in k:
+                return np.vstack([calib[k], [0, 0, 0, 1]])
+        print("⚠️ Warning: Aucune matrice 'Tr' (Transformation Velo -> Cam) trouvée dans calib.txt. Fallback sur une matrice Identité (ce qui causera des erreurs de rotation sur l'axe Z !)")
         return np.eye(4)
 
     def get_scan(self, idx, apply_pose=True):
