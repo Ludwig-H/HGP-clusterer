@@ -144,9 +144,9 @@ class HGPReducer(BaseEstimator, TransformerMixin):
                     D_diag_gpu = cp.asarray(W_gpu.sum(axis=1)).flatten()
                     
                     if self.laplacian_type == 'normalized':
-                        # CuPy does not have errstate; division by zero safely produces inf/nan on GPU
-                        D_inv_sqrt_gpu = 1.0 / cp.sqrt(D_diag_gpu)
-                        D_inv_sqrt_gpu[~cp.isfinite(D_inv_sqrt_gpu)] = 0.0
+                        D_inv_sqrt_gpu = cp.zeros_like(D_diag_gpu)
+                        mask = D_diag_gpu > 0
+                        D_inv_sqrt_gpu[mask] = 1.0 / cp.sqrt(D_diag_gpu[mask])
                         D_inv_sqrt_mat_gpu = csp.diags(D_inv_sqrt_gpu)
                         
                         if self.verbose:
@@ -186,9 +186,9 @@ class HGPReducer(BaseEstimator, TransformerMixin):
                 D_diag = np.asarray(W_csr.sum(axis=1)).flatten()
                 
                 if self.laplacian_type == 'normalized':
-                    with np.errstate(divide='ignore'):
-                        D_inv_sqrt = 1.0 / np.sqrt(D_diag)
-                    D_inv_sqrt[~np.isfinite(D_inv_sqrt)] = 0.0
+                    D_inv_sqrt = np.zeros_like(D_diag)
+                    mask = D_diag > 0
+                    D_inv_sqrt[mask] = 1.0 / np.sqrt(D_diag[mask])
                     D_inv_sqrt_mat = sp.diags(D_inv_sqrt)
                     
                     if self.verbose:
