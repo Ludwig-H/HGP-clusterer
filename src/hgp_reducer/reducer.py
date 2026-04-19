@@ -141,7 +141,7 @@ class HGPReducer(BaseEstimator, TransformerMixin):
                 # --- CUDA Fast Path ---
                 try:
                     W_gpu = csp.coo_matrix(W).tocsr()
-                    D_diag_gpu = W_gpu.sum(axis=1).A1
+                    D_diag_gpu = cp.asarray(W_gpu.sum(axis=1)).flatten()
                     
                     if self.laplacian_type == 'normalized':
                         with cp.errstate(divide='ignore'):
@@ -174,7 +174,7 @@ class HGPReducer(BaseEstimator, TransformerMixin):
             if not use_cuda:
                 # --- CPU Path ---
                 W_csr = W.tocsr()
-                D_diag = W_csr.sum(axis=1).A1
+                D_diag = np.asarray(W_csr.sum(axis=1)).flatten()
                 
                 if self.laplacian_type == 'normalized':
                     with np.errstate(divide='ignore'):
