@@ -114,7 +114,28 @@ class HGPReducer(BaseEstimator, TransformerMixin):
         W = sp.coo_matrix((edge_weights, (e_u, e_v)), shape=(n_faces, n_faces))
         # Symetrise since the connectivity is undirected
         W = W + W.T
+        W_coo = W.tocoo()
+        D_diag = np.asarray(W_coo.sum(axis=1)).flatten()
         
+        # Build LA Trick Matrix (M) completely on CPU via fast COO arrays to bypass all SpGEMM
+        if self.laplacian_type == 'normalized':
+            D_inv_sqrt = np.zeros_like(D_diag)
+            mask = D_diag > 0
+            D_inv_sqrt[mask] = 1.0 / np.sqrt(D_diag[mask])
+            
+            # M = D^{-1/2} W D^{-1/2} (computed element-wise on edges in O(N))
+            M_data = W_coo.data * D_inv_sqrt[W_coo.row] * D_inv_sqrt[W_coo.col]
+            M_cpu = sp.coo_matrix((M_data, (W_coo.row, W_coo.col)), shape=(n_faces, n_faces)).tocsr()
+        else:
+            c_bound = 2.0 * np.max(D_diag) + 0.1
+            diag_indices = np.arange(n_faces)
+            diag_data = c_bound - D_diag
+            
+            M_data = np.concatenate([W_coo.data, diag_data])
+            M_row = np.concatenate([W_coo.row, diag_indices])
+            M_col = np.concatenate([W_coo.col, diag_indices])
+            M_cpu = sp.coo_matrix((M_data, (M_row, M_col)), shape=(n_faces, n_faces)).tocsr()
+            
         # Hardware acceleration check
         use_cuda = False
         if self.device in ['auto', 'cuda']:
@@ -140,40 +161,18 @@ class HGPReducer(BaseEstimator, TransformerMixin):
             if use_cuda:
                 # --- CUDA Fast Path ---
                 try:
-                    W_gpu = csp.csr_matrix(W)
-                    D_diag_gpu = cp.asarray(W_gpu.sum(axis=1)).flatten()
+                    if self.verbose:
+                        print(f"Computing {d_target} eigenvectors on GPU (using SpGEMM-free LA Trick)...")
+                    
+                    M_gpu = csp.csr_matrix(M_cpu)
+                    evals_gpu, evecs_gpu = csplinalg.eigsh(M_gpu, k=k_eig, which='LA')
                     
                     if self.laplacian_type == 'normalized':
-                        D_inv_sqrt_gpu = cp.zeros_like(D_diag_gpu)
-                        mask = D_diag_gpu > 0
-                        D_inv_sqrt_gpu[mask] = 1.0 / cp.sqrt(D_diag_gpu[mask])
-                        D_inv_sqrt_mat_gpu = csp.diags(D_inv_sqrt_gpu)
-                        
-                        if self.verbose:
-                            print(f"Computing {d_target} eigenvectors on GPU (using LA Trick)...")
-                            
-                        # Trick to find smallest eigenvalues of L = I - M:
-                        # Find largest eigenvalues of M = D^{-1/2} W D^{-1/2}
-                        M_gpu = D_inv_sqrt_mat_gpu.dot(W_gpu).dot(D_inv_sqrt_mat_gpu)
-                        evals_gpu, evecs_gpu = csplinalg.eigsh(M_gpu, k=k_eig, which='LA')
                         evals = 1.0 - cp.asnumpy(evals_gpu)
-                        
                         # Rescale to get Random Walk Laplacian eigenvectors: u = D^{-1/2} v
-                        evecs = cp.asnumpy(D_inv_sqrt_gpu)[:, None] * cp.asnumpy(evecs_gpu)
+                        evecs = D_inv_sqrt[:, None] * cp.asnumpy(evecs_gpu)
                     else:
-                        D_gpu = csp.diags(D_diag_gpu)
-                        L_gpu = D_gpu - W_gpu
-                        
-                        if self.verbose:
-                            print(f"Computing {d_target} eigenvectors on GPU (using LA Trick)...")
-                        
-                        # LA trick for combinatorial: L has eigenvalues in [0, 2*max(D)]
-                        # Find largest evals of M = c*I - L
-                        c_bound = 2.0 * cp.max(D_diag_gpu) + 0.1
-                        M_gpu = csp.eye(n_faces, dtype=cp.float32) * c_bound - L_gpu
-                        
-                        evals_gpu, evecs_gpu = csplinalg.eigsh(M_gpu, k=k_eig, which='LA')
-                        evals = cp.asnumpy(c_bound - evals_gpu)
+                        evals = c_bound - cp.asnumpy(evals_gpu)
                         evecs = cp.asnumpy(evecs_gpu)
                     
                     # Sort explicitly to be certain
@@ -187,48 +186,21 @@ class HGPReducer(BaseEstimator, TransformerMixin):
 
             if not use_cuda:
                 # --- CPU Path ---
-                W_csr = W.tocsr()
-                D_diag = np.asarray(W_csr.sum(axis=1)).flatten()
+                if self.verbose:
+                    print(f"Computing {d_target} eigenvectors on CPU (using LA Trick)...")
+                    
+                try:
+                    evals_M, evecs_M = splinalg.eigsh(M_cpu, k=k_eig, which='LA')
+                except Exception as e:
+                    if self.verbose:
+                        print(f"eigsh LA failed ({e}), falling back to LM...")
+                    evals_M, evecs_M = splinalg.eigsh(M_cpu, k=k_eig, which='LM')
                 
                 if self.laplacian_type == 'normalized':
-                    D_inv_sqrt = np.zeros_like(D_diag)
-                    mask = D_diag > 0
-                    D_inv_sqrt[mask] = 1.0 / np.sqrt(D_diag[mask])
-                    D_inv_sqrt_mat = sp.diags(D_inv_sqrt)
-                    
-                    if self.verbose:
-                        print(f"Computing {d_target} eigenvectors on CPU (using LA Trick)...")
-                        
-                    # LA Trick on CPU: Avoids expensive sparse LU factorization of Shift-Invert
-                    M_cpu = D_inv_sqrt_mat @ W_csr @ D_inv_sqrt_mat
-                    try:
-                        evals_M, evecs_M = splinalg.eigsh(M_cpu, k=k_eig, which='LA')
-                    except Exception as e:
-                        if self.verbose:
-                            print(f"eigsh LA failed ({e}), falling back to LM...")
-                        evals_M, evecs_M = splinalg.eigsh(M_cpu, k=k_eig, which='LM')
-                    
                     evals = 1.0 - evals_M
-                    
                     # Rescale to get Random Walk Laplacian eigenvectors: u = D^{-1/2} v
                     evecs = D_inv_sqrt[:, None] * evecs_M
                 else:
-                    D = sp.diags(D_diag)
-                    L = D - W_csr
-                    
-                    if self.verbose:
-                        print(f"Computing {d_target} eigenvectors on CPU (using LA Trick)...")
-                        
-                    # LA Trick on CPU to prevent Memory issues and speed up
-                    c_bound = 2.0 * np.max(D_diag) + 0.1
-                    M_cpu = sp.eye(n_faces) * c_bound - L
-                    try:
-                        evals_M, evecs_M = splinalg.eigsh(M_cpu, k=k_eig, which='LA')
-                    except Exception as e:
-                        if self.verbose:
-                            print(f"eigsh LA failed ({e}), falling back to LM...")
-                        evals_M, evecs_M = splinalg.eigsh(M_cpu, k=k_eig, which='LM')
-                    
                     evals = c_bound - evals_M
                     evecs = evecs_M
                 
