@@ -202,7 +202,9 @@ class HGPReducer(BaseEstimator, TransformerMixin):
                         evals_M, evecs_M = splinalg.eigsh(M_cpu, k=k_eig, which='LM')
                     
                     evals = 1.0 - evals_M
-                    evecs = evecs_M
+                    
+                    # Rescale to get Random Walk Laplacian eigenvectors: u = D^{-1/2} v
+                    evecs = D_inv_sqrt[:, None] * evecs_M
                 else:
                     D = sp.diags(D_diag)
                     L = D - W_csr
