@@ -188,21 +188,35 @@ class HGPReducer(BaseEstimator, TransformerMixin):
                         D_inv_sqrt = 1.0 / np.sqrt(D_diag)
                     D_inv_sqrt[~np.isfinite(D_inv_sqrt)] = 0.0
                     D_inv_sqrt_mat = sp.diags(D_inv_sqrt)
-                    L = sp.eye(n_faces) - D_inv_sqrt_mat @ W_csr @ D_inv_sqrt_mat
+                    
+                    if self.verbose:
+                        print(f"Computing {d_target} eigenvectors on CPU (using LA Trick)...")
+                        
+                    # LA Trick on CPU: Avoids expensive sparse LU factorization of Shift-Invert
+                    M_cpu = D_inv_sqrt_mat @ W_csr @ D_inv_sqrt_mat
+                    try:
+                        evals_M, evecs_M = splinalg.eigsh(M_cpu, k=k_eig, which='LA')
+                    except Exception as e:
+                        if self.verbose:
+                            print(f"eigsh LA failed ({e}), falling back to LM...")
+                        evals_M, evecs_M = splinalg.eigsh(M_cpu, k=k_eig, which='LM')
+                    
+                    evals = 1.0 - evals_M
+                    evecs = evecs_M
                 else:
                     D = sp.diags(D_diag)
                     L = D - W_csr
                     
-                if self.verbose:
-                    print(f"Computing {d_target} eigenvectors on CPU...")
-                    
-                try:
-                    # Shift-invert is significantly faster for finding smallest eigenvectors
-                    evals, evecs = splinalg.eigsh(L, k=k_eig, sigma=-1e-5, which='LM')
-                except Exception as e:
                     if self.verbose:
-                        print(f"eigsh shift-invert failed ({e}), falling back to standard SM...")
-                    evals, evecs = splinalg.eigsh(L, k=k_eig, which='SM')
+                        print(f"Computing {d_target} eigenvectors on CPU...")
+                        
+                    try:
+                        # Shift-invert is significantly faster for finding smallest eigenvectors
+                        evals, evecs = splinalg.eigsh(L, k=k_eig, sigma=-1e-5, which='LM')
+                    except Exception as e:
+                        if self.verbose:
+                            print(f"eigsh shift-invert failed ({e}), falling back to standard SM...")
+                        evals, evecs = splinalg.eigsh(L, k=k_eig, which='SM')
                 
                 # Sort explicitly
                 idx = np.argsort(evals)
