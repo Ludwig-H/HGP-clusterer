@@ -157,7 +157,9 @@ class HGPReducer(BaseEstimator, TransformerMixin):
                         M_gpu = D_inv_sqrt_mat_gpu.dot(W_gpu).dot(D_inv_sqrt_mat_gpu)
                         evals_gpu, evecs_gpu = csplinalg.eigsh(M_gpu, k=k_eig, which='LA')
                         evals = 1.0 - cp.asnumpy(evals_gpu)
-                        evecs = cp.asnumpy(evecs_gpu)
+                        
+                        # Rescale to get Random Walk Laplacian eigenvectors: u = D^{-1/2} v
+                        evecs = cp.asnumpy(D_inv_sqrt_gpu)[:, None] * cp.asnumpy(evecs_gpu)
                     else:
                         D_gpu = csp.diags(D_diag_gpu)
                         L_gpu = D_gpu - W_gpu
