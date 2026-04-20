@@ -19,3 +19,15 @@ __pycache__/
 *.tar
 *.gz
 node_modules/
+.git/
+.gemini/
+.cache/
+*.log
+logs/
+tests/SemanticKITTI/logs/
+patch_*.py
+test_*.py
+fix_*.py
+notebook_code*.py
+output_*.py
+*.txt
