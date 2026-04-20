@@ -1,15 +1,29 @@
-semantic_kitti_data/
+# --- Dossiers Volumineux / Dépendances ---
+node_modules/
 third_party/
 geogram_install/
 CGALDelaunay/
+semantic_kitti_data/
+.git/
+.gemini/
+.cache/
+
+# --- Artifacts de Build et Environnements ---
 *venv*/
 .venv/
 build/
 dist/
 __pycache__/
+*.egg-info/
+.eggs/
 *.so
 *.o
 *.a
+*.py[cod]
+src/hgp_clusterer/_cython.cpp
+src/hgp_clusterer/_cython.c
+
+# --- Fichiers de Données et Binaires ---
 *.npy
 *.npz
 *.bin
@@ -18,16 +32,20 @@ __pycache__/
 *.zip
 *.tar
 *.gz
-node_modules/
-.git/
-.gemini/
-.cache/
+*.txt
 *.log
 logs/
 tests/SemanticKITTI/logs/
+
+# --- Notebooks (Fichiers JSON volumineux) ---
+# Les notebooks sont souvent très lourds et polluent le contexte
+*.ipynb
+
+# --- Fichiers Temporaires et Divers ---
+.DS_Store
 patch_*.py
 test_*.py
 fix_*.py
 notebook_code*.py
 output_*.py
-*.txt
+geogram_*
