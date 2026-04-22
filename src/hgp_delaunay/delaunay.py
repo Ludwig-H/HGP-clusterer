@@ -24,7 +24,7 @@ class HGPDelaunay(BaseEstimator):
                  expZ=1.0,
                  precision='safe',
                  verbose=False,
-                 backend='geogram',
+                 backend='cgal',
                  cgal_root="/content/HGP-clusterer/CGALDelaunay",
                  device='auto'):
         self.K = K
