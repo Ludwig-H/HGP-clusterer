@@ -39,7 +39,7 @@ tests/SemanticKITTI/logs/
 
 # --- Notebooks (Fichiers JSON volumineux) ---
 # Les notebooks sont souvent très lourds et polluent le contexte
-*.ipynb
+# *.ipynb
 
 # --- Fichiers Temporaires et Divers ---
 .DS_Store
