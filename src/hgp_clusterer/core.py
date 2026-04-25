@@ -48,7 +48,7 @@ class HGPClusterer(BaseEstimator, ClusterMixin):
                  weight_face='lambda',
                  label_all_points=False,
                  complex_chosen='auto',
-                 expZ=2.0,
+                 expZ=4.0,
                  precision='safe',
                  dim_reducer=False,
                  threshold_variance=0.999,
