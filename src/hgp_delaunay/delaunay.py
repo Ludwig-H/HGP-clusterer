@@ -21,7 +21,7 @@ class HGPDelaunay(BaseEstimator):
     
     def __init__(self,
                  K=2,
-                 expZ=4.0,
+                 expZ=1.0,
                  precision='safe',
                  verbose=False,
                  backend='cgal',

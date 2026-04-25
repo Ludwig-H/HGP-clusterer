@@ -32,7 +32,7 @@ class HGPReducer(BaseEstimator, TransformerMixin):
                  metric='euclidean',
                  weight_face='lambda',
                  complex_chosen='orderk_delaunay',
-                 expZ=4.0,
+                 expZ=2.0,
                  laplacian_type='combinatorial',
                  precision='safe',
                  verbose=False,
