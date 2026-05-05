@@ -10,7 +10,7 @@ import numpy as np
 from sklearn.metrics import pairwise_distances
 
 from .delaunay import orderk_delaunay3
-from .geometry import kth_radius
+from .geometry import kth_radius, minimum_enclosing_ball
 
 def _build_graph_KSimplexes(
     M: np.ndarray,
@@ -94,6 +94,16 @@ def _build_graph_KSimplexes(
                      # Should not happen if CGAL works as expected
                      if verbose: print("Warning: CGAL returned no radii. Weights set to 1.0.")
                      radii_arr = np.ones(n_simplices, dtype=np.float32)
+                
+                # Check for fallback (radii_arr < 0 means C++ returned -1.0)
+                fallback_mask = radii_arr < 0
+                if np.any(fallback_mask):
+                    if verbose:
+                        print(f"Calculating {np.sum(fallback_mask)} radii in Python fallback...")
+                    for i in np.where(fallback_mask)[0]:
+                        pts = M[simplex_indices_arr[i]]
+                        _, r_sq = minimum_enclosing_ball(pts)
+                        radii_arr[i] = r_sq
                 
                 # Apply Exponent if needed (radii_arr is squared radius)
                 # target is radius^expZ.
