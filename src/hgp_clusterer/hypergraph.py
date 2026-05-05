@@ -93,7 +93,7 @@ def _build_graph_KSimplexes(
                 if radii_arr is None or radii_arr.size == 0:
                      # Should not happen if CGAL works as expected
                      if verbose: print("Warning: CGAL returned no radii. Weights set to 1.0.")
-                     radii_arr = np.ones(n_simplices, dtype=np.float32)
+                     radii_arr = np.ones(n_simplices, dtype=np.float64)
                 
                 # Check for fallback (radii_arr < 0 means C++ returned -1.0)
                 fallback_mask = radii_arr < 0
@@ -107,9 +107,14 @@ def _build_graph_KSimplexes(
                         M = M.astype(np.float64)
                     if not M.flags.c_contiguous:
                         M = np.ascontiguousarray(M)
+                        
+                    if radii_arr.dtype != np.float64:
+                        radii_arr = radii_arr.astype(np.float64)
+                    if not radii_arr.flags.c_contiguous:
+                        radii_arr = np.ascontiguousarray(radii_arr)
                     
                     # Call cython function which drops into C++ and runs OpenMP over mask
-                    compute_fallback_radii(M, simplex_indices_arr, fallback_mask, radii_arr)
+                    compute_fallback_radii(M, simplex_indices_arr, fallback_mask.view(np.uint8), radii_arr)
                 
                 # Apply Exponent if needed (radii_arr is squared radius)
                 # target is radius^expZ.

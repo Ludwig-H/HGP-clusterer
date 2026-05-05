@@ -76,17 +76,17 @@ cdef extern from "_miniball_batch.hpp":
     void compute_miniball_radii_batch(
         const double* M,
         const int* simplex_indices,
-        const bool* mask,
+        const unsigned char* mask,
         double* radii,
-        int n_simplices,
-        int K_plus_1,
-        int dim
+        size_t n_simplices,
+        size_t K_plus_1,
+        size_t dim
     ) nogil
 
     void compute_single_miniball(
         const double* points_flat,
-        int n_points,
-        int dim,
+        size_t n_points,
+        size_t dim,
         double* out_center,
         double* out_radius_sq
     ) nogil
@@ -95,8 +95,8 @@ def native_minimum_enclosing_ball(const double[:, ::1] points):
     """
     Computes minimum enclosing ball natively for a single simplex.
     """
-    cdef int n_points = points.shape[0]
-    cdef int dim = points.shape[1]
+    cdef size_t n_points = points.shape[0]
+    cdef size_t dim = points.shape[1]
     
     center = np.zeros(dim, dtype=np.float64)
     cdef double[::1] center_view = center
@@ -116,12 +116,12 @@ def native_minimum_enclosing_ball(const double[:, ::1] points):
 def compute_fallback_radii(
     const double[:, ::1] M,
     const int[:, ::1] simplex_indices,
-    const bool[::1] mask,
+    const unsigned char[::1] mask,
     double[::1] radii
 ):
-    cdef int n_simplices = simplex_indices.shape[0]
-    cdef int K_plus_1 = simplex_indices.shape[1]
-    cdef int dim = M.shape[1]
+    cdef size_t n_simplices = simplex_indices.shape[0]
+    cdef size_t K_plus_1 = simplex_indices.shape[1]
+    cdef size_t dim = M.shape[1]
     
     with nogil:
         compute_miniball_radii_batch(
