@@ -71,7 +71,71 @@ cdef extern from *:
         FaceRefComparator()
         FaceRefComparator(const int* indices, int k_plus_1)
         bool operator()(const FaceRef& a, const FaceRef& b) nogil
+
+cdef extern from "_miniball_batch.hpp":
+    void compute_miniball_radii_batch(
+        const double* M,
+        const int* simplex_indices,
+        const bool* mask,
+        double* radii,
+        int n_simplices,
+        int K_plus_1,
+        int dim
+    ) nogil
+
+    void compute_single_miniball(
+        const double* points_flat,
+        int n_points,
+        int dim,
+        double* out_center,
+        double* out_radius_sq
+    ) nogil
+
+def native_minimum_enclosing_ball(const double[:, ::1] points):
+    """
+    Computes minimum enclosing ball natively for a single simplex.
+    """
+    cdef int n_points = points.shape[0]
+    cdef int dim = points.shape[1]
     
+    center = np.zeros(dim, dtype=np.float64)
+    cdef double[::1] center_view = center
+    cdef double radius_sq = 0.0
+    
+    with nogil:
+        compute_single_miniball(
+            &points[0, 0],
+            n_points,
+            dim,
+            &center_view[0],
+            &radius_sq
+        )
+        
+    return center, radius_sq
+
+def compute_fallback_radii(
+    const double[:, ::1] M,
+    const int[:, ::1] simplex_indices,
+    const bool[::1] mask,
+    double[::1] radii
+):
+    cdef int n_simplices = simplex_indices.shape[0]
+    cdef int K_plus_1 = simplex_indices.shape[1]
+    cdef int dim = M.shape[1]
+    
+    with nogil:
+        compute_miniball_radii_batch(
+            &M[0, 0],
+            &simplex_indices[0, 0],
+            &mask[0],
+            &radii[0],
+            n_simplices,
+            K_plus_1,
+            dim
+        )
+
+    
+cdef extern from *:
     void std_sort_custom "std::sort" [Iter, Compare](Iter first, Iter last, Compare comp) nogil
 
 cdef class UnionFind:

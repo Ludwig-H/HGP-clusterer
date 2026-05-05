@@ -98,34 +98,18 @@ def _build_graph_KSimplexes(
                 # Check for fallback (radii_arr < 0 means C++ returned -1.0)
                 fallback_mask = radii_arr < 0
                 if np.any(fallback_mask):
-                    fallback_indices = np.where(fallback_mask)[0]
                     if verbose:
-                        print(f"Calculating {len(fallback_indices)} radii in parallel Python fallback using cyminiball...")
+                        print(f"Calculating {np.sum(fallback_mask)} radii natively using Miniball C++...")
                     
-                    from joblib import Parallel, delayed
-                    import multiprocessing
+                    from ._cython import compute_fallback_radii
                     
-                    n_jobs = multiprocessing.cpu_count()
-                    if len(fallback_indices) < n_jobs * 100:
-                        n_jobs = 1  # Not worth parallelizing for very small batches
+                    if M.dtype != np.float64:
+                        M = M.astype(np.float64)
+                    if not M.flags.c_contiguous:
+                        M = np.ascontiguousarray(M)
                     
-                    batches = np.array_split(fallback_indices, n_jobs)
-                    
-                    def compute_batch(M, simplex_indices_arr, indices_batch):
-                        from hgp_clusterer.geometry import minimum_enclosing_ball
-                        radii = np.zeros(len(indices_batch), dtype=np.float32)
-                        for i, idx in enumerate(indices_batch):
-                            pts = M[simplex_indices_arr[idx]]
-                            _, r_sq = minimum_enclosing_ball(pts)
-                            radii[i] = r_sq
-                        return radii
-                        
-                    results = Parallel(n_jobs=n_jobs, backend='loky')(
-                        delayed(compute_batch)(M, simplex_indices_arr, batch) for batch in batches if len(batch) > 0
-                    )
-                    
-                    if results:
-                        radii_arr[fallback_indices] = np.concatenate(results)
+                    # Call cython function which drops into C++ and runs OpenMP over mask
+                    compute_fallback_radii(M, simplex_indices_arr, fallback_mask, radii_arr)
                 
                 # Apply Exponent if needed (radii_arr is squared radius)
                 # target is radius^expZ.
