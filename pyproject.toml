@@ -27,7 +27,6 @@ dependencies = [
 
 [project.optional-dependencies]
 umap = ["umap-learn"]
-geometry = ["cyminiball @ git+https://github.com/Ludwig-H/cyminiball.git"]
 
 [project.urls]
 Homepage = "https://github.com/Ludwig-H/HGP-clusterer"
