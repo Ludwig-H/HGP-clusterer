@@ -250,11 +250,7 @@ def minimum_enclosing_ball(points_sub: np.ndarray) -> tuple[np.ndarray, float]:
         radius_sq = float(ball.squared_radius())
         return center, radius_sq
 
-    global _WARNED_CYMINIBALL
-    if not _WARNED_CYMINIBALL:
-        print("Warning: cyminiball unavailable, using numpy fallback for minimum_enclosing_ball.")
-        _WARNED_CYMINIBALL = True
-    return _minimum_enclosing_ball_fallback(points_sub)
+    raise RuntimeError("cyminiball is required for computing minimum_enclosing_ball efficiently. Please install it using 'pip install cyminiball'.")
 
 
 _WARNED_CYMINIBALL = False
