@@ -81,7 +81,6 @@ struct WeightedDelaunayTraits {
 #include <CGAL/Min_sphere_annulus_d_traits_d.h>
 #include <CGAL/Min_sphere_annulus_d_traits_2.h>
 #include <CGAL/Min_sphere_annulus_d_traits_3.h>
-#include <CGAL/Cartesian_d.h>
 
 // TBB
 #ifdef CGAL_LINKED_WITH_TBB
@@ -432,24 +431,15 @@ struct WeightedDelaunayDD : public WeightedDelaunayTraits {
     }
 
     double compute_simplex_squared_radius(
-        const double* flat_points,
-        const int* indices,
-        size_t k,
-        size_t dim
+        const double* /*flat_points*/,
+        const int* /*indices*/,
+        size_t /*k*/,
+        size_t /*dim*/
     ) override {
-        using Sphere_K = CGAL::Cartesian_d<double>;
-        using MS_traits = CGAL::Min_sphere_annulus_d_traits_d<Sphere_K>;
-        using MS = CGAL::Min_sphere_d<MS_traits>;
-        using Sphere_Point = Sphere_K::Point_d;
-
-        std::vector<Sphere_Point> pts;
-        pts.reserve(k);
-        for(size_t i=0; i<k; ++i) {
-            int idx = indices[i];
-            pts.emplace_back(dim, flat_points + dim * idx, flat_points + dim * (idx + 1));
-        }
-        MS ms(pts.begin(), pts.end());
-        return CGAL::to_double(ms.squared_radius());
+        // dD Min_sphere compilation issues with Epick_d/Epeck_d traits,
+        // and using Cartesian_d<double> can cause infinite loops (hangs) in CGAL.
+        // We safely fallback to Python's robust minimum_enclosing_ball calculation.
+        return -1.0; 
     }
 };
 
