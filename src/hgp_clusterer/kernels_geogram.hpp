@@ -1,6 +1,6 @@
 #pragma once
 
-#include "kernels.hpp"
+
 #include <vector>
 #include <utility>
 #include <iostream>
@@ -11,29 +11,6 @@
 
 #include <Eigen/Dense>
 
-#ifdef HGP_WITH_GEOGRAM
-
-#include <geogram/delaunay/delaunay.h>
-
-inline bool my_cell_is_infinite(const GEO::Delaunay* delaunay, GEO::index_t c) {
-    GEO::index_t c_size = delaunay->cell_size();
-    for(GEO::index_t i=0; i<c_size; ++i) {
-        if(delaunay->cell_vertex(c, i) == GEO::index_t(-1)) return true;
-    }
-    return false;
-}
-
-#include <geogram/basic/common.h>
-#include <geogram/basic/command_line.h>
-#include <geogram/basic/command_line_args.h>
-#include <geogram/basic/file_system.h>
-
-#ifdef CGAL_LINKED_WITH_TBB
-#include <tbb/parallel_sort.h>
-#include <tbb/parallel_for.h>
-#include <tbb/blocked_range.h>
-#include <tbb/concurrent_vector.h>
-#endif
 
 // ==============================================================================
 // Fast, Thread-Safe Welzl's Algorithm (using Eigen for Basis solving)
@@ -389,6 +366,32 @@ namespace HGP_Numerics {
     }
 }
 
+
+#ifdef HGP_WITH_GEOGRAM
+
+#include <geogram/delaunay/delaunay.h>
+
+inline bool my_cell_is_infinite(const GEO::Delaunay* delaunay, GEO::index_t c) {
+    GEO::index_t c_size = delaunay->cell_size();
+    for(GEO::index_t i=0; i<c_size; ++i) {
+        if(delaunay->cell_vertex(c, i) == GEO::index_t(-1)) return true;
+    }
+    return false;
+}
+
+#include <geogram/basic/common.h>
+#include <geogram/basic/command_line.h>
+#include <geogram/basic/command_line_args.h>
+#include <geogram/basic/file_system.h>
+
+#ifdef CGAL_LINKED_WITH_TBB
+#include <tbb/parallel_sort.h>
+#include <tbb/parallel_for.h>
+#include <tbb/blocked_range.h>
+#include <tbb/concurrent_vector.h>
+#endif
+
+#include "kernels.hpp"
 // Geogram Implementation
 class GeogramDelaunayImpl : public WeightedDelaunayTraits {
 public:

@@ -1,5 +1,6 @@
 #pragma once
 #include "miniball.hpp"
+#include "kernels_geogram.hpp"
 #include <vector>
 
 void compute_miniball_radii_batch(
@@ -14,17 +15,7 @@ void compute_miniball_radii_batch(
     #pragma omp parallel for
     for (size_t i = 0; i < n_simplices; ++i) {
         if (mask[i]) {
-            std::vector<const double*> points(K_plus_1);
-            for (size_t k = 0; k < K_plus_1; ++k) {
-                points[k] = M + simplex_indices[i * K_plus_1 + k] * dim;
-            }
-            
-            typedef const double** PIt;
-            typedef const double* CIt;
-            typedef Miniball::Miniball <Miniball::CoordAccessor<PIt, CIt> > MB;
-            
-            MB mb(dim, points.data(), points.data() + K_plus_1);
-            radii[i] = mb.squared_radius();
+            radii[i] = HGP_Numerics::compute_meb_sq_radius(M, &simplex_indices[i * K_plus_1], K_plus_1, dim);
         }
     }
 }

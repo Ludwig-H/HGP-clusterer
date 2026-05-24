@@ -12,6 +12,24 @@ from setuptools.command.build_ext import build_ext
 
 import pybind11
 
+def get_eigen_include():
+    paths = [
+        "/usr/include/eigen3",
+        "/usr/local/include/eigen3",
+        "/opt/homebrew/include/eigen3",
+        "/opt/local/include/eigen3"
+    ]
+    for p in paths:
+        if os.path.exists(p):
+            return p
+    # Fallback, let compiler find it if it's in standard path
+    return ""
+
+eigen_path = get_eigen_include()
+include_dirs = [np.get_include()]
+if eigen_path:
+    include_dirs.append(eigen_path)
+
 # A CMakeExtension needs a sourcedir
 class CMakeExtension(Extension):
     def __init__(self, name: str, sourcedir: str = "") -> None:
@@ -83,7 +101,7 @@ class CMakeBuild(build_ext):
 cython_ext = Extension(
     "hgp_clusterer._cython",
     sources=[str(Path("src") / "hgp_clusterer" / "_cython.pyx")],
-    include_dirs=[np.get_include()],
+    include_dirs=include_dirs,
     define_macros=[("NPY_NO_DEPRECATED_API", "NPY_1_7_API_VERSION")],
     language="c++",
     extra_compile_args=["-fopenmp"],
